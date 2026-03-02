@@ -64,6 +64,17 @@ skene-growth includes an MCP server for integration with AI assistants. Add to y
 }
 ```
 
+## Monorepo Structure
+
+This repository contains two independent packages:
+
+| Directory | Description | Language | Distribution |
+|-----------|-------------|----------|-------------|
+| `src/skene_growth/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene-growth/) |
+| `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene-growth/releases) |
+
+The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue or submit a pull request on [GitHub](https://github.com/SkeneTechnologies/skene-growth).

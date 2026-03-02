@@ -3,6 +3,8 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+    # TUI releases use tui-v* tags and a separate workflow
+    # This only triggers for Python package releases
 
 permissions:
   id-token: write  # Required for trusted publishing

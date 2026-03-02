@@ -1,0 +1,23 @@
+# Binaries
+skene
+skene-cli
+build/
+
+# Generated output
+skene-context/
+
+# OS
+**/.DS_Store
+Thumbs.db
+
+# Temp
+tmp/
+*.log
+
+# IDE / editor
+.cursor/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

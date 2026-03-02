@@ -1,0 +1,50 @@
+name: TUI CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tui/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tui/**'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tui/go.mod
+          cache-dependency-path: tui/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: tui
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tui/go.mod
+          cache-dependency-path: tui/go.sum
+
+      - name: Build
+        working-directory: tui
+        run: go build ./cmd/skene/
+
+      - name: Test
+        working-directory: tui
+        run: go test ./...
