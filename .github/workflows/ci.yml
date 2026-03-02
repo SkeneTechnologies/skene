@@ -3,8 +3,12 @@ name: skene-growth
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'tui/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'tui/**'
 
 permissions:
   contents: read
