@@ -167,13 +167,14 @@ def generate_timestamped_filename(loop_id: str) -> str:
     Format: <loop_id>_YYYYMMDD_HHMMSS.json
 
     Args:
-        loop_id: Snake_case loop identifier (already sanitized)
+        loop_id: Snake_case loop identifier
 
     Returns:
-        Filename with timestamp suffix
+        Filename with timestamp suffix, prefix truncated to 80 chars
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{loop_id}_{timestamp}.json"
+    sanitized_id = sanitize_filename(loop_id, max_length=80)
+    return f"{sanitized_id}_{timestamp}.json"
 
 
 async def generate_loop_definition_with_llm(
