@@ -18,52 +18,63 @@ acceptable_alternatives = ["SaaS", "SaaS Infrastructure"]
 expected_tags = ["B2B", "SaaS", "Open Source", "Developer Tools"]
 
 # --- Expected Features ---
+# Only features relevant to product-led growth (PLG).
+# Each feature includes a `motivation` field explaining its PLG relevance,
+# referencing PLG frameworks (Motions × Levers, PLG Audit Checklist, etc.).
 
 [[expected_features]]
 name = "authentication"
 description = "Devise-based authentication with 2FA, OmniAuth (Stripe Connect), Doorkeeper OAuth2 provider, lockable accounts, and confirmable emails"
+motivation = "PLG Acquisition lever: self-serve signup is the entry point for product-led acquisition. OAuth/social login reduces signup friction (PLG Audit: 'signup requires fewer than 5 form fields'). 2FA supports enterprise readiness."
 file_patterns = ["devise", "omniauth", "doorkeeper", "oauth"]
 keywords = ["authentication", "login", "signup", "oauth", "two-factor", "2fa", "sso"]
 
 [[expected_features]]
 name = "billing"
 description = "Stripe integration with free/basic/pro pricing tiers, monthly and annual intervals, trial periods, and usage limits"
+motivation = "PLG Monetization lever: tiered pricing with a free tier enables freemium model. Self-serve checkout is a core PLG Audit requirement ('self-serve checkout exists'). Trial periods support reverse-trial or time-limited trial strategies."
 file_patterns = ["stripe", "billing", "products.yml"]
 keywords = ["billing", "subscription", "stripe", "payment", "pricing", "plan"]
 
 [[expected_features]]
 name = "teams"
 description = "Multi-tenant team model with memberships, invitation system, bulk invitations, and team-scoped resources"
+motivation = "PLG Acquisition + Retention lever: invitation system creates a viral loop (each user can bring in teammates). Seat-based expansion is a key PLG monetization path ('expansion revenue paths exist: seats, usage, add-ons')."
 file_patterns = ["team", "membership", "invitation"]
 keywords = ["team", "invitation", "membership", "multi-tenant", "workspace"]
 
 [[expected_features]]
 name = "roles"
 description = "Role-based access control with default/editor/admin roles, CanCanCan abilities, and per-model permission grants"
+motivation = "PLG Monetization lever: roles enable feature gating by plan tier (e.g., admin roles on premium plans). Supports team collaboration structure which drives seat expansion."
 file_patterns = ["roles", "ability"]
 keywords = ["role", "permission", "access control", "rbac", "authorization"]
 
 [[expected_features]]
 name = "onboarding"
 description = "Onboarding framework with ensure_onboarding_is_complete controller hook, onboarding routes, and invitation list step"
+motivation = "PLG Activation lever: guided onboarding drives users to the aha moment. PLG Audit: 'onboarding guides users to the aha moment in < 1 session'. Reduces time-to-value, a core PLG readiness factor."
 file_patterns = ["onboarding"]
 keywords = ["onboarding", "wizard", "setup", "getting started"]
 
 [[expected_features]]
 name = "email"
 description = "Transactional email with invitation and welcome email templates, ActionMailer base with premailer inline CSS"
+motivation = "PLG Retention + Acquisition lever: invitation emails power the viral loop. Welcome emails support activation. Re-engagement emails drive retention (PLG Audit: 'users who do not activate receive re-engagement nudges')."
 file_patterns = ["mailer", "user_mailer"]
 keywords = ["email", "mailer", "notification", "transactional"]
 
 [[expected_features]]
 name = "webhooks"
 description = "Outgoing webhook infrastructure with endpoints, events, deliveries, and delivery attempts; incoming webhook support"
+motivation = "BORDERLINE — PLG Retention lever: webhooks enable third-party integrations that increase product stickiness. For a developer tools product, extensibility is a key retention driver and supports ecosystem/platform growth."
 file_patterns = ["webhook"]
 keywords = ["webhook", "outgoing", "incoming", "event"]
 
 [[expected_features]]
 name = "api"
 description = "REST API (v1) with Doorkeeper OAuth2 tokens for teams, users, invitations, and memberships"
+motivation = "BORDERLINE — PLG Acquisition + Retention lever: developer API enables ecosystem growth and third-party integrations. For a developer tools SaaS boilerplate, the API is a distribution channel (developers discover and adopt the product through API usage)."
 file_patterns = ["api/v1"]
 keywords = ["api", "rest", "oauth", "token", "doorkeeper"]
 

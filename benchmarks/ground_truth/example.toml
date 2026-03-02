@@ -41,24 +41,28 @@ expected_tags = ["B2B", "SaaS"]
 [[expected_features]]
 name = "billing"
 description = "Stripe subscription billing with free and paid tiers"
+motivation = "PLG Monetization lever: self-serve checkout and tiered pricing enable freemium conversion. PLG Audit: 'self-serve checkout exists'."
 file_patterns = ["billing", "stripe", "subscriptions"]
 keywords = ["billing", "subscription", "stripe", "payment", "pricing"]
 
 [[expected_features]]
 name = "team_invites"
 description = "Email-based team invitation flow with role assignment"
+motivation = "PLG Acquisition lever — viral loop: invitations create organic user acquisition. Seat expansion drives monetization."
 file_patterns = ["invitations", "invite", "members"]
 keywords = ["invitation", "invite", "team", "collaboration"]
 
 [[expected_features]]
 name = "auth"
 description = "NextAuth-based authentication with OAuth providers"
+motivation = "PLG Acquisition lever: OAuth reduces signup friction. PLG Audit: 'self-serve signup exists (no request-a-demo gate)'."
 file_patterns = ["auth", "login", "signup"]
 keywords = ["auth", "login", "signup", "session", "oauth"]
 
 [[expected_features]]
 name = "analytics"
 description = "Usage analytics dashboard with event tracking"
+motivation = "PLG Infrastructure: product analytics foundation. PLG Audit: 'product analytics platform is implemented'."
 file_patterns = ["analytics", "tracking", "events"]
 keywords = ["analytics", "tracking", "metrics", "dashboard"]
 

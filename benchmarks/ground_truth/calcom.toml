@@ -18,169 +18,140 @@ acceptable_alternatives = ["SaaS", "Productivity"]
 expected_tags = ["B2B", "B2C", "SaaS", "Open Source", "API-first"]
 
 # --- Expected Features ---
+# Only features relevant to product-led growth (PLG).
+# Each feature includes a `motivation` field explaining its PLG relevance,
+# referencing PLG frameworks (Motions × Levers, PLG Audit Checklist, etc.).
 
 [[expected_features]]
 name = "billing"
 description = "Stripe subscription billing with seat-based pricing, usage-based billing, proration, credits, and team/organization billing"
+motivation = "PLG Monetization lever: seat-based + usage-based billing enables both expansion revenue and consumption-based growth. Per Usage-Based Pricing framework: hybrid models (seats + usage credits) maximize revenue capture. PLG Audit: 'expansion revenue paths exist (seats, usage, add-ons)'."
 file_patterns = ["ee/billing", "stripepayment", "credit-service"]
 keywords = ["billing", "subscription", "stripe", "payment", "credit", "invoice", "pricing"]
 
 [[expected_features]]
 name = "authentication"
 description = "NextAuth-based authentication with email/password, Google OAuth, SAML SSO, and organization-specific signup flows"
+motivation = "PLG Acquisition lever: OAuth reduces signup friction. Organization-specific signup flows support bottom-up enterprise adoption. PLG Audit: 'self-serve signup exists (no request-a-demo gate)'."
 file_patterns = ["features/auth", "next-auth-options", "signup"]
 keywords = ["authentication", "login", "signup", "oauth", "sso", "saml", "nextauth"]
 
 [[expected_features]]
 name = "teams"
 description = "Team and organization management with member invitations, role-based access control, and seat-based billing integration"
+motivation = "PLG Acquisition + Monetization lever: invitations create viral loops within organizations. Seat-based billing directly ties team growth to revenue expansion. Per Viral Loops framework: collaboration-driven invite mechanics are a core product-driven viral growth mechanism."
 file_patterns = ["ee/teams", "ee/organizations", "inviteMember", "membership"]
 keywords = ["team", "organization", "member", "invitation", "role", "workspace"]
 
 [[expected_features]]
 name = "onboarding"
 description = "Multi-step guided onboarding for personal users and organizations with calendar setup, team creation, and member invitations"
+motivation = "PLG Activation lever: guided onboarding drives users to the aha moment (first calendar connected, first booking link created). PLG Audit: 'onboarding guides users to the aha moment in < 1 session'. Team creation during onboarding seeds the viral loop."
 file_patterns = ["onboarding", "onboarding-path", "BaseOnboardingService"]
 keywords = ["onboarding", "setup", "guided", "welcome", "getting-started"]
 
 [[expected_features]]
 name = "email"
 description = "Transactional email system for booking confirmations, cancellations, invitations, billing notifications, and workflow-triggered reminders"
+motivation = "PLG Retention + Acquisition lever: booking confirmations expose the brand to non-users (attendees see Cal.com). Invitation emails power the viral loop. Reminder emails drive recurring engagement."
 file_patterns = ["packages/emails", "email-manager", "EmailWorkflowService"]
 keywords = ["email", "notification", "transactional", "reminder", "confirmation"]
 
 [[expected_features]]
-name = "workflows"
-description = "Automation engine with event-triggered workflows supporting email, SMS, WhatsApp, and AI phone call actions with customizable templates"
-file_patterns = ["ee/workflows", "WorkflowService", "scheduleWorkflowReminders"]
-keywords = ["workflow", "automation", "trigger", "reminder", "action", "scheduled"]
-
-[[expected_features]]
 name = "webhooks"
 description = "Webhook infrastructure for booking events with delivery scheduling, retry logic, and external system integration"
+motivation = "BORDERLINE — PLG Retention lever: webhooks enable integrations with external tools (CRMs, calendars, automation platforms), increasing product stickiness and switching costs."
 file_patterns = ["features/webhooks", "WebhookService", "WebhookRepository"]
 keywords = ["webhook", "integration", "event", "delivery", "payload"]
 
 [[expected_features]]
 name = "analytics"
 description = "Booking analytics and insights with CSV export, usage tracking, and PostHog integration for product metrics"
+motivation = "PLG Infrastructure + Retention lever: PostHog provides product analytics foundation (PLG Audit: 'product analytics platform is implemented'). Booking insights demonstrate ongoing value to users, driving retention and justifying upgrades."
 file_patterns = ["features/insights", "tasker/tasks/analytics"]
 keywords = ["analytics", "insights", "tracking", "metrics", "dashboard"]
 
 [[expected_features]]
 name = "embed"
 description = "Embeddable booking widget SDK for external websites with customizable themes and responsive design"
+motivation = "PLG Acquisition lever — viral distribution: embedded widgets expose the Cal.com brand on third-party websites. Per Viral Loops framework: embedding creates a content loop where every booking page is a marketing touchpoint. PLG Audit: 'the product generates shareable outputs (links, embeds, exports)'."
 file_patterns = ["features/embed", "EmbedCodes", "EmbedTabs"]
 keywords = ["embed", "widget", "sdk", "iframe", "booking"]
 
 [[expected_features]]
 name = "feature-flags"
 description = "Feature flag system for progressive rollout, A/B testing, and operational toggles"
+motivation = "PLG Infrastructure: feature flags enable A/B testing and progressive rollout — core PLG experimentation infrastructure. PLG Audit: 'A/B testing infrastructure exists'. Per Growth Experimentation framework: feature flags are the delivery mechanism for growth experiments."
 file_patterns = ["features/flags", "feature-opt-in"]
 keywords = ["feature flag", "feature gate", "rollout", "toggle"]
 
 [[expected_features]]
 name = "usage-limits"
 description = "Credit-based usage limits for SMS, WhatsApp, and AI phone calls with low balance warnings and quota enforcement"
+motivation = "PLG Monetization lever: usage limits with low-balance warnings create natural upgrade triggers. Per Feature Gating framework: usage-based limits are a monetization signal that drives expansion revenue. Per Usage-Based Pricing: credit systems enable consumption-based growth."
 file_patterns = ["credits", "credit-service", "CreditsRepository"]
 keywords = ["credit", "usage", "limit", "quota", "balance", "upgrade"]
 
 [[expected_features]]
 name = "i18n"
 description = "Full internationalization with 44 locales, next-i18next integration, server-side translation caching, and useLocale hook used throughout components"
+motivation = "BORDERLINE — PLG Acquisition lever: i18n with 44 locales massively expands the addressable market. Per PLG Readiness assessment: 'market size' is a key factor — localization multiplies the self-serve reachable user base across geographies."
 file_patterns = ["packages/i18n", "locales", "useLocale"]
 keywords = ["i18n", "localization", "translation", "locale", "language"]
 
 [[expected_features]]
 name = "api-keys"
 description = "Developer API key management with CRUD endpoints, SHA256 hashing, expiration policies, team-scoped keys, rate limiting with auto-lock, and settings UI"
+motivation = "PLG Ecosystem + Retention lever: developer API keys enable third-party integrations and custom builds on top of the platform, creating ecosystem growth and increasing switching costs. Supports platform/developer community growth loop."
 file_patterns = ["ee/api-keys", "ApiKeyService", "PrismaApiKeyRepository"]
 keywords = ["api key", "developer", "api", "key", "token", "secret"]
 
 [[expected_features]]
 name = "notifications"
 description = "Web push notification system with VAPID authentication, service worker, subscription management, instant meeting alerts with sound, and settings UI"
+motivation = "PLG Retention lever: push notifications bring users back to the product. Per Engagement Loops framework: notifications are triggers in the habit loop (Trigger → Action → Reward). Instant meeting alerts create urgency-driven engagement."
 file_patterns = ["features/notifications", "sendNotification", "WebPushContext"]
 keywords = ["notification", "push", "web push", "alert", "subscribe"]
 
 [[expected_features]]
 name = "referrals"
 description = "Dub.co-powered referral program with embedded referral dashboard, referral token API, and feature flag gating"
+motivation = "PLG Acquisition lever — viral growth: referral programs are a direct viral loop mechanism. Per Referral Program framework: two-sided incentives (referrer + referee) drive organic acquisition. Per Growth Loops: referral loops are a compounding growth engine."
 file_patterns = ["refer", "referrals-token", "DubReferralsPage"]
 keywords = ["referral", "refer", "dub", "partner", "invite"]
 
 [[expected_features]]
-name = "watchlist"
-description = "Trust and safety watchlist system with email/domain blocking, free email domain detection, spam prevention, organization-scoped and global watchlists, and audit logging"
-file_patterns = ["features/watchlist", "WatchlistService", "GlobalBlockingService"]
-keywords = ["watchlist", "blocking", "spam", "abuse", "trust", "safety"]
-
-[[expected_features]]
 name = "sso"
 description = "SAML and OIDC single sign-on for enterprise organizations using BoxyHQ Jackson, with directory provider integration and organization-scoped SSO configuration"
+motivation = "PLG Monetization lever: SSO is a classic enterprise feature gate. Per Feature Gating framework: SSO is one of the most common premium/enterprise plan gates that drives upgrades. Reduces friction for enterprise adoption."
 file_patterns = ["ee/sso", "saml", "jackson"]
 keywords = ["sso", "saml", "single sign-on", "oidc", "enterprise", "jackson"]
 
 [[expected_features]]
 name = "directory-sync"
 description = "SCIM-based directory synchronization for enterprise identity management with automatic user provisioning, group event handling, and attribute mapping from identity providers"
+motivation = "PLG Monetization lever: directory sync is a premium enterprise feature gate. Per Feature Gating framework: enterprise IT compliance features justify premium pricing. Also enables frictionless seat expansion — new employees are auto-provisioned, driving organic seat growth."
 file_patterns = ["ee/dsync", "handleUserEvents", "handleGroupEvents", "getAttributesFromScimPayload"]
 keywords = ["directory sync", "dsync", "scim", "provisioning", "identity", "directory"]
 
 [[expected_features]]
-name = "routing-forms"
-description = "Dynamic form-based routing to match respondents with the right team member based on configurable attributes, with form response tracking and insights integration"
-file_patterns = ["routing-forms", "PrismaRoutingFormRepository", "handleResponse", "getRoutedUrl"]
-keywords = ["routing", "form", "routing form", "lead routing", "attribute", "response"]
-
-[[expected_features]]
-name = "impersonation"
-description = "Admin user impersonation for support and debugging, allowing authorized users to act as another user within the platform"
-file_patterns = ["ee/impersonation", "ImpersonationProvider"]
-keywords = ["impersonation", "impersonate", "admin", "support", "act as"]
-
-[[expected_features]]
 name = "platform"
 description = "Developer platform with OAuth client management, embeddable React atoms (booker, calendar, event types), and API for third-party integrations to embed Cal.com scheduling"
+motivation = "PLG Acquisition + Ecosystem lever: the developer platform enables third-party apps to embed Cal.com, creating a distribution loop. Per Growth Loops framework: platform/ecosystem loops create compounding growth — each integration is a new acquisition channel."
 file_patterns = ["platform/atoms", "features/oauth", "OAuthService", "CalProvider"]
 keywords = ["platform", "oauth", "atoms", "embed", "sdk", "developer", "third-party"]
 
 [[expected_features]]
-name = "managed-event-types"
-description = "Centralized event type management for organizations with locked field enforcement, child event type propagation, and automated reassignment services"
-file_patterns = ["ee/managed-event-types", "handleChildrenEventTypes", "useLockedFieldsManager"]
-keywords = ["managed", "event type", "locked fields", "reassignment", "centralized"]
-
-[[expected_features]]
-name = "booking-payments"
-description = "Payment collection from attendees at booking time with support for Stripe, PayPal, and other providers, including hold-based and on-booking payment options"
-file_patterns = ["ee/payments", "app-store/stripepayment", "app-store/paypal", "PaymentService"]
-keywords = ["payment", "charge", "pay", "stripe", "paypal", "collect payment", "booking payment"]
-
-[[expected_features]]
-name = "admin-panel"
-description = "Super-admin dashboard with user management, billing administration, feature flag control, organization management, impersonation, OAuth client management, and PBAC role-based access control"
-file_patterns = ["settings/admin", "features/pbac"]
-keywords = ["admin", "dashboard", "management", "super admin", "settings", "rbac", "permissions"]
-
-[[expected_features]]
 name = "audit-logging"
 description = "Booking audit trail system with action-specific services for creation, cancellation, rescheduling, reassignment, no-show, and attendee changes, with DI-based architecture and viewer services"
+motivation = "PLG Monetization lever: audit logging is a classic enterprise feature gate. Per Feature Gating framework: compliance and governance features (audit trails, change tracking) justify enterprise plan pricing and drive upgrades."
 file_patterns = ["features/booking-audit", "BookingAuditProducerService", "BookingAuditViewerService"]
 keywords = ["audit", "audit log", "history", "trail", "booking audit", "tracking"]
-
-[[expected_features]]
-name = "rate-limiting"
-description = "Unkey-based rate limiting infrastructure with named namespaces for core API, SMS, instant meetings, and booking endpoints, plus IP ban list enforcement"
-file_patterns = ["rateLimit", "isIpInBanList"]
-keywords = ["rate limit", "throttle", "rate limiting", "abuse", "ban"]
 
 # --- Notable Files ---
 notable_files = [
     "packages/features/ee/billing/credit-service.ts",
     "packages/features/ee/billing/service/billingProvider/StripeBillingService.ts",
-    "packages/features/ee/payments/server/stripe.ts",
-    "packages/app-store/stripepayment/lib/PaymentService.ts",
     "packages/features/auth/lib/next-auth-options.ts",
     "packages/features/auth/signup/utils/createOrUpdateMemberships.ts",
     "packages/features/ee/teams/lib/inviteMemberUtils.ts",
@@ -188,7 +159,6 @@ notable_files = [
     "packages/features/ee/organizations/lib/service/onboarding/BaseOnboardingService.ts",
     "packages/features/onboarding/lib/onboarding-path.service.ts",
     "packages/emails/email-manager.ts",
-    "packages/features/ee/workflows/lib/service/WorkflowService.ts",
     "packages/features/webhooks/lib/WebhookService.ts",
     "packages/features/insights/server/events.ts",
     "packages/features/embed/lib/EmbedCodes.tsx",
@@ -201,16 +171,9 @@ notable_files = [
     "packages/features/ee/api-keys/repositories/PrismaApiKeyRepository.ts",
     "apps/web/app/(use-page-wrapper)/refer/DubReferralsPage.tsx",
     "apps/web/app/api/user/referrals-token/route.ts",
-    "packages/features/watchlist/lib/service/WatchlistService.ts",
-    "packages/features/watchlist/lib/service/GlobalBlockingService.ts",
     "packages/features/ee/sso/lib/jackson.ts",
     "packages/features/ee/dsync/lib/handleUserEvents.ts",
     "packages/features/ee/dsync/lib/handleGroupEvents.ts",
-    "packages/features/routing-forms/lib/handleResponse.ts",
-    "packages/features/routing-forms/repositories/PrismaRoutingFormRepository.ts",
-    "packages/features/ee/impersonation/lib/ImpersonationProvider.ts",
     "packages/features/oauth/services/OAuthService.ts",
-    "packages/features/ee/managed-event-types/lib/handleChildrenEventTypes.ts",
     "packages/features/booking-audit/lib/service/BookingAuditTaskerProducerService.ts",
-    "packages/lib/rateLimit.ts",
 ]

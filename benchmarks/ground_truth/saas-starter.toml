@@ -17,48 +17,44 @@ acceptable_alternatives = ["SaaS", "Boilerplate"]
 expected_tags = ["B2B", "SaaS", "Open Source"]
 
 # --- Expected Features ---
+# Only features relevant to product-led growth (PLG).
+# Each feature includes a `motivation` field explaining its PLG relevance,
+# referencing PLG frameworks (Motions × Levers, PLG Audit Checklist, etc.).
 
 [[expected_features]]
 name = "billing"
 description = "Stripe subscriptions with checkout sessions, customer portal, and webhook handling for subscription lifecycle"
+motivation = "PLG Monetization lever: self-serve checkout and customer portal enable frictionless upgrades. PLG Audit: 'self-serve checkout exists (credit card entry, no sales call required)'. Webhook handling automates the subscription lifecycle."
 file_patterns = ["payments", "stripe", "pricing"]
 keywords = ["billing", "subscription", "stripe", "payment", "checkout"]
 
 [[expected_features]]
 name = "authentication"
 description = "Custom email/password auth with JWT sessions (jose), bcrypt password hashing, and cookie-based session management"
+motivation = "PLG Acquisition lever: self-serve signup is the foundation of product-led acquisition. PLG Audit: 'self-serve signup exists (no request-a-demo gate)'. Low-friction email/password auth enables immediate product access."
 file_patterns = ["auth", "login", "sign-in", "sign-up"]
 keywords = ["auth", "login", "signup", "session", "password"]
 
 [[expected_features]]
 name = "team-management"
 description = "Multi-member teams with role-based access (owner/member), member removal, and team creation on signup"
+motivation = "PLG Acquisition + Monetization lever: teams enable seat-based expansion revenue. PLG Audit: 'expansion revenue paths exist (seats, usage, add-ons)'. Team structure supports collaborative adoption and organizational buy-in."
 file_patterns = ["team", "dashboard"]
 keywords = ["team", "member", "role", "collaboration"]
 
 [[expected_features]]
 name = "invitation-system"
 description = "Team invitations with pending/accepted status tracking and invite-link signup flow (email sending not implemented)"
+motivation = "PLG Acquisition lever — viral loop: each team member can invite others, creating organic user acquisition. Per Viral Loops framework: invite mechanics are a core product-driven viral growth mechanism."
 file_patterns = ["invit", "actions"]
 keywords = ["invite", "invitation", "team invite"]
 
 [[expected_features]]
-name = "activity-logging"
-description = "Internal activity log tracking user and team events (sign-in, sign-up, team changes) with timestamps and IP addresses"
-file_patterns = ["activity", "queries"]
-keywords = ["activity", "logging", "audit", "tracking"]
-
-[[expected_features]]
 name = "trial-management"
 description = "14-day free trial period on Stripe subscriptions with trial status display on dashboard and pricing page"
+motivation = "PLG Monetization lever: free trials are a core PLG model (see Freemium vs Free Trial decision framework). 14-day trial lets users experience value before committing. PLG Audit: transparent pricing and self-serve upgrade path."
 file_patterns = ["stripe", "pricing"]
 keywords = ["trial", "free trial", "trialing"]
-
-[[expected_features]]
-name = "account-settings"
-description = "Account management with profile updates (name/email), password changes, and account deletion via dedicated settings pages"
-file_patterns = ["general", "security", "dashboard"]
-keywords = ["settings", "profile", "account", "password", "delete account"]
 
 # --- Notable Files ---
 notable_files = [
@@ -76,8 +72,5 @@ notable_files = [
     "lib/db/schema.ts",
     "lib/db/queries.ts",
     "app/(dashboard)/dashboard/page.tsx",
-    "app/(dashboard)/dashboard/activity/page.tsx",
     "app/api/team/route.ts",
-    "app/(dashboard)/dashboard/general/page.tsx",
-    "app/(dashboard)/dashboard/security/page.tsx",
 ]

@@ -18,156 +18,121 @@ acceptable_alternatives = ["SaaS", "Communication"]
 expected_tags = ["B2B", "SaaS", "Open Source", "Enterprise"]
 
 # --- Expected Features ---
+# Only features relevant to product-led growth (PLG).
+# Each feature includes a `motivation` field explaining its PLG relevance,
+# referencing PLG frameworks (Motions × Levers, PLG Audit Checklist, etc.).
 
 [[expected_features]]
 name = "billing"
 description = "Stripe subscriptions with tiered plans (Hacker, Startups, Business, Enterprise), billing portal, and AI credit top-up purchases"
+motivation = "PLG Monetization lever: tiered plans with a free tier (Hacker) enable freemium model. Self-serve billing portal supports PLG Audit requirement: 'self-serve checkout exists'. Credit top-ups represent usage-based monetization (see Usage-Based Pricing framework)."
 file_patterns = ["billing", "stripe", "enterprise/billing"]
 keywords = ["billing", "subscription", "stripe", "payment", "plan", "pricing"]
 
 [[expected_features]]
 name = "authentication"
 description = "Devise-based auth with token auth API, Google OAuth, SAML SSO, two-factor authentication (TOTP), email confirmation, and password reset"
+motivation = "PLG Acquisition lever: self-serve signup with OAuth reduces friction. SAML SSO supports enterprise adoption — per Feature Gating framework, SSO is a classic enterprise plan gate that drives upgrades."
 file_patterns = ["devise_overrides", "omniauth", "saml", "sessions_controller"]
 keywords = ["authentication", "login", "signup", "oauth", "sso", "saml", "2fa", "two-factor"]
 
 [[expected_features]]
 name = "team_management"
 description = "Agent invitation system with bulk invite, team creation and member management, and enterprise custom roles with granular permissions"
+motivation = "PLG Acquisition + Monetization lever: invitations create viral loops within organizations. Bulk invite accelerates team adoption. Custom roles as enterprise feature gate drives plan upgrades. Seat expansion is a core PLG monetization path."
 file_patterns = ["agent_builder", "team_members", "teams", "custom_roles"]
 keywords = ["team", "invitation", "invite", "agent", "role", "member", "collaboration"]
 
 [[expected_features]]
 name = "analytics"
 description = "Amplitude event tracking on the frontend plus built-in reporting dashboards for conversations, agents, teams, CSAT, SLA, and bot performance"
+motivation = "PLG Infrastructure + Retention lever: Amplitude integration provides product analytics foundation (PLG Audit: 'product analytics platform is implemented'). Built-in dashboards drive daily engagement and demonstrate ongoing value to decision-makers."
 file_patterns = ["AnalyticsHelper", "reports", "amplitude"]
 keywords = ["analytics", "tracking", "reports", "metrics", "dashboard", "amplitude"]
 
 [[expected_features]]
 name = "onboarding"
 description = "Guided onboarding flow for new accounts with step-by-step setup including inbox creation, team invites, and feature introduction cards"
+motivation = "PLG Activation lever: guided onboarding drives users to the aha moment. PLG Audit: 'onboarding guides users to the aha moment in < 1 session'. Feature introduction cards support progressive disclosure and feature adoption."
 file_patterns = ["onboarding", "OnboardingView", "OnboardingStep"]
 keywords = ["onboarding", "setup", "welcome", "getting started"]
 
 [[expected_features]]
 name = "notifications"
 description = "Multi-channel notification system with email notifications via mailers, browser push via web-push, mobile push via FCM, and in-app notification center"
+motivation = "PLG Retention lever: multi-channel notifications bring users back to the product. Per Engagement Loops framework: notifications are triggers in the habit loop (Trigger → Action → Reward). In-app notification center drives session engagement."
 file_patterns = ["mailers", "notification", "fcm_service", "push_notification"]
 keywords = ["notification", "email", "push", "mailer", "fcm"]
 
 [[expected_features]]
 name = "feature_gating"
 description = "Plan-based feature flags controlling access to premium features (SLA, Captain AI, custom roles, audit logs, SAML) with paywall modal for upgrade prompts"
+motivation = "PLG Monetization lever: feature gating is the core mechanism for freemium conversion. Per Feature Gating framework: controlling what's free vs paid, with contextual upgrade prompts (paywall modal), drives self-serve upgrades. PLG Audit: 'free-to-paid upgrade path is clear and in-product'."
 file_patterns = ["featurable", "featureFlags", "plan_usage_and_limits", "BasePaywallModal"]
 keywords = ["feature flag", "feature gating", "paywall", "premium", "upgrade", "plan", "limits"]
 
 [[expected_features]]
 name = "webhooks"
 description = "Outbound webhook system allowing users to configure HTTP callbacks for conversation, message, contact, and inbox events with per-webhook secrets"
+motivation = "BORDERLINE — PLG Retention lever: webhooks enable integrations with external tools, increasing product stickiness and switching costs. Supports ecosystem/platform growth strategy."
 file_patterns = ["webhook_listener", "webhooks_controller", "webhook"]
 keywords = ["webhook", "callback", "event"]
 
 [[expected_features]]
 name = "campaigns"
 description = "Outbound campaign system supporting live chat (ongoing), SMS, and WhatsApp (one-off) campaigns with audience targeting by labels, Liquid template personalization, and async job execution"
+motivation = "PLG Retention + Engagement lever: outbound campaigns drive re-engagement with end-users. Per Engagement Loops framework: proactive outreach is a re-engagement trigger that brings users back into the product loop."
 file_patterns = ["campaign", "campaigns_controller", "campaign_listener", "oneoff_sms_campaign"]
 keywords = ["campaign", "outbound", "sms", "whatsapp", "audience", "broadcast"]
 
 [[expected_features]]
 name = "audit_logging"
 description = "Enterprise audit trail tracking changes to accounts, users, teams, inboxes, webhooks, automations, and conversations via the audited gem, with admin UI and feature-flag gating"
+motivation = "PLG Monetization lever: audit logging is a classic enterprise feature gate. Per Feature Gating framework: compliance features (audit trails, access logs) are high-value items that justify premium/enterprise plan pricing and drive upgrades."
 file_patterns = ["audit_log", "audit_logs_controller", "auditlogs"]
 keywords = ["audit", "audit log", "change tracking", "compliance"]
 
 [[expected_features]]
 name = "captain_ai"
 description = "Enterprise AI assistant (Captain) with document knowledge base, scenario workflows, custom tools, copilot chat for agents, and LLM-powered response generation via RubyLLM with usage-metered credits"
+motivation = "PLG Monetization lever: AI features with usage-metered credits represent usage-based pricing (see Usage-Based Pricing framework). Feature-gated to enterprise plan, creating a high-value upgrade incentive. Credit system creates natural expansion revenue."
 file_patterns = ["captain/assistant", "captain/document", "captain/scenario", "captain/copilot", "captain/custom_tool"]
 keywords = ["ai", "captain", "assistant", "copilot", "llm", "ai agent", "knowledge base"]
 
 [[expected_features]]
 name = "sla_policies"
 description = "Enterprise SLA policy engine with configurable first-response, next-response, and resolution time thresholds, automatic evaluation via background jobs, SLA event tracking, and violation notifications"
+motivation = "PLG Monetization lever: SLA policies are feature-gated to enterprise plan. Per Feature Gating framework: operational compliance features justify premium pricing and create urgency for plan upgrades as teams scale."
 file_patterns = ["sla_policy", "applied_sla", "sla_event", "evaluate_applied_sla"]
 keywords = ["sla", "service level", "response time", "resolution time", "threshold"]
 
 [[expected_features]]
 name = "help_center"
 description = "Self-service knowledge base with portals, categorized articles (draft/published/archived), multi-locale support, full-text search, custom domains, and public-facing portal API"
+motivation = "PLG Activation + Retention lever: self-service knowledge base reduces support friction and supports the self-serve motion. Per Self-Serve Motion framework: self-serve support is critical to removing 'contact sales/support' gates. Also supports SEO-driven acquisition."
 file_patterns = ["portal", "article", "portals_controller", "articles_controller", "helpcenter"]
 keywords = ["help center", "knowledge base", "portal", "article", "self-service", "documentation"]
 
 [[expected_features]]
-name = "automation_rules"
-description = "Event-driven automation engine with configurable triggers (conversation created/updated/resolved, message created), condition matching, and actions (assign agent/team, send message, add label, change status, send webhook, add SLA)"
-file_patterns = ["automation_rule", "automation_rules_controller", "automation_rule_listener", "action_service"]
-keywords = ["automation", "rule", "trigger", "workflow", "condition", "action"]
-
-[[expected_features]]
-name = "canned_responses_and_macros"
-description = "Canned responses for quick-reply text snippets keyed by short codes, plus macros for multi-step saved action sequences (send message, assign agent, add label, mute, change status, send webhook) with personal and global visibility"
-file_patterns = ["canned_response", "macro", "macros_controller", "macros/execution_service"]
-keywords = ["canned response", "macro", "quick reply", "shortcut", "template", "saved action"]
-
-[[expected_features]]
 name = "integrations"
 description = "Integrations framework with an app registry and installable hooks for third-party services including Slack, Linear, Notion, Shopify, and Dyte, with OAuth flows and webhook-based event sync"
+motivation = "PLG Retention lever: integrations increase product stickiness by embedding the product into the user's workflow. Per Growth Loops framework: integrations create ecosystem network effects — each integration raises switching costs and deepens retention."
 file_patterns = ["integrations/app", "integrations/hook", "apps_controller", "hooks_controller", "slack_controller", "linear_controller"]
 keywords = ["integration", "app", "hook", "slack", "linear", "notion", "shopify", "marketplace"]
 
 [[expected_features]]
-name = "contact_management"
-description = "Contact CRM with CRUD, filtering, labels, notes, bulk actions, CSV import/export, and enterprise Company model with domain association, Clearbit enrichment, and CRM v2 feature flag"
-file_patterns = ["contact.rb", "contacts_controller", "contacts/filter_service", "data_import", "contacts_export_job", "company.rb"]
-keywords = ["contact", "crm", "company", "import", "export", "filter", "enrichment"]
-
-[[expected_features]]
-name = "agent_bots"
-description = "Webhook-driven chatbot system with agent bots assignable to inboxes, bot event listener for automatic responses, and platform API for system-wide bot management (distinct from Captain AI)"
-file_patterns = ["agent_bot", "agent_bot_inbox", "agent_bot_listener", "agent_bots_controller"]
-keywords = ["bot", "chatbot", "agent bot", "automated response", "webhook bot"]
-
-[[expected_features]]
 name = "custom_branding"
 description = "White-labeling system with configurable installation name, logos, brand URLs, widget branding, terms/privacy links, manifest display toggle, and enterprise custom domain support for Help Center portals via Cloudflare"
+motivation = "PLG Monetization lever: white-labeling is a premium/enterprise feature gate. Per Feature Gating framework: branding removal and custom domains are high-value items that justify enterprise pricing. Also enables viral distribution when widget displays the product brand on free tiers."
 file_patterns = ["installation_config", "useBranding", "custom_domains_controller", "cloudflare"]
 keywords = ["branding", "white label", "logo", "custom domain", "installation name"]
 
 [[expected_features]]
-name = "rate_limiting"
-description = "Rack::Attack-based API rate limiting with per-endpoint throttles for auth endpoints, widget API, contact search, reports, and conversation meta, configurable via environment variables"
-file_patterns = ["rack_attack"]
-keywords = ["rate limit", "throttle", "rack attack", "api limit"]
-
-[[expected_features]]
 name = "platform_api"
 description = "Platform API for programmatic multi-tenant management including account creation, user provisioning, account-user associations, and system-wide agent bot management with token-based authentication"
+motivation = "PLG Acquisition + Ecosystem lever: platform API enables third-party developers and partners to build on top of the product, creating ecosystem growth. Per Growth Loops framework: platform/ecosystem loops create compounding growth through third-party distribution."
 file_patterns = ["platform/api", "platform_app", "platform_app_permissible"]
 keywords = ["platform api", "multi-tenant", "account provisioning", "platform app"]
-
-[[expected_features]]
-name = "csat_surveys"
-description = "Customer satisfaction survey system with configurable 1-5 ratings (emoji/star display), feedback messages, conditional sending rules based on labels, WhatsApp/Twilio template integration, public survey submission API, CSV export, and dedicated CSAT reporting dashboard"
-file_patterns = ["csat_survey_response", "csat_survey_controller", "csat_survey_service", "CustomerSatisfaction"]
-keywords = ["csat", "customer satisfaction", "survey", "rating", "feedback"]
-
-[[expected_features]]
-name = "custom_attributes"
-description = "User-defined custom fields for contacts and conversations with multiple data types (text, number, currency, percent, link, date, list, checkbox), CRUD management UI, sidebar display in conversation and contact views, and pre-chat form integration"
-file_patterns = ["custom_attribute_definition", "custom_attribute", "AddAttribute", "ContactCustomAttributes"]
-keywords = ["custom attribute", "custom field", "attribute definition", "metadata"]
-
-[[expected_features]]
-name = "labels"
-description = "Tagging system for conversations and contacts with color-coded labels, sidebar visibility toggle, dedicated CRUD API, conversation/contact/widget-level label assignment, and integration with automation rules, campaign targeting, and CSAT survey rules"
-file_patterns = ["label.rb", "labels_controller", "LabelDropdown", "conversationLabels", "contactLabels"]
-keywords = ["label", "tag", "categorization", "organization"]
-
-[[expected_features]]
-name = "assignment_policies"
-description = "Configurable conversation routing with round-robin assignment, fair distribution limits and time windows, conversation priority strategies (earliest created, longest waiting), inbox-level policy binding, and feature-flagged advanced assignment tier"
-file_patterns = ["assignment_policy", "assignment_policies_controller", "auto_assignment", "AgentAssignmentEditPage"]
-keywords = ["assignment", "routing", "round robin", "fair distribution", "capacity", "auto assign"]
 
 # --- Notable Files ---
 notable_files = [
@@ -214,40 +179,12 @@ notable_files = [
     "app/models/article.rb",
     "app/controllers/api/v1/accounts/portals_controller.rb",
     "app/controllers/api/v1/accounts/articles_controller.rb",
-    "app/models/automation_rule.rb",
-    "app/controllers/api/v1/accounts/automation_rules_controller.rb",
-    "app/listeners/automation_rule_listener.rb",
-    "app/services/automation_rules/action_service.rb",
-    "app/models/canned_response.rb",
-    "app/controllers/api/v1/accounts/canned_responses_controller.rb",
-    "app/models/macro.rb",
-    "app/controllers/api/v1/accounts/macros_controller.rb",
-    "app/services/macros/execution_service.rb",
     "app/models/integrations/app.rb",
     "app/models/integrations/hook.rb",
     "app/controllers/api/v1/accounts/integrations/apps_controller.rb",
     "app/controllers/api/v1/accounts/integrations/hooks_controller.rb",
-    "app/models/contact.rb",
-    "app/controllers/api/v1/accounts/contacts_controller.rb",
-    "app/services/contacts/filter_service.rb",
-    "app/models/data_import.rb",
-    "app/jobs/account/contacts_export_job.rb",
-    "enterprise/app/models/company.rb",
-    "app/models/agent_bot.rb",
-    "app/controllers/api/v1/accounts/agent_bots_controller.rb",
-    "app/listeners/agent_bot_listener.rb",
     "config/installation_config.yml",
     "enterprise/app/controllers/custom_domains_controller.rb",
-    "config/initializers/rack_attack.rb",
     "app/controllers/platform/api/v1/accounts_controller.rb",
     "app/controllers/platform/api/v1/users_controller.rb",
-    "app/models/csat_survey_response.rb",
-    "app/controllers/api/v1/accounts/csat_survey_responses_controller.rb",
-    "app/services/csat_survey_service.rb",
-    "app/models/custom_attribute_definition.rb",
-    "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb",
-    "app/models/label.rb",
-    "app/controllers/api/v1/accounts/labels_controller.rb",
-    "app/models/assignment_policy.rb",
-    "app/controllers/api/v1/accounts/assignment_policies_controller.rb",
 ]

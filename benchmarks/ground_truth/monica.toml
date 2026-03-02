@@ -18,72 +18,72 @@ acceptable_alternatives = ["CRM", "Productivity", "Lifestyle"]
 expected_tags = ["B2C", "Open Source", "Self-Hosted"]
 
 # --- Expected Features ---
+# Only features relevant to product-led growth (PLG).
+# Each feature includes a `motivation` field explaining its PLG relevance,
+# referencing PLG frameworks (Motions × Levers, PLG Audit Checklist, etc.).
 
 [[expected_features]]
 name = "authentication"
 description = "Full login/signup flow with email/password, OAuth social login (GitHub, Google, Facebook, LinkedIn, Microsoft Azure, Keycloak, SAML2, Kanidm), WebAuthn/passkeys, two-factor authentication, and email verification"
+motivation = "PLG Acquisition lever: extensive OAuth/social login options reduce signup friction. PLG Audit: 'signup requires fewer than 5 form fields'. WebAuthn/passkeys represent modern passwordless auth that further lowers barriers. SAML2 supports enterprise adoption."
 file_patterns = ["Auth/", "Fortify", "Socialite", "webauthn", "saml2", "kanidm"]
 keywords = ["authentication", "login", "signup", "oauth", "social login", "2fa", "two-factor", "webauthn", "passkey", "saml"]
 
 [[expected_features]]
 name = "team-collaboration"
 description = "Multi-user vault system with role-based access control (viewer, editor, manager), user invitation via email, and shared vault access management"
+motivation = "PLG Acquisition + Retention lever: invitation system creates a viral loop (users invite family/friends). Shared vaults drive collaborative usage which increases stickiness. Roles support seat-based expansion."
 file_patterns = ["ManageUsers", "InviteUser", "VaultSettings", "VaultAccess", "VaultPolicy"]
 keywords = ["invitation", "invite", "team", "collaboration", "vault", "access control", "role", "permission", "sharing"]
 
 [[expected_features]]
 name = "notifications"
 description = "Multi-channel notification system with email and Telegram support, user-configurable notification channels with verification, and scheduled contact reminders"
+motivation = "PLG Retention lever: notifications drive recurring engagement by bringing users back to the product. Per Engagement Loops framework: triggers (reminders, alerts) are the first step in the habit loop (Trigger → Action → Reward)."
 file_patterns = ["Notification", "Mail/", "ManageNotificationChannels", "ReminderTriggered"]
 keywords = ["notification", "email", "telegram", "reminder", "alert", "channel"]
 
 [[expected_features]]
 name = "onboarding"
 description = "Account setup job that provisions default templates, modules, and vault configuration for new users"
+motivation = "PLG Activation lever: automated setup with sensible defaults reduces time-to-value. PLG Audit: 'setup friction is minimized (templates, defaults, sample data)'. Provisioning templates accelerates the user's path to the aha moment."
 file_patterns = ["SetupAccount", "CreateAccount", "CreateNewUser"]
 keywords = ["onboarding", "setup", "account creation", "welcome"]
 
 [[expected_features]]
 name = "api-tokens"
 description = "Jetstream/Sanctum personal API token management with configurable read/write permissions for programmatic access to vaults and contacts"
+motivation = "PLG Retention + Ecosystem lever: API access enables third-party integrations and automations that increase product stickiness. Developer platform plays support ecosystem growth and create switching costs."
 file_patterns = ["JetstreamServiceProvider", "ApiTokenManager", "config/jetstream.php"]
 keywords = ["api", "token", "personal access token", "api key", "permissions"]
 
 [[expected_features]]
 name = "data-import-export"
 description = "CardDAV/CalDAV-based contact and calendar synchronization with vCard import/export and vCalendar import/export"
+motivation = "PLG Acquisition lever: import reduces switching friction, lowering the barrier for new users migrating from competing products. Per Self-Serve Motion: removing friction from the adoption journey is critical. Export builds trust and reduces lock-in anxiety."
 file_patterns = ["Dav/", "ExportVCard", "ImportVCard", "ExportVCalendar", "ImportVCalendar"]
 keywords = ["import", "export", "vcard", "carddav", "caldav", "sync", "vcalendar"]
 
 [[expected_features]]
 name = "account-cancellation"
 description = "Self-service account deletion flow allowing users to permanently cancel and remove their account after password verification"
+motivation = "PLG Self-Serve Motion: frictionless self-service includes the ability to leave. Per Self-Serve Motion framework: removing 'contact sales' gates applies to cancellation too. Builds trust and reduces adoption hesitation."
 file_patterns = ["CancelAccount"]
 keywords = ["cancel", "delete account", "account deletion", "remove account"]
 
 [[expected_features]]
-name = "user-preferences"
-description = "Comprehensive user preferences system for personalizing date format, distance format, locale/language, timezone, name display order, number format, maps preference, and help visibility"
-file_patterns = ["ManageUserPreferences", "StoreLocale", "StoreTimezone", "PreferencesController"]
-keywords = ["preferences", "settings", "personalization", "locale", "timezone", "date format", "distance format"]
-
-[[expected_features]]
 name = "localization"
 description = "Multi-language internationalization support with 29+ languages, locale selection, and Laravel Localizer integration"
+motivation = "BORDERLINE — PLG Acquisition lever: i18n expands the addressable market by enabling self-serve adoption across language barriers. Per PLG Readiness: 'market size' is a key factor — localization multiplies the reachable user base."
 file_patterns = ["lang/", "StoreLocale", "localizer"]
 keywords = ["localization", "i18n", "language", "translation", "locale", "multilingual"]
 
 [[expected_features]]
 name = "storage-management"
 description = "Account storage limit system with configurable default limits and usage tracking for uploaded files"
+motivation = "PLG Monetization lever: usage limits are a classic feature-gating mechanism. Per Feature Gating framework: usage-based limits create natural upgrade triggers when users hit their ceiling."
 file_patterns = ["ManageStorage", "AccountStorageController", "StorageIndexViewHelper"]
 keywords = ["storage", "limit", "upload", "quota", "file size"]
-
-[[expected_features]]
-name = "currency-management"
-description = "Multi-currency support with per-account currency selection, toggle functionality, and enable/disable all currencies"
-file_patterns = ["ManageCurrencies", "ToggleCurrency", "CurrencyController", "PersonalizeCurrency"]
-keywords = ["currency", "money", "currencies", "personalization"]
 
 # --- Notable Files ---
 notable_files = [
@@ -117,13 +117,6 @@ notable_files = [
     "app/Providers/DAVServiceProvider.php",
     "app/Domains/Settings/CancelAccount/Services/CancelAccount.php",
     "app/Domains/Settings/CancelAccount/Web/Controllers/CancelAccountController.php",
-    "app/Domains/Settings/ManageUserPreferences/Services/StoreLocale.php",
-    "app/Domains/Settings/ManageUserPreferences/Services/StoreTimezone.php",
-    "app/Domains/Settings/ManageUserPreferences/Web/Controllers/PreferencesController.php",
     "app/Domains/Settings/ManageStorage/Web/Controllers/AccountStorageController.php",
     "app/Domains/Settings/ManageStorage/Web/ViewHelpers/StorageIndexViewHelper.php",
-    "app/Domains/Settings/ManageCurrencies/Services/ToggleCurrency.php",
-    "app/Domains/Settings/ManageCurrencies/Web/Controllers/CurrencyController.php",
-    "app/Domains/Vault/ManageAddresses/Services/GetGPSCoordinate.php",
-    "app/Helpers/MapHelper.php",
 ]
