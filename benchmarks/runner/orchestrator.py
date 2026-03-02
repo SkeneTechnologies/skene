@@ -53,6 +53,7 @@ def run_benchmark_matrix(
     config: BenchmarkConfig,
     api_keys: dict[str, str],
     output_base_dir: Path,
+    resume: bool = False,
 ) -> list[PipelineResult]:
     """Run the full benchmark matrix: codebase x model x run_number.
 
@@ -85,6 +86,12 @@ def run_benchmark_matrix(
         logger.info(f"[{i}/{total}] {codebase.name} / {model_cfg.name} / run-{run_num}")
 
         output_dir = output_base_dir / codebase.name / model_cfg.name / f"run-{run_num}"
+
+        if resume and (output_dir / "metadata.json").exists():
+            logger.info("  SKIP (already exists)")
+            result = _load_single_result(output_dir, codebase.name, model_cfg.name, run_num)
+            results.append(result)
+            continue
 
         result = run_pipeline(
             codebase_path=codebase.path,

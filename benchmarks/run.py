@@ -5,6 +5,7 @@ Usage:
     uv run benchmarks/run.py --config benchmarks/config.toml
     uv run benchmarks/run.py --skip-judge
     uv run benchmarks/run.py --evaluate-only results/2025-02-16T14-30-00
+    uv run benchmarks/run.py --resume results/2025-02-16T14-30-00
 """
 
 import os
@@ -43,6 +44,11 @@ def main(
         "--evaluate-only",
         help="Re-evaluate existing results directory (skip pipeline, re-run checks and report)",
     ),
+    resume: Path | None = typer.Option(
+        None,
+        "--resume",
+        help="Resume a previous run: re-run only missing benchmarks, skip existing ones",
+    ),
 ) -> None:
     """Run the skene-growth benchmark suite."""
     from benchmarks.evaluation.llm_judge import evaluate_with_llm_judge
@@ -54,6 +60,10 @@ def main(
         load_results_from_directory,
         run_benchmark_matrix,
     )
+
+    if evaluate_only and resume:
+        logger.error("--evaluate-only and --resume are mutually exclusive")
+        raise typer.Exit(1)
 
     if evaluate_only:
         # Re-evaluate existing results without re-running the pipeline
@@ -78,6 +88,41 @@ def main(
                 logger.info(f"Loaded config from {config} (for ground truth)")
             except Exception as e:
                 logger.warning(f"Could not load config for ground truth: {e}")
+    elif resume:
+        # Resume a previous run: re-run only missing benchmarks
+        results_dir = resume
+        logger.info(f"Resuming previous run from {results_dir}")
+
+        if not results_dir.exists():
+            logger.error(f"Results directory not found: {results_dir}")
+            raise typer.Exit(1)
+
+        # Load config
+        logger.info(f"Loading config from {config}")
+        try:
+            bench_config = load_benchmark_config(config)
+        except Exception as e:
+            logger.error(f"Failed to load config: {e}")
+            raise typer.Exit(1)
+
+        logger.info(
+            f"Config: {len(bench_config.codebases)} codebase(s), "
+            f"{len(bench_config.models)} model(s), "
+            f"{bench_config.settings.runs_per_combo} run(s) per combo"
+        )
+
+        # Resolve API keys
+        try:
+            api_keys = resolve_api_keys(bench_config)
+        except ValueError as e:
+            logger.error(str(e))
+            raise typer.Exit(1)
+
+        logger.info(f"Resolved {len(api_keys)} API key(s)")
+
+        # Run benchmark matrix with resume=True
+        results = run_benchmark_matrix(bench_config, api_keys, results_dir, resume=True)
+
     else:
         # Full pipeline run
         # Load config
