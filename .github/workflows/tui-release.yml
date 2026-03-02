@@ -77,11 +77,18 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#tui-}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=${GITHUB_REF_NAME#tui-}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_NAME" =~ (rc|alpha|beta|a[0-9]|b[0-9]) ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "TUI ${{ steps.version.outputs.version }}"
+          prerelease: ${{ steps.version.outputs.prerelease }}
           generate_release_notes: true
           files: artifacts/*
