@@ -1,6 +1,6 @@
 [project]
 name = "skene-growth"
-version = "0.2.1b2"
+version = "0.2.1b1"
 description = "PLG analysis toolkit for codebases - analyze code, detect growth opportunities, generate documentation"
 readme = "README.md"
 license = { text = "MIT" }
