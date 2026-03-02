@@ -15,18 +15,22 @@ from benchmarks.evaluation.models import FactualCheck, FactualEvaluation
 from benchmarks.runner.models import PipelineResult
 
 
-def _normalize(value: str) -> str:
+def _normalize(value: str | None) -> str:
     """Normalize a string for fuzzy comparison (lowercase, strip whitespace)."""
+    if value is None:
+        return ""
     return value.strip().lower()
 
 
-def _matches(expected: str, actual: str) -> bool:
+def _matches(expected: str | None, actual: str | None) -> bool:
     """Check if an actual value matches the expected value (case-insensitive, substring-aware).
 
     Handles common variations like "Next.js" vs "NextJS", "PostgreSQL" vs "Postgres".
     """
     e = _normalize(expected)
     a = _normalize(actual)
+    if not e or not a:
+        return False
     # Exact match
     if e == a:
         return True
@@ -134,7 +138,7 @@ def _check_industry(manifest_data: dict, ground_truth: GroundTruth) -> list[Fact
         return checks
 
     manifest_industry = manifest_data.get("industry") or {}
-    actual_primary = manifest_industry.get("primary", "")
+    actual_primary = manifest_industry.get("primary") or ""
 
     # Check primary industry
     acceptable = [gt_industry.primary] + gt_industry.acceptable_alternatives
@@ -149,7 +153,7 @@ def _check_industry(manifest_data: dict, ground_truth: GroundTruth) -> list[Fact
     ))
 
     # Check expected tags in secondary
-    actual_secondary = manifest_industry.get("secondary", [])
+    actual_secondary = manifest_industry.get("secondary") or []
     for tag in gt_industry.expected_tags:
         found = any(_matches(tag, s) for s in actual_secondary)
         checks.append(FactualCheck(
