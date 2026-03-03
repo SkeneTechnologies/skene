@@ -1,9 +1,7 @@
 # skene-growth
 
 [![PyPI version](https://img.shields.io/pypi/v/skene-growth)](https://pypi.org/project/skene-growth/)
-[![Python](https://img.shields.io/pypi/pyversions/skene-growth)](https://pypi.org/project/skene-growth/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
 [![PyPI downloads](https://img.shields.io/pypi/dm/skene-growth)](https://pypi.org/project/skene-growth/)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/SkeneTechnologies/skene-growth)](https://github.com/SkeneTechnologies/skene-growth/commits)
 [![Website](https://img.shields.io/badge/Website-skene.ai-blue)](https://www.skene.ai)
