@@ -62,7 +62,7 @@ export OLLAMA_BASE_URL="http://localhost:8080/v1"
 
 ### "No API key" or fallback to sample report
 
-If `analyze` runs without an API key, it falls back to showing a sample preview (equivalent to `audit`). Set your key using one of:
+If `analyze` runs without an API key, it falls back to showing a sample preview. Set your key using one of:
 
 ```bash
 # CLI flag

@@ -1,6 +1,6 @@
 # Quickstart
 
-Get from zero to a full growth plan in five commands.
+Get from zero to a full growth plan in six commands.
 
 > **Prerequisites**
 >
@@ -8,7 +8,7 @@ Get from zero to a full growth plan in five commands.
 > - [uv](https://docs.astral.sh/uv/) installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 > - An API key from OpenAI, Google Gemini, or Anthropic -- OR a local LLM running via [LM Studio](https://lmstudio.ai/) or [Ollama](https://ollama.com/)
 
-## The 5-step workflow
+## The 6-step workflow
 
 ### Step 1: Create a config file
 
@@ -69,10 +69,10 @@ The plan is produced by a "Council of Growth Engineers" analysis -- multiple spe
 - A technical execution section with the recommended "next build"
 - An implementation todo list
 
-For onboarding-focused analysis instead of general growth, add the `--onboarding` flag:
+For activation-focused analysis instead of general growth, add the `--activation` flag:
 
 ```bash
-uvx skene-growth plan --onboarding
+uvx skene-growth plan --activation
 ```
 
 ### Step 5: Build an implementation prompt
@@ -98,9 +98,25 @@ The prompt is also saved to a file in `./skene-context/` for later use.
 > uvx skene-growth build --target file   # Just save the prompt, no interaction
 > ```
 
+### Step 6: Check implementation status
+
+After implementing the growth loop (using Cursor, Claude, or manually), verify that all requirements are met:
+
+```bash
+uvx skene-growth status
+```
+
+This loads the growth loop definitions from `./skene-context/growth-loops/` and uses AST parsing to verify that required files, functions, and patterns are present in your codebase. Each loop is marked **COMPLETE** or **INCOMPLETE** with details on what's missing.
+
+For LLM-powered semantic matching to find alternative implementations:
+
+```bash
+uvx skene-growth status --find-alternatives --api-key "your-key"
+```
+
 ## What you get
 
-After running all five steps, your `./skene-context/` directory contains:
+After running all six steps, your `./skene-context/` directory contains:
 
 | File | Description |
 |---|---|
@@ -108,6 +124,7 @@ After running all five steps, your `./skene-context/` directory contains:
 | `growth-template.json` | Business-type-aware growth template with prioritized recommendations |
 | `growth-plan.md` | Full growth plan with executive summary, priorities, and technical execution details |
 | `implementation-prompt.md` | Ready-to-use prompt for your AI coding assistant |
+| `growth-loops/*.json` | Growth loop definitions with file/function requirements for validation |
 
 ## Alternative: Quick one-liner
 
@@ -123,20 +140,21 @@ This uses the default provider (openai) and model (gpt-4o). To use a different p
 uvx skene-growth analyze . --api-key "your-key" --provider gemini --model gemini-3-flash-preview
 ```
 
-## Alternative: Free audit (no API key)
+## Alternative: Free preview (no API key)
 
-If you want to see what skene-growth does before configuring an LLM, the `audit` command runs a local preview with no API key required:
+If you want to see what skene-growth does before configuring an LLM, simply run `analyze` without an API key:
 
 ```bash
-uvx skene-growth audit .
+uvx skene-growth analyze .
 ```
 
-This shows a sample growth analysis report demonstrating the kind of strategic insights available with full API-powered analysis. It does not require any API key or LLM configuration.
+When no API key is configured and you are not using a local provider, the command falls back to a sample growth analysis preview demonstrating the kind of strategic insights available with full API-powered analysis.
 
 ## Next steps
 
 - [Analyze command in depth](../guides/analyze.md) -- all flags, output customization, excluding folders
-- [Plan command in depth](../guides/plan.md) -- context directories, onboarding mode, custom manifest paths
+- [Plan command in depth](../guides/plan.md) -- context directories, activation mode, custom manifest paths
 - [Build command in depth](../guides/build.md) -- prompt generation, Cursor/Claude integration
+- [Status command in depth](../guides/status.md) -- growth loop validation and alternative matching
 - [Configuration reference](../guides/configuration.md) -- config files, environment variables, precedence rules
 - [LLM providers](../guides/llm-providers.md) -- setup for OpenAI, Gemini, Anthropic, LM Studio, Ollama, and generic endpoints

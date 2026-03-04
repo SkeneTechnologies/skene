@@ -31,13 +31,15 @@ Point to a directory containing both files:
 uvx skene-growth plan --context ./my-context
 ```
 
-Generate an onboarding-focused plan:
+Generate an activation-focused plan:
 
 ```bash
-uvx skene-growth plan --onboarding
+uvx skene-growth plan --activation
 ```
 
 ## Flag reference
+
+> **Note:** The `--activation` flag was previously called `--onboarding` in earlier versions.
 
 | Flag | Short | Description |
 |------|-------|-------------|
@@ -50,7 +52,7 @@ uvx skene-growth plan --onboarding
 | `--model TEXT` | `-m` | Model name (e.g., `gemini-3-flash-preview`, `claude-sonnet-4-5`) |
 | `--base-url TEXT` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. Also set via `SKENE_BASE_URL` env var or config. |
 | `--verbose` | `-v` | Enable verbose output |
-| `--onboarding` | | Generate onboarding-focused plan using Senior Onboarding Engineer perspective |
+| `--activation` | | Generate activation-focused plan using Senior Activation Engineer perspective |
 | `--prompt TEXT` | | Additional user prompt to influence the plan generation |
 | `--debug` | | Log all LLM input/output to `.skene-growth/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
@@ -81,21 +83,21 @@ The council generates a structured memo covering eight sections:
 
 The Technical Execution section is particularly important because it feeds directly into the `build` command.
 
-## Onboarding mode
+## Activation mode
 
-The `--onboarding` flag switches the system prompt from the Council of Growth Engineers to a **Senior Onboarding Engineer** perspective. This mode focuses specifically on onboarding optimization with a different philosophy:
+The `--activation` flag switches the system prompt from the Council of Growth Engineers to a **Senior Activation Engineer** perspective. This mode focuses specifically on activation optimization with a different philosophy:
 
 ```bash
-uvx skene-growth plan --onboarding
+uvx skene-growth plan --activation
 ```
 
-The onboarding engineer operates under the principle of **progressive revelation** -- treating onboarding not as a one-time event but as a continuous evolution of state. Key concepts:
+The activation engineer operates under the principle of **progressive revelation** -- treating onboarding not as a one-time event but as a continuous evolution of state. Key concepts:
 
 - **The 60-Second Rule.** The first minute determines lifetime value. If the user has not felt the impact of value within 60 seconds, the opportunity is lost.
 - **Contextual Configuration.** Configuration is friction. Collect information only at the moment of action.
 - **Data-Driven Correction.** Onboarding flows drift when the product evolves but the flow remains static.
 
-The onboarding memo follows a different structure:
+The activation memo follows a different structure:
 
 1. **Strip to the Momentum Core** -- Distinguish between "tour" (weak) and "pathway to power" (strong)
 2. **The Playbook** -- Hidden mechanics from elite onboarding at Stripe, Linear, Vercel

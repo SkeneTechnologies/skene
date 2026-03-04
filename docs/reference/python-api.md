@@ -228,6 +228,39 @@ These classes are primarily used internally by the analyzers but can be composed
 
 ```python
 from skene_growth.planner import Planner
+from skene_growth.planner.schema import GrowthPlan, TechnicalExecution, PlanSection
 ```
 
 The `Planner` class generates growth plans from manifests and templates. It is used internally by the `plan` CLI command.
+
+### GrowthPlan schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `executive_summary` | `str` | High-level summary focused on first-time activation |
+| `sections` | `list[PlanSection]` | Numbered memo sections (1-6) |
+| `technical_execution` | `TechnicalExecution` | Section 7: Technical Execution |
+| `memo` | `str` | Section 8: The closing confidential engineering memo |
+
+### TechnicalExecution fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `next_build` | `str` | What activation loop to build next |
+| `confidence` | `str` | Confidence level, e.g. `"85%"` |
+| `exact_logic` | `str` | Specific flow changes for first-action completion |
+| `data_triggers` | `str` | Events indicating first meaningful action |
+| `stack_steps` | `str` | Tools, scripts, or structural changes required |
+| `sequence` | `str` | Now / Next / Later priorities |
+
+### PlanSection fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | `str` | Section heading, e.g. `"The Next Action"` |
+| `content` | `str` | Free-form markdown content |
+
+### Helper functions
+
+- `render_plan_to_markdown(plan, project_name, generated_at)` — Render a `GrowthPlan` to the council memo markdown format
+- `parse_plan_json(response)` — Parse an LLM response (with optional code fences) into a validated `GrowthPlan`

@@ -1,6 +1,6 @@
 # CLI Reference
 
-Complete reference for every `skene-growth` command and flag (version 0.2.0).
+Complete reference for every `skene-growth` command and flag (version 0.2.1).
 
 For in-depth usage of individual commands, see the [guides](../guides/analyze.md). This page is a lookup reference.
 
@@ -43,7 +43,6 @@ skene-growth analyze [PATH] [OPTIONS]
 | `--model TEXT` | `-m` | provider default | LLM model name (e.g. `gpt-4o`, `gemini-3-flash-preview`) |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
 | `--verbose` | `-v` | `false` | Enable verbose output |
-| `--business-type TEXT` | `-b` | LLM-inferred | Business type for the growth template (e.g. `design-agency`, `b2b-saas`). If omitted, the LLM infers it from your codebase. |
 | `--product-docs` | | `false` | Also generate `product-docs.md` with user-facing feature documentation |
 | `--exclude TEXT` | `-e` | config value | Folder names to exclude from analysis. Repeatable: `--exclude tests --exclude vendor`. Merged with `exclude_folders` from config. |
 | `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
@@ -51,39 +50,11 @@ skene-growth analyze [PATH] [OPTIONS]
 
 ### Behavior notes
 
-- When no API key is provided and the provider is not local (`lmstudio`, `ollama`, `generic`), the command falls back to a sample preview (same as `audit`).
+- When no API key is provided and the provider is not local (`lmstudio`, `ollama`, `generic`), the command falls back to a sample preview.
 - Local providers (`lmstudio`, `ollama`, `generic`) do not require an API key.
 - The `generic` provider requires `--base-url`.
 
 See the [analyze guide](../guides/analyze.md) for detailed usage.
-
----
-
-## `audit`
-
-Show a sample growth analysis preview without requiring an API key.
-
-```
-skene-growth audit [PATH] [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `PATH` | `.` | Path to codebase directory |
-
-### Options
-
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--output PATH` | `-o` | Output path (not used in sample mode) |
-| `--exclude TEXT` | `-e` | Folder names to exclude (not used in sample mode) |
-
-### Behavior notes
-
-- Always shows the sample report regardless of API key status.
-- Useful for previewing the kind of insights a full analysis produces before configuring an LLM provider.
 
 ---
 
@@ -110,7 +81,7 @@ skene-growth plan [OPTIONS]
 | `--model TEXT` | `-m` | provider default | LLM model name |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
 | `--verbose` | `-v` | `false` | Enable verbose output |
-| `--onboarding` | | `false` | Generate an onboarding-focused plan using a Senior Onboarding Engineer perspective |
+| `--activation` | | `false` | Generate an activation-focused plan using a Senior Activation Engineer perspective |
 | `--prompt TEXT` | | | Additional user prompt to influence the plan generation |
 | `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
@@ -369,8 +340,8 @@ uvx skene-growth analyze . -p ollama -m llama3
 # Analyze with OpenAI-compatible endpoint
 uvx skene-growth analyze . -p generic --base-url http://localhost:8080/v1
 
-# Generate onboarding-focused plan
-uvx skene-growth plan --onboarding
+# Generate activation-focused plan
+uvx skene-growth plan --activation
 
 # Validate a manifest
 uvx skene-growth validate ./skene-context/growth-manifest.json
@@ -384,6 +355,6 @@ uvx skene-growth status
 # Check status with LLM-powered alternative matching
 uvx skene-growth status --find-alternatives --api-key "YOUR_KEY"
 
-# Quick preview (no API key)
-uvx skene-growth audit .
+# Quick preview (no API key, just run analyze without a key)
+uvx skene-growth analyze .
 ```

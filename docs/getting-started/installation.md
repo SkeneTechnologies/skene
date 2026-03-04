@@ -77,13 +77,11 @@ Using pip:
 pip install -e .
 ```
 
-To include all optional dependencies for development:
+To include all optional dependencies:
 
 ```bash
-pip install -e ".[mcp,ui,dev]"
+pip install -e ".[mcp,ui]"
 ```
-
-The `[dev]` group adds `pytest`, `pytest-asyncio`, and `ruff` for running tests and linting.
 
 ---
 
@@ -121,7 +119,7 @@ skene-growth --version
 Expected output:
 
 ```
-skene-growth 0.2.0
+skene-growth 0.2.1
 ```
 
 If you used `uvx`:

@@ -2,7 +2,7 @@
 
 > PLG (Product-Led Growth) codebase analysis toolkit. Analyzes codebases to detect growth opportunities, revenue leakage, and generates actionable growth plans.
 
-- Version: 0.2.0
+- Version: 0.2.1
 - License: MIT
 - Python: >=3.11
 - PyPI: skene-growth
@@ -12,15 +12,11 @@
 
 skene-growth analyze [PATH]
   Analyze a codebase. Generates growth-manifest.json and growth-template.json.
-  Flags: -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, -b/--business-type, --product-docs, -e/--exclude, --debug, --no-fallback
-
-skene-growth audit [PATH]
-  Free local heuristics scan. Detects 50 PLG onboarding anti-patterns. No API key required.
-  Flags: -o/--output, -e/--exclude
+  Flags: -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --product-docs, -e/--exclude, --debug, --no-fallback
 
 skene-growth plan
   Generate a growth plan from manifest and template using Council of Growth Engineers.
-  Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --onboarding, --prompt, --debug, --no-fallback
+  Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --activation, --prompt, --debug, --no-fallback
 
 skene-growth build
   Generate implementation prompt from growth plan. Send to Cursor, Claude, or display in terminal.

@@ -41,7 +41,6 @@ If no API key is configured and you are not using a local provider, the command 
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` (aliases: `openai-compatible`, `openai_compatible`) |
 | `--model TEXT` | `-m` | Model name (e.g., `gpt-4o`, `gemini-3-flash-preview`, `claude-sonnet-4-5`) |
 | `--base-url TEXT` | | Base URL for OpenAI-compatible endpoint (required for `generic` provider; also `SKENE_BASE_URL` env var) |
-| `--business-type TEXT` | `-b` | Business type for growth template (e.g., `design-agency`, `b2b-saas`). LLM infers if not provided. |
 | `--product-docs` | | Generate `product-docs.md` with user-facing feature documentation (creates v2.0 manifest) |
 | `--exclude TEXT` | `-e` | Folder names to exclude from analysis (repeatable). Also configurable in `.skene-growth.config` as `exclude_folders`. |
 | `--verbose` | `-v` | Enable verbose output |
@@ -75,25 +74,6 @@ A custom PLG growth template generated alongside the manifest. Contains lifecycl
 ### product-docs.md (only with --product-docs)
 
 A Markdown file containing user-facing product documentation generated from your codebase. See the [Product docs mode](#product-docs-mode) section below.
-
-## Business type
-
-The `--business-type` flag tells the LLM what kind of business your project serves, which shapes the growth template it generates. Examples:
-
-```bash
-# SaaS product
-uvx skene-growth analyze . -b b2b-saas
-
-# Design or creative agency
-uvx skene-growth analyze . -b design-agency
-
-# E-commerce platform
-uvx skene-growth analyze . -b ecommerce
-```
-
-If you omit `--business-type`, the LLM infers it from your codebase. In most cases, the inference is accurate enough. Use the flag when the LLM's guess is wrong or when you want to see growth recommendations tailored to a specific business model.
-
-The business type affects the `growth-template.json` output -- different business types produce different lifecycle stages, growth loops, and strategic recommendations.
 
 ## Product docs mode
 
