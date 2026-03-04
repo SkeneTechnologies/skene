@@ -160,7 +160,8 @@ Return a complete growth manifest as JSON with:
 - current_growth_features: From the growth features analysis
 - revenue_leakage: From the revenue leakage analysis
 - industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
-- growth_opportunities: Your identified opportunities with feature_name, description, priority (high/medium/low), growth_pillars (0-3 of "onboarding", "engagement", "retention")
+- growth_opportunities: Your identified opportunities with feature_name, description, priority
+  (high/medium/low), growth_pillars (0-3 of "onboarding", "engagement", "retention")
 """
     return base_prompt
 
@@ -340,7 +341,8 @@ Return a complete manifest as JSON with:
 - industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
 - features: From the features documentation
 - current_growth_features: From the growth features analysis
-- growth_opportunities: Your identified opportunities with feature_name, description, priority, growth_pillars (0-3 of onboarding/engagement/retention)
+- growth_opportunities: Your identified opportunities with feature_name, description, priority,
+  growth_pillars (0-3 of onboarding/engagement/retention)
 """
     return base_prompt
 

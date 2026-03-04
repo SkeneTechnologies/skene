@@ -1,14 +1,9 @@
 """
-Deploy utilities for building Supabase migrations from growth loop telemetry.
+Push utilities for building Supabase migrations from growth loop telemetry.
 
 Builds migration files that create:
-- Base schema (event_log, growth_loops, etc.) via init
+- Base schema (event_log, failed_events, enrichment_map) via init
 - Allowlisted triggers that INSERT into event_log (Shadow Mirror)
-- Edge function proxy (forwards to centralized cloud API with HMAC signature)
-
-Triggers do not call pg_net. Events land in event_log; the processor (Phase 3)
-reads from there, enriches, evaluates condition_config, then calls the edge function
-proxy which forwards to the centralized cloud API for execution.
 """
 
 import re
@@ -18,15 +13,12 @@ from typing import Any
 
 from rich.console import Console
 
-from skene_growth.growth_loops.processor_sql import PROCESSOR_SQL
 from skene_growth.growth_loops.schema_sql import BASE_SCHEMA_SQL
 
 console = Console()
 
 BASE_SCHEMA_MIGRATION_PREFIX = "20260201000000"
 BASE_SCHEMA_MIGRATION_NAME = "skene_growth_schema"
-PROCESSOR_MIGRATION_PREFIX = "20260202000000"
-PROCESSOR_MIGRATION_NAME = "skene_growth_processor"
 
 
 def _trigger_name(table: str, operation: str, loop_id: str) -> str:
@@ -119,17 +111,6 @@ def ensure_base_schema_migration(output_dir: Path) -> Path | None:
     return path
 
 
-def ensure_processor_migration(output_dir: Path) -> Path | None:
-    """Write processor migration if it does not exist. Idempotent."""
-    migrations_dir = output_dir / "supabase" / "migrations"
-    migrations_dir.mkdir(parents=True, exist_ok=True)
-    if list(migrations_dir.glob(f"*{PROCESSOR_MIGRATION_NAME}*.sql")):
-        return None
-    path = migrations_dir / f"{PROCESSOR_MIGRATION_PREFIX}_{PROCESSOR_MIGRATION_NAME}.sql"
-    path.write_text(PROCESSOR_SQL, encoding="utf-8")
-    return path
-
-
 def extract_supabase_telemetry(loop_def: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Extract telemetry items with type 'supabase' from a loop definition.
@@ -199,152 +180,7 @@ def build_migration_sql(
     migration += "\n\n-- Triggers\n"
     migration += "\n".join(trg_parts)
 
-    # Seed growth_loops from loop definitions (processor reads this)
-    migration += "\n\n-- Seed growth_loops (upsert from loop definitions)\n"
-    seen_loops: set[tuple[str, str]] = set()
-    for loop_def in loops:
-        loop_id = loop_def.get("loop_id", "growth_loop")
-        for t in extract_supabase_telemetry(loop_def):
-            table = t.get("table")
-            op = (t.get("operation") or "INSERT").lower()
-            if not table:
-                continue
-            trigger_event = f"{table.lower()}.{op}"
-            loop_key = f"{loop_id}_{table.lower()}_{op}"
-            key = (loop_key, trigger_event)
-            if key in seen_loops:
-                continue
-            seen_loops.add(key)
-            safe_key = loop_key.replace("'", "''")
-            safe_event = trigger_event.replace("'", "''")
-            migration += f"""
-INSERT INTO skene_growth.growth_loops (loop_key, trigger_event, condition_config, action_type, action_config, recipient_path, enabled)
-VALUES ('{safe_key}', '{safe_event}', '{{}}', 'email', '{{}}', 'email', true)
-ON CONFLICT (loop_key) DO UPDATE SET trigger_event = EXCLUDED.trigger_event, enabled = EXCLUDED.enabled;
-"""
-
-    migration += "\n"
-
     return migration.strip()
-
-
-def build_edge_function_index_ts(loops: list[dict[str, Any]]) -> str:
-    """
-    Build the skene-growth-process edge function.
-
-    Acts as a secure proxy that forwards processor payloads to the centralized
-    Skene Growth cloud API. Signs requests with HMAC for verification.
-    Keeps logic centralized for instant updates without redeploying edge functions.
-    """
-    return '''// Skene Growth: Secure proxy to centralized cloud API (called by processor via pg_net)
-
-import { HmacSha256 } from "https://deno.land/std@0.224.0/crypto/crypto.ts";
-import { encodeHex } from "https://deno.land/std@0.224.0/encoding/hex.ts";
-
-interface ProcessorPayload {
-  source: string;
-  event_log_id: number;
-  loop_key: string;
-  idempotency_key: string;
-  recipient: string;
-  enriched_payload: Record<string, unknown>;
-  action_type: string;
-  action_config: Record<string, unknown>;
-}
-
-async function signPayload(payload: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const key = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
-  return encodeHex(new Uint8Array(signature));
-}
-
-Deno.serve(async (req) => {
-  try {
-    const body: ProcessorPayload = await req.json();
-    
-    if (body.source !== "processor") {
-      return new Response(JSON.stringify({ error: "Expected source=processor" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    if (!body.recipient) {
-      return new Response(JSON.stringify({ error: "Missing recipient" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    // Get configuration from environment
-    const SKENE_PROXY_SECRET = Deno.env.get("SKENE_PROXY_SECRET");
-    const SKENE_CLOUD_ENDPOINT = Deno.env.get("SKENE_CLOUD_ENDPOINT") || "https://skene.ai/api/v1/cloud";
-    const SUPABASE_PROJECT_REF = Deno.env.get("SUPABASE_PROJECT_REF") || "unknown";
-
-    if (!SKENE_PROXY_SECRET) {
-      console.error("[skene] SKENE_PROXY_SECRET not set. Deployment service must configure this secret.");
-      return new Response(JSON.stringify({ error: "Configuration error" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 500,
-      });
-    }
-
-    // Sign the payload for verification by cloud API
-    const timestamp = Date.now().toString();
-    const payloadString = JSON.stringify(body);
-    const signaturePayload = `${timestamp}.${payloadString}`;
-    const signature = await signPayload(signaturePayload, SKENE_PROXY_SECRET);
-
-    // Forward to centralized cloud API
-    const cloudResponse = await fetch(SKENE_CLOUD_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Skene-Signature": signature,
-        "X-Skene-Timestamp": timestamp,
-        "X-Skene-Project-Ref": SUPABASE_PROJECT_REF,
-      },
-      body: payloadString,
-    });
-
-    if (!cloudResponse.ok) {
-      const errorText = await cloudResponse.text();
-      console.error("[skene] Cloud API error:", cloudResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ 
-          error: "Cloud execution failed", 
-          status: cloudResponse.status 
-        }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: cloudResponse.status,
-        }
-      );
-    }
-
-    const result = await cloudResponse.json();
-    return new Response(JSON.stringify(result), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-
-  } catch (err) {
-    console.error("[skene] Proxy error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
-  }
-});
-'''
 
 
 def write_migration(
@@ -363,15 +199,6 @@ def write_migration(
     return path
 
 
-def write_edge_function(index_ts: str, output_dir: Path) -> Path:
-    """Write edge function to supabase/functions/skene-growth-process/."""
-    fn_dir = output_dir / "supabase" / "functions" / "skene-growth-process"
-    fn_dir.mkdir(parents=True, exist_ok=True)
-    path = fn_dir / "index.ts"
-    path.write_text(index_ts, encoding="utf-8")
-    return path
-
-
 def _trigger_events_from_loops(loops: list[dict[str, Any]]) -> list[str]:
     """Extract trigger events (table.operation) from loop telemetry."""
     events: list[str] = []
@@ -384,7 +211,7 @@ def _trigger_events_from_loops(loops: list[dict[str, Any]]) -> list[str]:
     return list(dict.fromkeys(events))
 
 
-def push_deploy_to_upstream(
+def push_to_upstream(
     project_root: Path,
     upstream_url: str,
     token: str,
@@ -392,7 +219,7 @@ def push_deploy_to_upstream(
     context: Path | None = None,
 ) -> dict[str, Any] | None:
     """
-    Push deploy artifacts to upstream (migrations, edge function, growth-loops folder).
+    Push package (growth loops + telemetry.sql) to upstream.
     Returns response dict on success, None on failure.
     """
     from skene_growth.growth_loops.upstream import push_to_upstream
@@ -409,27 +236,21 @@ def push_deploy_to_upstream(
     )
 
 
-def deploy_loops_to_supabase(
+def build_loops_to_supabase(
     loops: list[dict[str, Any]],
     output_dir: Path,
     *,
     supabase_url_placeholder: str = "https://YOUR_PROJECT.supabase.co",
-) -> tuple[Path, Path]:
+) -> Path:
     """
-    Build migration and edge function for the given growth loops.
+    Build migration for the given growth loops.
 
-    Ensures base schema migration exists (event_log, growth_loops, etc.) before
-    writing trigger migration. Returns tuple of (migration_path, edge_function_path).
+    Ensures base schema migration exists (event_log, failed_events, enrichment_map)
+    before writing trigger migration. Returns migration_path.
     """
     ensure_base_schema_migration(output_dir)
-    ensure_processor_migration(output_dir)
     migration_sql = build_migration_sql(
         loops,
         supabase_url_placeholder=supabase_url_placeholder,
     )
-    edge_ts = build_edge_function_index_ts(loops)
-
-    migration_path = write_migration(migration_sql, output_dir)
-    edge_path = write_edge_function(edge_ts, output_dir)
-
-    return migration_path, edge_path
+    return write_migration(migration_sql, output_dir)

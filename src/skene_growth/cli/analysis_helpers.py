@@ -202,7 +202,7 @@ async def run_features_analysis(
 
 def show_features_summary(data: dict) -> None:
     """Display a summary of feature registry analysis."""
-    console.print(f"\n")
+    console.print("\n")
     features = data.get("current_growth_features", [])
     table = Table(title="Feature Registry")
     table.add_column("Features", style="cyan")
@@ -212,7 +212,7 @@ def show_features_summary(data: dict) -> None:
         names = [f.get("feature_name", "?") for f in features[:5]]
         table.add_row("Sample", ", ".join(names) + ("..." if len(features) > 5 else ""))
     console.print(table)
-    console.print(f"\n")
+    console.print("\n")
 
 
 def show_analysis_summary(data: dict, template_data: dict | None = None):

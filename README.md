@@ -340,7 +340,7 @@ Settings are loaded in this order (later overrides earlier):
 
 ## Upstream
 
-Push deploy artifacts (migrations, edge functions, growth loops) to a remote workspace.
+Push artifacts (migrations, edge functions, growth loops) to a remote workspace.
 
 ### Login
 
@@ -359,26 +359,26 @@ This creates two things:
 
 Different projects can target different workspaces without overwriting each other.
 
-### Token Resolution
+### API Key Resolution
 
-When running `skene deploy`, the token is resolved in this order:
+When running `skene push`, the Skene API key is resolved in this order:
 
-1. **Workspace-keyed token** from `~/.config/skene-growth/credentials` (matched by the workspace slug in `.skene-upstream`)
-2. **`SKENE_UPSTREAM_TOKEN`** environment variable
-3. **`upstream_token`** in `.skene-growth.config`
+1. **Workspace-keyed key** from `~/.config/skene-growth/credentials` (matched by the workspace slug in `.skene-upstream`)
+2. **`SKENE_UPSTREAM_API_KEY`** environment variable
+3. **`upstream_api_key`** in `.skene-growth.config`
 4. Legacy global `token` from credentials file
 
-### Deploy
+### Push
 
 ```bash
-# Uses upstream + token from .skene-upstream / credentials
-skene deploy
+# Uses upstream + API key from .skene-upstream / credentials
+skene push
 
 # Override upstream for this run
-skene deploy --upstream https://skene.ai/workspace/other-app
+skene push --upstream https://skene.ai/workspace/other-app
 
 # Re-push without regenerating
-skene deploy --push-only
+skene push --push-only
 ```
 
 ### Status & Logout
@@ -553,7 +553,7 @@ When using `--product-docs` flag, the manifest includes additional fields:
 | `SKENE_API_KEY` | API key for LLM provider |
 | `SKENE_PROVIDER` | LLM provider to use: `openai` (default), `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama` (experimental), or `generic` |
 | `SKENE_BASE_URL` | Base URL for OpenAI-compatible API endpoints (required for `generic` provider) |
-| `SKENE_UPSTREAM_TOKEN` | Upstream API token for deploy push (overrides credentials file) |
+| `SKENE_UPSTREAM_API_KEY` | Skene API key for push (overrides credentials file) |
 | `LMSTUDIO_BASE_URL` | LM Studio server URL (default: `http://localhost:1234/v1`) |
 | `OLLAMA_BASE_URL` | Ollama server URL (default: `http://localhost:11434/v1`) - Experimental |
 

@@ -2,22 +2,27 @@
 
 from pathlib import Path
 
-import pytest
-
-from skene_growth.growth_loops.deploy import (
+from skene_growth.growth_loops.push import (
     _build_trigger_function_sql,
     build_migration_sql,
     ensure_base_schema_migration,
-    ensure_processor_migration,
 )
-from skene_growth.growth_loops.processor_sql import PROCESSOR_SQL
 from skene_growth.growth_loops.schema_sql import BASE_SCHEMA_SQL
 
 
 class TestBaseSchemaSQL:
     def test_contains_all_tables(self):
-        for table in ("event_log", "growth_loops", "loop_executions", "attribution", "failed_events"):
+        for table in ("event_log", "failed_events", "enrichment_map"):
             assert table in BASE_SCHEMA_SQL
+
+    def test_enrichment_map_has_metadata_key_and_enrich_sql(self):
+        assert "metadata_key" in BASE_SCHEMA_SQL
+        assert "enrich_sql" in BASE_SCHEMA_SQL
+
+    def test_enrich_event_trigger_and_notify_webhook(self):
+        assert "enrich_event" in BASE_SCHEMA_SQL
+        assert "notify_event_log" in BASE_SCHEMA_SQL
+        assert "pg_net" in BASE_SCHEMA_SQL
 
     def test_uses_idempotent_ddl(self):
         assert "CREATE SCHEMA IF NOT EXISTS" in BASE_SCHEMA_SQL
@@ -32,7 +37,7 @@ class TestEnsureBaseSchemaMigration:
         assert "skene_growth_schema" in out.name
         content = out.read_text()
         assert "event_log" in content
-        assert "growth_loops" in content
+        assert "enrichment_map" in content
 
     def test_skips_when_already_exists(self, tmp_path: Path) -> None:
         first = ensure_base_schema_migration(tmp_path)
@@ -45,7 +50,7 @@ class TestEnsureBaseSchemaMigration:
 
 
 class TestEventLogTriggers:
-    """Phase 2: triggers INSERT into event_log, not pg_net."""
+    """Triggers INSERT into event_log, not pg_net."""
 
     def test_trigger_inserts_into_event_log(self) -> None:
         sql = _build_trigger_function_sql(
@@ -71,27 +76,3 @@ class TestEventLogTriggers:
         assert "event_log" in migration
         assert "CREATE EXTENSION IF NOT EXISTS pg_net" not in migration
         assert "skene_growth.actions" not in migration
-
-    def test_migration_seeds_growth_loops(self) -> None:
-        loops = [{
-            "loop_id": "my_loop",
-            "requirements": {
-                "telemetry": [{"type": "supabase", "table": "users", "operation": "INSERT"}],
-            },
-        }]
-        migration = build_migration_sql(loops)
-        assert "INSERT INTO skene_growth.growth_loops" in migration
-        assert "my_loop_users_insert" in migration
-        assert "users.insert" in migration
-
-
-class TestProcessor:
-    def test_processor_sql_creates_function(self) -> None:
-        assert "process_events" in PROCESSOR_SQL
-        assert "event_log" in PROCESSOR_SQL
-        assert "growth_loops" in PROCESSOR_SQL
-
-    def test_ensure_processor_migration_creates_file(self, tmp_path: Path) -> None:
-        out = ensure_processor_migration(tmp_path)
-        assert out is not None
-        assert "skene_growth_processor" in out.name

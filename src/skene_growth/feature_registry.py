@@ -36,6 +36,27 @@ def derive_feature_id(feature_name: str) -> str:
     return result
 
 
+def _feature_from_orphan_loop(loop: dict[str, Any], now_str: str) -> dict[str, Any]:
+    """Build a minimal feature dict from an orphan loop (no linked feature)."""
+    loop_id = loop.get("loop_id", "")
+    name = loop.get("name") or loop.get("linked_feature") or loop_id
+    feature_id = derive_feature_id(name) or derive_feature_id(loop_id) or "orphan_loop"
+    return {
+        "feature_name": name,
+        "feature_id": feature_id,
+        "file_path": loop.get("file_path", ""),
+        "detected_intent": "",
+        "growth_pillars": list(loop.get("growth_pillars", [])),
+        "loop_ids": [loop_id] if loop_id else [],
+        "confidence_score": 0.0,
+        "entry_point": None,
+        "growth_potential": [],
+        "first_seen_at": now_str,
+        "last_seen_at": now_str,
+        "status": "active",
+    }
+
+
 def _feature_to_registry_item(
     f: dict[str, Any],
     now: str,

@@ -3,14 +3,12 @@
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from skene_growth.growth_loops.upstream import (
     _api_base_from_upstream,
-    _collect_artifacts,
     _sha256_checksum,
     _workspace_slug_from_url,
-    build_deploy_manifest,
+    build_package,
+    build_push_manifest,
     push_to_upstream,
     validate_token,
 )
@@ -29,54 +27,59 @@ class TestUpstreamHelpers:
         assert _sha256_checksum("hello") == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
 
-class TestCollectArtifacts:
-    def test_collects_migrations_and_edge_function(self, tmp_path: Path):
-        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")
-        (tmp_path / "supabase" / "migrations" / "20260202000000_skene_growth_processor.sql").write_text("CREATE FUNCTION")
-        (tmp_path / "supabase" / "migrations" / "other.sql").write_text("-- other")
-        (tmp_path / "supabase" / "functions" / "skene-growth-process").mkdir(parents=True)
-        (tmp_path / "supabase" / "functions" / "skene-growth-process" / "index.ts").write_text("Deno.serve")
-
-        artifacts = _collect_artifacts(tmp_path)
-        paths = [a["path"] for a in artifacts]
-        assert "migrations/20260201000000_skene_growth_schema.sql" in paths
-        assert "migrations/20260202000000_skene_growth_processor.sql" in paths
-        assert "migrations/other.sql" not in paths
-        assert "functions/skene-growth-process/index.ts" in paths
-
-    def test_collects_growth_loops_from_context(self, tmp_path: Path):
+class TestBuildPackage:
+    def test_package_has_growth_loops_and_telemetry_sql(self, tmp_path: Path):
         (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
         (tmp_path / "skene-context" / "growth-loops" / "loop1.json").write_text('{"loop_id": "loop1"}')
-        (tmp_path / "skene-context" / "growth-loops" / "loop2.json").write_text('{"loop_id": "loop2"}')
+        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        telemetry_sql.write_text("CREATE TRIGGER")
 
-        artifacts = _collect_artifacts(tmp_path)
-        paths = [a["path"] for a in artifacts]
-        assert "growth-loops/loop1.json" in paths
-        assert "growth-loops/loop2.json" in paths
+        package = build_package(tmp_path)
+        assert len(package["growth_loops"]) == 1
+        assert package["growth_loops"][0]["name"] == "loop1.json"
+        assert package["growth_loops"][0]["content"] == '{"loop_id": "loop1"}'
+        assert package["telemetry_sql"] == "CREATE TRIGGER"
 
-    def test_collects_growth_loops_from_explicit_loops_dir(self, tmp_path: Path):
+    def test_package_excludes_schema_migration(self, tmp_path: Path):
+        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
+        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        telemetry_sql.write_text("CREATE TRIGGER")
+
+        package = build_package(tmp_path)
+        assert "CREATE SCHEMA" not in (package["telemetry_sql"] or "")
+        assert package["telemetry_sql"] == "CREATE TRIGGER"
+
+    def test_package_uses_latest_telemetry_migration(self, tmp_path: Path):
+        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
+        (tmp_path / "supabase" / "migrations" / "20260218164139_skene_growth_telemetry.sql").write_text("-- older")
+        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql").write_text("-- latest")
+
+        package = build_package(tmp_path)
+        assert package["telemetry_sql"] == "-- latest"
+
+    def test_package_uses_explicit_loops_dir(self, tmp_path: Path):
         (tmp_path / "custom" / "growth-loops").mkdir(parents=True)
         (tmp_path / "custom" / "growth-loops" / "loop1.json").write_text('{"loop_id": "loop1"}')
 
-        artifacts = _collect_artifacts(tmp_path, loops_dir=tmp_path / "custom" / "growth-loops")
-        paths = [a["path"] for a in artifacts]
-        assert "growth-loops/loop1.json" in paths
+        package = build_package(tmp_path, loops_dir=tmp_path / "custom" / "growth-loops")
+        assert len(package["growth_loops"]) == 1
+        assert package["growth_loops"][0]["name"] == "loop1.json"
 
 
-class TestBuildDeployManifest:
+class TestBuildPushManifest:
     def test_manifest_structure(self, tmp_path: Path):
-        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "x_skene_growth_schema.sql").write_text("CREATE SCHEMA")
-        m = build_deploy_manifest(tmp_path, "my-workspace", ["api_keys.insert"], loops_count=2)
+        (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
+        (tmp_path / "skene-context" / "growth-loops" / "loop.json").write_text("{}")
+        m = build_push_manifest(tmp_path, "my-workspace", ["api_keys.insert"], loops_count=1)
         assert m["version"] == "1.0"
         assert m["workspace_slug"] == "my-workspace"
         assert m["trigger_events"] == ["api_keys.insert"]
-        assert m["loops_count"] == 2
+        assert m["loops_count"] == 1
         assert "pushed_at" in m
-        assert len(m["artifacts"]) >= 1
-        assert m["artifacts"][0]["path"].startswith("migrations/")
-        assert "sha256:" in m["artifacts"][0]["checksum"]
+        assert "package_checksum" in m
+        assert m["package_checksum"].startswith("sha256:")
 
 
 class TestValidateToken:
@@ -94,8 +97,8 @@ class TestValidateToken:
 class TestPushToUpstream:
     @patch("skene_growth.growth_loops.upstream.httpx.post")
     def test_push_success(self, mock_post, tmp_path: Path):
-        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "x_skene_growth_schema.sql").write_text("CREATE SCHEMA")
+        (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
+        (tmp_path / "skene-context" / "growth-loops" / "loop.json").write_text("{}")
         mock_post.return_value.status_code = 201
         mock_post.return_value.json.return_value = {"commit_hash": "sha256:abc", "version": 1}
 
@@ -109,14 +112,15 @@ class TestPushToUpstream:
         assert result["ok"] is True
         assert result["commit_hash"] == "sha256:abc"
         call_args = mock_post.call_args
-        assert "manifest" in call_args.kwargs["json"]
-        assert "artifacts" in call_args.kwargs["json"]
-        assert call_args.kwargs["json"]["manifest"]["workspace_slug"] == "test"
+        payload = call_args.kwargs["json"]
+        assert "manifest" in payload
+        assert "package" in payload
+        assert payload["manifest"]["workspace_slug"] == "test"
+        assert "growth_loops" in payload["package"]
+        assert "telemetry_sql" in payload["package"]
 
     @patch("skene_growth.growth_loops.upstream.httpx.post")
     def test_push_401_returns_auth_error(self, mock_post, tmp_path: Path):
-        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "x.sql").write_text("--")
         mock_post.return_value.status_code = 401
         result = push_to_upstream(tmp_path, "https://x.com/workspace/w", "bad", [], 0)
         assert result["ok"] is False

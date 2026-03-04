@@ -1,8 +1,6 @@
 """Tests for feature registry (feature-registry.json merge and export)."""
 
 import json
-from datetime import datetime
-from pathlib import Path
 
 import pytest
 
@@ -56,7 +54,6 @@ class TestMergeFeaturesIntoRegistry:
         assert "last_seen_at" in f
 
     def test_matching_updates_existing(self):
-        now = datetime.now().isoformat()
         existing = {
             "version": "1.0",
             "features": [
@@ -213,11 +210,11 @@ class TestMergeRegistryAndEnrichManifest:
         manifest_data = {
             "current_growth_features": [
                 {
-                    "feature_name": "Deploy Engine",
-                    "file_path": "src/skene_growth/growth_loops/deploy.py",
-                    "detected_intent": "Deploys telemetry",
+                    "feature_name": "Push Engine",
+                    "file_path": "src/skene_growth/growth_loops/push.py",
+                    "detected_intent": "Pushes telemetry",
                     "confidence_score": 0.9,
-                    "entry_point": "skene deploy",
+                    "entry_point": "skene push",
                     "growth_potential": [],
                 },
             ],
@@ -227,15 +224,15 @@ class TestMergeRegistryAndEnrichManifest:
                 "loop_id": "guard_ci",
                 "name": "Guard CI",
                 "requirements": {
-                    "files": [{"path": "src/skene_growth/growth_loops/deploy.py", "purpose": "deploy"}],
+                    "files": [{"path": "src/skene_growth/growth_loops/push.py", "purpose": "push"}],
                 },
             },
         ]
         merge_registry_and_enrich_manifest(manifest_data, loops, output_path)
         reg = json.loads((output_path.parent / FEATURE_REGISTRY_FILENAME).read_text())
-        f = next(x for x in reg["features"] if x["feature_id"] == "deploy_engine")
+        f = next(x for x in reg["features"] if x["feature_id"] == "push_engine")
         assert "guard_ci" in f["loop_ids"]
-        assert any(g["loop_id"] == "guard_ci" and g["linked_feature_id"] == "deploy_engine" for g in reg["growth_loops"])
+        assert any(g["loop_id"] == "guard_ci" and g["linked_feature_id"] == "push_engine" for g in reg["growth_loops"])
 
 
 class TestLoadFeaturesForBuild:
@@ -275,7 +272,14 @@ class TestExportRegistryToFormat:
     def test_csv_format(self):
         registry = {
             "features": [
-                {"feature_id": "x", "feature_name": "X", "file_path": "a", "status": "active", "loop_ids": [], "growth_pillars": []},
+                {
+                    "feature_id": "x",
+                    "feature_name": "X",
+                    "file_path": "a",
+                    "status": "active",
+                    "loop_ids": [],
+                    "growth_pillars": [],
+                },
             ],
         }
         out = export_registry_to_format(registry, "csv")

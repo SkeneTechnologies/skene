@@ -1,8 +1,9 @@
 """Shadow Mirror base schema for skene_growth. All DDL is idempotent."""
 
 BASE_SCHEMA_SQL = """
--- Skene Growth: Shadow Mirror base schema (event_log, growth_loops, loop_executions, attribution, failed_events)
--- Idempotent: safe to run on init or every deploy
+-- Skene Growth: Shadow Mirror base schema (event_log, failed_events, enrichment_map)
+-- 1. Schema tables (run first, idempotent)
+-- 2. Webhook (run after tables, idempotent): pg_net + notify_event_log
 
 CREATE SCHEMA IF NOT EXISTS skene_growth;
 
@@ -19,36 +20,6 @@ CREATE TABLE IF NOT EXISTS skene_growth.event_log (
   last_error text
 );
 
--- Loop registry: config-driven (trigger_event, condition_config, action_type, recipient_path).
-CREATE TABLE IF NOT EXISTS skene_growth.growth_loops (
-  loop_key text PRIMARY KEY,
-  trigger_event text NOT NULL,
-  condition_config jsonb DEFAULT '{}',
-  action_type text NOT NULL,
-  action_config jsonb DEFAULT '{}',
-  recipient_path text,
-  enabled boolean DEFAULT true NOT NULL
-);
-
--- Idempotency and execution tracking. Processor creates rows here before calling Cloud.
-CREATE TABLE IF NOT EXISTS skene_growth.loop_executions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_log_id bigint NOT NULL REFERENCES skene_growth.event_log(id),
-  idempotency_key text UNIQUE NOT NULL,
-  status text NOT NULL CHECK (status IN ('pending', 'sent', 'failed')),
-  tokens_used int DEFAULT 0,
-  error_message text,
-  created_at timestamptz DEFAULT now() NOT NULL,
-  updated_at timestamptz DEFAULT now() NOT NULL
-);
-
--- Attribution for billing.
-CREATE TABLE IF NOT EXISTS skene_growth.attribution (
-  loop_execution_id uuid PRIMARY KEY REFERENCES skene_growth.loop_executions(id),
-  conversion_event text NOT NULL,
-  conversion_value_usd decimal(12, 2)
-);
-
 -- Dead-letter table for events that exceed retry limit.
 CREATE TABLE IF NOT EXISTS skene_growth.failed_events (
   id bigserial PRIMARY KEY,
@@ -59,21 +30,92 @@ CREATE TABLE IF NOT EXISTS skene_growth.failed_events (
   moved_at timestamptz DEFAULT now() NOT NULL
 );
 
--- Patch: Constraint updates (drop-then-add pattern for schema evolution)
--- Ensures constraint matches latest definition on every deploy.
-ALTER TABLE skene_growth.loop_executions
-DROP CONSTRAINT IF EXISTS loop_executions_status_check;
+-- Enrichment rules: metadata_key -> enrich_sql (SQL returning jsonb to merge into metadata).
+-- metadata_key matches event_type or '*' for all. enrich_sql uses $1=entity_id, $2=metadata.
+CREATE TABLE IF NOT EXISTS skene_growth.enrichment_map (
+  metadata_key text PRIMARY KEY,
+  enrich_sql text NOT NULL
+);
 
-ALTER TABLE skene_growth.loop_executions
-ADD CONSTRAINT loop_executions_status_check
-CHECK (status IN ('pending', 'sent', 'failed', 'retrying', 'archived'));
+-- BEFORE INSERT trigger on event_log: apply enrichment rules from enrichment_map.
+CREATE OR REPLACE FUNCTION skene_growth.enrich_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, skene_growth
+AS $$
+DECLARE
+  r RECORD;
+  enriched jsonb;
+BEGIN
+  FOR r IN
+    SELECT metadata_key, enrich_sql FROM skene_growth.enrichment_map
+    WHERE metadata_key = NEW.event_type OR metadata_key = '*'
+  LOOP
+    BEGIN
+      EXECUTE r.enrich_sql INTO enriched USING NEW.entity_id, NEW.metadata;
+      IF enriched IS NOT NULL THEN
+        NEW.metadata := COALESCE(NEW.metadata, '{}'::jsonb) || enriched;
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
 
--- Patch: Future column additions use the DO block pattern, e.g.:
--- DO $$
--- BEGIN
---   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
---                  WHERE table_schema='skene_growth' AND table_name='event_log' AND column_name='version') THEN
---     ALTER TABLE skene_growth.event_log ADD COLUMN version text DEFAULT '1.0';
---   END IF;
--- END $$;
+DROP TRIGGER IF EXISTS skene_growth_trg_enrich_event ON skene_growth.event_log;
+CREATE TRIGGER skene_growth_trg_enrich_event
+  BEFORE INSERT ON skene_growth.event_log
+  FOR EACH ROW
+  EXECUTE FUNCTION skene_growth.enrich_event();
+
+-- 2. Webhook: pg_net + notify_event_log
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension e
+                JOIN pg_namespace n ON e.extnamespace = n.oid
+                WHERE e.extname = 'pg_net' AND n.nspname = 'extensions') THEN
+    CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'pg_net not available: %. Enable it in Supabase dashboard.', SQLERRM;
+END $$;
+
+-- AFTER INSERT trigger on event_log: POST to ingest_url via pg_net.
+-- Set app.settings.ingest_url for the webhook endpoint.
+CREATE OR REPLACE FUNCTION skene_growth.notify_event_log()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, skene_growth
+AS $$
+DECLARE
+  ingest_url text;
+BEGIN
+  ingest_url := nullif(trim(current_setting('app.settings.ingest_url', true)), '');
+  IF ingest_url IS NOT NULL THEN
+    PERFORM net.http_post(
+      url := ingest_url,
+      headers := '{"Content-Type": "application/json"}'::jsonb,
+      body := jsonb_build_object(
+        'id', NEW.id,
+        'org_id', NEW.org_id,
+        'entity_id', NEW.entity_id,
+        'event_type', NEW.event_type,
+        'metadata', NEW.metadata,
+        'occurred_at', NEW.occurred_at
+      )
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS skene_growth_trg_notify_event_log ON skene_growth.event_log;
+CREATE TRIGGER skene_growth_trg_notify_event_log
+  AFTER INSERT ON skene_growth.event_log
+  FOR EACH ROW
+  EXECUTE FUNCTION skene_growth.notify_event_log();
 """.strip()

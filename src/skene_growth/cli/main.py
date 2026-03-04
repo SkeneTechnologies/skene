@@ -17,11 +17,11 @@ Configuration files (optional):
 import asyncio
 import json
 import os
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import click
 import typer
 from pydantic import SecretStr
 from rich.console import Console
@@ -29,21 +29,24 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
+from typer.core import TyperGroup
 
 from skene_growth import __version__
 from skene_growth.cli.analysis_helpers import (
     run_analysis,
-    run_features_analysis,
     run_cycle,
+    run_features_analysis,
     show_analysis_summary,
     show_features_summary,
 )
+from skene_growth.cli.auth import cmd_login, cmd_login_status, cmd_logout
 from skene_growth.cli.config_manager import (
     create_sample_config,
     interactive_config_setup,
     save_config,
     show_config_status,
 )
+from skene_growth.cli.features import features_app
 from skene_growth.cli.output_writers import write_growth_template, write_product_docs
 from skene_growth.cli.prompt_builder import (
     build_prompt_from_template,
@@ -53,17 +56,31 @@ from skene_growth.cli.prompt_builder import (
     run_claude,
     save_prompt_to_file,
 )
-from skene_growth.cli.auth import cmd_login, cmd_login_status, cmd_logout
-from skene_growth.cli.features import features_app
-from skene_growth.feature_registry import FEATURE_REGISTRY_FILENAME
 from skene_growth.cli.sample_report import show_sample_report
 from skene_growth.config import default_model_for_provider, load_config, load_project_upstream, resolve_upstream_token
+
+# Command order and groups for --help
+_COMMAND_ORDER = [
+    "analyze", "plan", "build", "status", "push", "config", "validate",
+    "login", "logout", "features", "init", "chat",
+]
+
+
+class SectionedHelpGroup(TyperGroup):
+    """TyperGroup that lists commands in a specific order for help output."""
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        ordered = [c for c in _COMMAND_ORDER if c in self.commands]
+        extra = [c for c in self.commands if c not in _COMMAND_ORDER]
+        return ordered + extra
+
 
 app = typer.Typer(
     name="skene-growth",
     help="PLG analysis toolkit for codebases. Analyze code, detect growth opportunities.",
     add_completion=False,
     no_args_is_help=True,
+    cls=SectionedHelpGroup,
 )
 
 console = Console()
@@ -702,7 +719,7 @@ def plan(
     asyncio.run(execute_cycle())
 
 
-@app.command()
+@app.command(rich_help_panel="experimental")
 def chat(
     path: Path = typer.Argument(
         ".",
@@ -798,7 +815,7 @@ def chat(
     )
 
 
-@app.command()
+@app.command(rich_help_panel="manage")
 def validate(
     manifest: Path = typer.Argument(
         ...,
@@ -1009,7 +1026,7 @@ def status(
     print_validation_report(results)
 
 
-@app.command()
+@app.command(rich_help_panel="manage")
 def login(
     upstream: Optional[str] = typer.Option(
         None,
@@ -1025,7 +1042,7 @@ def login(
     ),
 ):
     """
-    Log in to upstream for deploy push.
+    Log in to upstream for push.
 
     Saves credentials to .skene-upstream in the current project directory,
     so each project can target a different upstream workspace.
@@ -1043,7 +1060,7 @@ def login(
     cmd_login(upstream_url=upstream)
 
 
-@app.command()
+@app.command(rich_help_panel="manage")
 def logout():
     """
     Log out from upstream (remove saved token).
@@ -1053,7 +1070,7 @@ def logout():
     cmd_logout()
 
 
-@app.command()
+@app.command(rich_help_panel="manage")
 def init(
     path: Path = typer.Argument(
         ".",
@@ -1068,10 +1085,10 @@ def init(
     Create skene_growth base schema migration if missing.
 
     Writes supabase/migrations/20260201000000_skene_growth_schema.sql with
-    event_log, growth_loops, loop_executions, attribution, failed_events.
+    event_log, failed_events, enrichment_map.
     Safe to run repeatedly; skips if migration already exists.
     """
-    from skene_growth.growth_loops.deploy import ensure_base_schema_migration
+    from skene_growth.growth_loops.push import ensure_base_schema_migration
 
     written = ensure_base_schema_migration(path.resolve())
     if written:
@@ -1082,7 +1099,7 @@ def init(
 
 
 @app.command()
-def deploy(
+def push(
     path: Path = typer.Argument(
         ".",
         help="Project root (output directory for supabase/)",
@@ -1101,50 +1118,47 @@ def deploy(
         None,
         "--loop",
         "-l",
-        help="Deploy only this loop (by loop_id); if omitted, deploys all loops with Supabase telemetry",
+        help="Push only this loop (by loop_id); if omitted, pushes all loops with Supabase telemetry",
     ),
     upstream: Optional[str] = typer.Option(
         None,
         "--upstream",
         "-u",
-        help="Upstream workspace URL for push (e.g. https://skene.ai/workspace/my-app)",
+        help="Upstream workspace URL (e.g. https://skene.ai/workspace/my-app)",
     ),
     push_only: bool = typer.Option(
         False,
         "--push-only",
-        help="Re-push current deploy output without regenerating",
+        help="Re-push current output without regenerating",
     ),
     commit_push: bool = typer.Option(
         False,
         "--commit-push",
-        help="Commit deploy artifacts and push to git remote after deploy",
+        help="Commit artifacts and push to git remote after push",
     ),
 ):
     """
-    Build a Supabase migration from growth loop telemetry into /supabase.
+    Build a Supabase migration from growth loop telemetry into /supabase and push to upstream.
 
     Creates:
     - supabase/migrations/<timestamp>_skene_growth_telemetry.sql: idempotent triggers
-      on telemetry-defined tables, invoking the edge function via pg_net
-    - supabase/functions/skene-growth-process/index.ts: edge function that
-      enriches payload (e.g. user_id -> email), creates action if event_seq %% 5 == 0,
-      and ensures each action has db_id
+      on telemetry-defined tables that INSERT into event_log
 
     With --upstream: pushes artifacts to remote for backup/versioning.
     Use `skene login` to authenticate.
 
     Examples:
 
-        skene deploy
-        skene deploy --upstream https://skene.ai/workspace/my-app
-        skene deploy --loop skene_guard_activation_safety
-        skene deploy --context ./skene-context
-        skene deploy --upstream https://skene.ai/workspace/my-app --commit-push
+        skene push
+        skene push --upstream https://skene.ai/workspace/my-app
+        skene push --loop skene_guard_activation_safety
+        skene push --context ./skene-context
+        skene push --upstream https://skene.ai/workspace/my-app --commit-push
     """
-    from skene_growth.growth_loops.deploy import (
-        deploy_loops_to_supabase,
+    from skene_growth.growth_loops.push import (
+        build_loops_to_supabase,
         extract_supabase_telemetry,
-        push_deploy_to_upstream,
+        push_to_upstream,
     )
     from skene_growth.growth_loops.storage import load_existing_growth_loops
 
@@ -1181,9 +1195,11 @@ def deploy(
     loops_with_telemetry: list[dict[str, Any]] = []
     if not push_only:
         loops = load_existing_growth_loops(context)
-        loops_with_telemetry = [l for l in loops if extract_supabase_telemetry(l)]
+        loops_with_telemetry = [loop for loop in loops if extract_supabase_telemetry(loop)]
         if loop_id:
-            loops_with_telemetry = [l for l in loops_with_telemetry if l.get("loop_id") == loop_id]
+            loops_with_telemetry = [
+                loop for loop in loops_with_telemetry if loop.get("loop_id") == loop_id
+            ]
             if not loops_with_telemetry:
                 console.print(f"[red]No loop with loop_id '{loop_id}' has Supabase telemetry.[/red]")
                 raise typer.Exit(1)
@@ -1196,34 +1212,34 @@ def deploy(
 
     try:
         if not push_only:
-            migration_path, edge_path = deploy_loops_to_supabase(
+            migration_path = build_loops_to_supabase(
                 loops_with_telemetry,
                 path,
             )
             console.print(f"[green]Migration:[/green] {migration_path}")
-            console.print(f"[green]Edge function:[/green] {edge_path}")
         else:
             ctx = context or path / "skene-context"
             if (ctx / "growth-loops").is_dir():
                 loops_with_telemetry = [
-                    l
-                    for l in load_existing_growth_loops(ctx)
-                    if extract_supabase_telemetry(l)
+                    loop
+                    for loop in load_existing_growth_loops(ctx)
+                    if extract_supabase_telemetry(loop)
                 ]
 
         if resolved_upstream:
             ctx = context or path / "skene-context"
             if push_only:
                 migrations_dir = path / "supabase" / "migrations"
-                for p in sorted(migrations_dir.glob("*.sql")):
-                    if "skene_growth" in p.name.lower():
-                        console.print(f"[green]Migration:[/green] {p}")
-                edge_path = path / "supabase" / "functions" / "skene-growth-process" / "index.ts"
-                if edge_path.exists():
-                    console.print(f"[green]Edge function:[/green] {edge_path}")
-                registry_path = ctx / FEATURE_REGISTRY_FILENAME
-                if registry_path.exists():
-                    console.print(f"[green]Feature registry:[/green] {registry_path}")
+                if migrations_dir.exists():
+                    telemetry = next(
+                        (p for p in sorted(migrations_dir.glob("*.sql"))
+                         if "skene_growth_telemetry" in p.name.lower()),
+                        None,
+                    )
+                    if telemetry:
+                        console.print(f"[green]Telemetry:[/green] {telemetry}")
+                if (ctx / "growth-loops").is_dir():
+                    console.print(f"[green]Growth loops:[/green] {ctx / 'growth-loops'}")
             if not resolved_token:
                 console.print(
                     "[yellow]No token. Run skene login to authenticate.[/yellow]"
@@ -1232,10 +1248,7 @@ def deploy(
                 loops_dir = ctx / "growth-loops" if ctx.exists() else None
                 if loops_dir and loops_dir.exists():
                     console.print(f"[green]Growth loops:[/green] {loops_dir}")
-                registry_path = ctx / FEATURE_REGISTRY_FILENAME
-                if registry_path.exists():
-                    console.print(f"[green]Feature registry:[/green] {registry_path}")
-                result = push_deploy_to_upstream(
+                result = push_to_upstream(
                     project_root=path,
                     upstream_url=resolved_upstream,
                     token=resolved_token,
@@ -1249,15 +1262,14 @@ def deploy(
                         if loops_dir and loops_dir.exists()
                         else 0
                     )
-                    registry_path = ctx / FEATURE_REGISTRY_FILENAME
-                    sent_parts = ["migrations", "edge function"]
-                    if growth_loops_count:
-                        sent_parts.append(f"growth-loops ({growth_loops_count} file{'s' if growth_loops_count != 1 else ''})")
-                    if registry_path.exists():
-                        sent_parts.append("feature-registry")
+                    suffix = "s" if growth_loops_count != 1 else ""
+                    sent_parts = [
+                        f"growth-loops ({growth_loops_count} file{suffix})",
+                        "telemetry.sql",
+                    ]
                     console.print(
                         f"[green]Pushed to upstream[/green] commit_hash={result.get('commit_hash', '?')} "
-                        f"({', '.join(sent_parts)})"
+                        f"(package: {', '.join(sent_parts)})"
                     )
                 else:
                     msg = result.get("message", "Push failed.")
@@ -1268,11 +1280,7 @@ def deploy(
 
         if not push_only:
             console.print(
-                "\n[dim]Two-stage deploy (handled by upstream service):\n"
-                "  pg_cron and pg_net must be enabled in the Supabase dashboard.\n"
-                "  Configure secrets via the upstream service dashboard.\n"
-                "  Deployment step 1: Upstream service sets app.settings (supabase_url, keys) from the upstream project secrets.\n"
-                "  Deployment step 2: Upstream service runs schema, processor, and telemetry migrations.[/dim]\n\n"
+                "\n[dim]Upstream parses the package (growth loops + telemetry.sql) and deploys.[/dim]\n"
             )
     except Exception as e:
         console.print(f"[red]Deploy failed:[/red] {e}")
@@ -1634,10 +1642,10 @@ async def _build_async(
             raise typer.Exit(1)
 
 
-app.add_typer(features_app, name="features")
+app.add_typer(features_app, name="features", rich_help_panel="manage")
 
 
-@app.command()
+@app.command(rich_help_panel="manage")
 def config(
     init: bool = typer.Option(
         False,
@@ -1840,21 +1848,22 @@ def skene_entry_point():
         help="PLG analysis toolkit for codebases. Analyze code, detect growth opportunities.",
         add_completion=False,
         no_args_is_help=False,
+        cls=SectionedHelpGroup,
     )
 
-    # Add all commands from the main app as subcommands FIRST
-    # This ensures subcommands are recognized before the callback
+    # Add commands in order: analyze, plan, build, status, push | manage | experimental
     skene_app.command()(analyze)
     skene_app.command()(plan)
-    skene_app.command()(chat)
-    skene_app.command()(validate)
-    skene_app.command()(status)
-    skene_app.command()(login)
-    skene_app.command()(logout)
-    skene_app.command()(deploy)
     skene_app.command()(build)
-    skene_app.add_typer(features_app, name="features")
-    skene_app.command()(config)
+    skene_app.command()(status)
+    skene_app.command()(push)
+    skene_app.command(rich_help_panel="manage")(config)
+    skene_app.command(rich_help_panel="manage")(validate)
+    skene_app.command(rich_help_panel="manage")(login)
+    skene_app.command(rich_help_panel="manage")(logout)
+    skene_app.add_typer(features_app, name="features", rich_help_panel="manage")
+    skene_app.command(rich_help_panel="manage")(init)
+    skene_app.command(rich_help_panel="experimental")(chat)
 
     # Add callback to handle default case (no subcommand) - launches chat
     # Added AFTER commands so subcommands take precedence

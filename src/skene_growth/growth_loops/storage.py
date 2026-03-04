@@ -313,7 +313,8 @@ The output MUST be a valid JSON object with these REQUIRED fields:
 - `name` (string): Human-readable name of the growth loop
 - `description` (string): Detailed description of what this loop accomplishes
 - `linked_feature` (string): Human-readable feature name this loop implements or enhances
-- `linked_feature_id` (string): Snake_case ID for programmatic linking (must match a known feature_id, or derive from linked_feature)
+- `linked_feature_id` (string): Snake_case ID for programmatic linking
+  (must match a known feature_id, or derive from linked_feature)
 - `growth_pillars` (array of strings): 0–3 of "onboarding", "engagement", "retention"
 - `requirements` (object):
   - `files` (array): File requirements with path, purpose, required, checks

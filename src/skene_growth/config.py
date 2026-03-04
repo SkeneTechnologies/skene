@@ -107,14 +107,14 @@ class Config:
 
     @property
     def upstream(self) -> str | None:
-        """Get upstream URL for deploy push (e.g. https://skene.ai/workspace/my-app)."""
-        url = self.get("upstream")
-        return url if url else None
+        """Get upstream URL for push (e.g. https://skene.ai/workspace/my-app)."""
+        url = self.get("upstream") or self.get("upstream_url")
+        return url.strip() if isinstance(url, str) and url.strip() else None
 
     @property
-    def upstream_token(self) -> str | None:
-        """Get upstream API token. Precedence: SKENE_UPSTREAM_TOKEN env > config > credentials file."""
-        return self.get("upstream_token")
+    def upstream_api_key(self) -> str | None:
+        """Get upstream API key. Precedence: SKENE_UPSTREAM_API_KEY env > config > credentials file."""
+        return self.get("upstream_api_key")
 
 
 PROJECT_UPSTREAM_FILE = ".skene-upstream"
@@ -301,31 +301,44 @@ def get_credentials_path() -> Path:
 
 
 def resolve_upstream_token(config: Config) -> str | None:
+    """Resolve upstream API key. See resolve_upstream_api_key_with_source for precedence."""
+    key, _ = resolve_upstream_api_key_with_source(config)
+    return key
+
+
+def resolve_upstream_api_key_with_source(config: Config) -> tuple[str | None, str]:
     """
-    Resolve upstream token in precedence order:
-    1. Workspace-keyed token from credentials (matched via .skene-upstream workspace slug)
-    2. SKENE_UPSTREAM_TOKEN env (already in config)
-    3. Config file upstream_token
-    4. Legacy global token from credentials file
+    Resolve upstream API key and its source. Returns (api_key, source).
+
+    Precedence:
+    1. Workspace-keyed key from credentials (matched via .skene-upstream)
+    2. SKENE_UPSTREAM_API_KEY env
+    3. Config file upstream_api_key
+    4. Legacy global key from credentials file
     """
     project = load_project_upstream()
     if project and project.get("workspace"):
         token = resolve_workspace_token(project["workspace"])
         if token:
-            return token
+            return token.strip(), ".skene-upstream/credentials"
 
-    if config.upstream_token:
-        return config.upstream_token.strip()
+    env_key = os.environ.get("SKENE_UPSTREAM_API_KEY")
+    if env_key:
+        return env_key.strip(), "env"
+
+    if config.upstream_api_key:
+        return config.upstream_api_key.strip(), "config"
 
     cred_path = get_credentials_path()
     if cred_path.exists():
         try:
             data = load_toml(cred_path)
-            token = data.get("token") or data.get("upstream_token")
-            return token.strip() if isinstance(token, str) and token else None
+            token = data.get("token") or data.get("upstream_api_key")
+            if isinstance(token, str) and token.strip():
+                return token.strip(), "credentials"
         except Exception:
             pass
-    return None
+    return None, "-"
 
 
 def load_toml(path: Path) -> dict[str, Any]:
@@ -375,7 +388,7 @@ def load_config() -> Config:
         config.set("base_url", base_url)
     if os.environ.get("SKENE_DEBUG", "").lower() in ("1", "true", "yes"):
         config.set("debug", True)
-    if upstream_token := os.environ.get("SKENE_UPSTREAM_TOKEN"):
-        config.set("upstream_token", upstream_token.strip() if upstream_token else None)
+    if api_key := os.environ.get("SKENE_UPSTREAM_API_KEY"):
+        config.set("upstream_api_key", api_key.strip() if api_key else None)
 
     return config
