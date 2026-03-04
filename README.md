@@ -1,11 +1,15 @@
+<p align="center">
+  <a href="https://www.skene.ai"><img src="https://img.shields.io/badge/Website-007ACC?style=flat&logo=google-chrome&logoColor=white" alt="Website"></a>
+  <a href="https://www.skene.ai/resources/docs/skene-growth"><img src="https://img.shields.io/badge/Docs-555?style=flat&logo=bookstack&logoColor=white" alt="Docs"></a>
+  <a href="https://www.skene.ai/resources/blog"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Blog"></a>
+  <a href="https://www.reddit.com/r/plgbuilders/"><img src="https://img.shields.io/badge/r%2Fplgbuilders-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
+</p>
+
 # skene-growth
 
 [![PyPI version](https://img.shields.io/pypi/v/skene-growth)](https://pypi.org/project/skene-growth/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PyPI downloads](https://img.shields.io/pypi/dm/skene-growth)](https://pypi.org/project/skene-growth/)
+[![Downloads](https://static.pepy.tech/badge/skene-growth/month)](https://pepy.tech/projects/skene-growth)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/SkeneTechnologies/skene-growth)](https://github.com/SkeneTechnologies/skene-growth/commits)
-[![Website](https://img.shields.io/badge/Website-skene.ai-blue)](https://www.skene.ai)
-[![Docs](https://img.shields.io/badge/Docs-skene.ai-green)](https://www.skene.ai/resources/docs/skene-growth)
 
 PLG (Product-Led Growth) codebase analysis toolkit. Scan your codebase, detect growth opportunities, and generate actionable implementation plans.
 
