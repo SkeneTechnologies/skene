@@ -13,6 +13,7 @@ from typing import Any, Literal
 
 from rich.console import Console
 
+from skene_growth.feature_registry import derive_feature_id
 from skene_growth.llm.base import LLMClient
 
 console = Console()
@@ -164,16 +165,35 @@ def generate_timestamped_filename(loop_id: str) -> str:
     """
     Generate a timestamped filename for the loop.
 
-    Format: <loop_id>_YYYYMMDD_HHMMSS.json
+    Format: YYYYMMDD_HHMMSS_<loop_id>.json
 
     Args:
         loop_id: Snake_case loop identifier (already sanitized)
 
     Returns:
-        Filename with timestamp suffix
+        Filename with timestamp prefix
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{loop_id}_{timestamp}.json"
+    return f"{timestamp}_{loop_id}.json"
+
+
+def format_features_for_prompt(features: list[dict[str, Any]]) -> str:
+    """Format feature list for LLM prompt context."""
+    if not features:
+        return "(No known features — infer from technical execution and optionally define a new one.)"
+    lines = [
+        "Pick the best-matching feature for this loop, or define a new feature when none fits.",
+        "Set linked_feature (human-readable name), linked_feature_id (snake_case), growth_pillars.",
+        "",
+        "Known features:",
+    ]
+    for f in features:
+        fid = f.get("feature_id", "")
+        name = f.get("feature_name", "?")
+        pillars = f.get("growth_pillars", [])
+        path = f.get("file_path", "")
+        lines.append(f"- {name} (id: {fid}) — pillars: {pillars or 'none'} — {path}")
+    return "\n".join(lines)
 
 
 async def generate_loop_definition_with_llm(
@@ -183,6 +203,8 @@ async def generate_loop_definition_with_llm(
     plan_path: Path,
     codebase_path: Path,
     run_target: Literal["skene_cloud", "supabase"] = "supabase",
+    features: list[dict[str, Any]] | None = None,
+    bias_feature_name: str | None = None,
 ) -> dict[str, Any]:
     """
     Generate a complete growth loop definition using LLM.
@@ -273,6 +295,11 @@ async def generate_loop_definition_with_llm(
 """
     _telemetry_instructions += "\n- **Remember: Only ONE telemetry item. Choose the most important one.**"
 
+    features_context = format_features_for_prompt(features) if features else format_features_for_prompt([])
+    bias_note = ""
+    if bias_feature_name:
+        bias_note = f"\n**Strongly prefer linking to feature: {bias_feature_name}**"
+
     # Construct the LLM prompt
     prompt = (
         f"""You are a growth engineering expert. Generate a complete growth loop definition """
@@ -285,6 +312,9 @@ The output MUST be a valid JSON object with these REQUIRED fields:
 - `loop_id` (string): Snake_case identifier matching pattern ^[a-z0-9_]+$ (e.g., "phase1_share_flag")
 - `name` (string): Human-readable name of the growth loop
 - `description` (string): Detailed description of what this loop accomplishes
+- `linked_feature` (string): Human-readable feature name this loop implements or enhances
+- `linked_feature_id` (string): Snake_case ID for programmatic linking (must match a known feature_id, or derive from linked_feature)
+- `growth_pillars` (array of strings): 0–3 of "onboarding", "engagement", "retention"
 - `requirements` (object):
   - `files` (array): File requirements with path, purpose, required, checks
     (checks: array of objects with type, pattern, description)
@@ -311,6 +341,10 @@ The output MUST be a valid JSON object with these REQUIRED fields:
 
 - Codebase path: {codebase_path}
 - Growth plan: {plan_path}
+
+## Feature Linking
+{features_context}
+{bias_note}
 
 ## Database Schema
 
@@ -441,6 +475,14 @@ Return ONLY the JSON object, no markdown code fences, no explanations. The JSON 
                 "success_criteria": [],
             }
 
+        # Ensure feature linking fields (derive from name/plan if missing)
+        if not loop_def.get("linked_feature"):
+            loop_def["linked_feature"] = loop_def.get("name", loop_name)
+        if not loop_def.get("linked_feature_id"):
+            loop_def["linked_feature_id"] = derive_feature_id(loop_def["linked_feature"])
+        if "growth_pillars" not in loop_def:
+            loop_def["growth_pillars"] = []
+
         return loop_def
 
     except json.JSONDecodeError:
@@ -449,6 +491,9 @@ Return ONLY the JSON object, no markdown code fences, no explanations. The JSON 
             "loop_id": loop_id,
             "name": loop_name,
             "description": technical_execution.get("next_build", "Growth loop implementation")[:500],
+            "linked_feature": loop_name,
+            "linked_feature_id": derive_feature_id(loop_name),
+            "growth_pillars": [],
             "requirements": {
                 "files": [],
                 "functions": [],
@@ -538,9 +583,9 @@ def load_existing_growth_loops(base_dir: Path) -> list[dict[str, Any]]:
             loop_data = json.loads(content)
 
             # Extract timestamp from filename for sorting
-            # Expected format: <loop_id>_YYYYMMDD_HHMMSS.json
+            # Expected format: YYYYMMDD_HHMMSS_<loop_id>.json
             filename = json_file.stem  # Without .json extension
-            timestamp_match = re.search(r"_(\d{8}_\d{6})$", filename)
+            timestamp_match = re.match(r"^(\d{8}_\d{6})_", filename)
             if timestamp_match:
                 timestamp_str = timestamp_match.group(1)
                 try:

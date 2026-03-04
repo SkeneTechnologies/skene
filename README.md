@@ -230,7 +230,7 @@ uvx skene-growth build --debug
 **Growth Loop Storage:**
 - Growth loop definitions are automatically saved as JSON files when using the `build` command
 - Files are stored in `./skene-context/growth-loops/` directory (or custom `output_dir` if specified)
-- Filename format: `<loop_id>_YYYYMMDD_HHMMSS.json` (e.g., `share_flag_20240204_143022.json`)
+- Filename format: `YYYYMMDD_HHMMSS_<loop_id>.json` (e.g., `20240204_143022_share_flag.json`)
 
 - Existing growth loops are automatically loaded and referenced in subsequent analyses to avoid duplicates
 
@@ -337,6 +337,59 @@ Settings are loaded in this order (later overrides earlier):
 2. Project config (`./.skene-growth.config`)
 3. Environment variables (`SKENE_API_KEY`, `SKENE_PROVIDER`)
 4. CLI arguments
+
+## Upstream
+
+Push deploy artifacts (migrations, edge functions, growth loops) to a remote workspace.
+
+### Login
+
+Each project folder stores its own upstream connection. Run `skene login` from the project root:
+
+```bash
+skene login --upstream https://skene.ai/workspace/my-app
+```
+
+This creates two things:
+
+| File | Location | Contents |
+|------|----------|----------|
+| `.skene-upstream` | Project directory | Upstream URL, workspace slug, timestamp (no secrets) |
+| `credentials` | `~/.config/skene-growth/credentials` | Tokens keyed by workspace slug (0o600 permissions) |
+
+Different projects can target different workspaces without overwriting each other.
+
+### Token Resolution
+
+When running `skene deploy`, the token is resolved in this order:
+
+1. **Workspace-keyed token** from `~/.config/skene-growth/credentials` (matched by the workspace slug in `.skene-upstream`)
+2. **`SKENE_UPSTREAM_TOKEN`** environment variable
+3. **`upstream_token`** in `.skene-growth.config`
+4. Legacy global `token` from credentials file
+
+### Deploy
+
+```bash
+# Uses upstream + token from .skene-upstream / credentials
+skene deploy
+
+# Override upstream for this run
+skene deploy --upstream https://skene.ai/workspace/other-app
+
+# Re-push without regenerating
+skene deploy --push-only
+```
+
+### Status & Logout
+
+```bash
+# Check current login state for this project
+skene login --status
+
+# Remove project upstream and workspace token
+skene logout
+```
 
 ## Python API
 
@@ -500,6 +553,7 @@ When using `--product-docs` flag, the manifest includes additional fields:
 | `SKENE_API_KEY` | API key for LLM provider |
 | `SKENE_PROVIDER` | LLM provider to use: `openai` (default), `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama` (experimental), or `generic` |
 | `SKENE_BASE_URL` | Base URL for OpenAI-compatible API endpoints (required for `generic` provider) |
+| `SKENE_UPSTREAM_TOKEN` | Upstream API token for deploy push (overrides credentials file) |
 | `LMSTUDIO_BASE_URL` | LM Studio server URL (default: `http://localhost:1234/v1`) |
 | `OLLAMA_BASE_URL` | Ollama server URL (default: `http://localhost:11434/v1`) - Experimental |
 

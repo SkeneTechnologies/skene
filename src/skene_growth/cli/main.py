@@ -50,8 +50,10 @@ from skene_growth.cli.prompt_builder import (
     run_claude,
     save_prompt_to_file,
 )
+from skene_growth.cli.auth import cmd_login, cmd_login_status, cmd_logout
+from skene_growth.cli.features import features_app
 from skene_growth.cli.sample_report import show_sample_report
-from skene_growth.config import default_model_for_provider, load_config
+from skene_growth.config import default_model_for_provider, load_config, load_project_upstream, resolve_upstream_token
 
 app = typer.Typer(
     name="skene-growth",
@@ -971,6 +973,78 @@ def status(
 
 
 @app.command()
+def login(
+    upstream: Optional[str] = typer.Option(
+        None,
+        "--upstream",
+        "-u",
+        help="Upstream workspace URL (e.g. https://skene.ai/workspace/my-app)",
+    ),
+    status: bool = typer.Option(
+        False,
+        "--status",
+        "-s",
+        help="Show current login status for this project",
+    ),
+):
+    """
+    Log in to upstream for deploy push.
+
+    Saves credentials to .skene-upstream in the current project directory,
+    so each project can target a different upstream workspace.
+
+    Use --status to check current login state.
+
+    Examples:
+
+        skene login --upstream https://skene.ai/workspace/my-project
+        skene login --status
+    """
+    if status:
+        cmd_login_status()
+        return
+    cmd_login(upstream_url=upstream)
+
+
+@app.command()
+def logout():
+    """
+    Log out from upstream (remove saved token).
+
+    Does not invalidate the token server-side.
+    """
+    cmd_logout()
+
+
+@app.command()
+def init(
+    path: Path = typer.Argument(
+        ".",
+        help="Project root (output directory for supabase/)",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True,
+    ),
+):
+    """
+    Create skene_growth base schema migration if missing.
+
+    Writes supabase/migrations/20260201000000_skene_growth_schema.sql with
+    event_log, growth_loops, loop_executions, attribution, failed_events.
+    Safe to run repeatedly; skips if migration already exists.
+    """
+    from skene_growth.growth_loops.deploy import ensure_base_schema_migration
+
+    written = ensure_base_schema_migration(path.resolve())
+    if written:
+        console.print(f"[green]Created schema migration:[/green] {written}")
+        console.print("[dim]Run supabase db push to apply.[/dim]")
+    else:
+        console.print("[dim]Base schema migration already exists.[/dim]")
+
+
+@app.command()
 def deploy(
     path: Path = typer.Argument(
         ".",
@@ -992,6 +1066,17 @@ def deploy(
         "-l",
         help="Deploy only this loop (by loop_id); if omitted, deploys all loops with Supabase telemetry",
     ),
+    upstream: Optional[str] = typer.Option(
+        None,
+        "--upstream",
+        "-u",
+        help="Upstream workspace URL for push (e.g. https://skene.ai/workspace/my-app)",
+    ),
+    push_only: bool = typer.Option(
+        False,
+        "--push-only",
+        help="Re-push current deploy output without regenerating",
+    ),
 ):
     """
     Build a Supabase migration from growth loop telemetry into /supabase.
@@ -1003,14 +1088,31 @@ def deploy(
       enriches payload (e.g. user_id -> email), creates action if event_seq %% 5 == 0,
       and ensures each action has db_id
 
+    With --upstream: pushes artifacts to remote for backup/versioning.
+    Use `skene login` to authenticate.
+
     Examples:
 
         skene deploy
+        skene deploy --upstream https://skene.ai/workspace/my-app
         skene deploy --loop skene_guard_activation_safety
         skene deploy --context ./skene-context
     """
-    from skene_growth.growth_loops.deploy import deploy_loops_to_supabase
+    from skene_growth.growth_loops.deploy import (
+        deploy_loops_to_supabase,
+        extract_supabase_telemetry,
+        push_deploy_to_upstream,
+    )
     from skene_growth.growth_loops.storage import load_existing_growth_loops
+
+    config = load_config()
+    project_upstream = load_project_upstream()
+    resolved_upstream = (
+        upstream
+        or (project_upstream.get("upstream") if project_upstream else None)
+        or config.upstream
+    )
+    resolved_token = resolve_upstream_token(config) if resolved_upstream else None
 
     # Resolve context directory
     if context is None:
@@ -1022,46 +1124,103 @@ def deploy(
             if (candidate / "growth-loops").is_dir():
                 context = candidate
                 break
-        if context is None:
+        if context is None and not push_only:
             console.print(
                 "[red]Could not find skene-context/growth-loops/ directory.[/red]\n"
                 "Use --context to specify the path explicitly."
             )
             raise typer.Exit(1)
+    if push_only and context is None:
+        context = path / "skene-context"
+        if not (context / "growth-loops").is_dir():
+            context = Path.cwd() / "skene-context"
 
-    loops = load_existing_growth_loops(context)
-    # Filter to loops with Supabase telemetry
-    from skene_growth.growth_loops.deploy import extract_supabase_telemetry
-
-    loops_with_telemetry = [
-        l for l in loops
-        if extract_supabase_telemetry(l)
-    ]
-    if loop_id:
-        loops_with_telemetry = [l for l in loops_with_telemetry if l.get("loop_id") == loop_id]
+    loops_with_telemetry: list[dict[str, Any]] = []
+    if not push_only:
+        loops = load_existing_growth_loops(context)
+        loops_with_telemetry = [l for l in loops if extract_supabase_telemetry(l)]
+        if loop_id:
+            loops_with_telemetry = [l for l in loops_with_telemetry if l.get("loop_id") == loop_id]
+            if not loops_with_telemetry:
+                console.print(f"[red]No loop with loop_id '{loop_id}' has Supabase telemetry.[/red]")
+                raise typer.Exit(1)
         if not loops_with_telemetry:
-            console.print(f"[red]No loop with loop_id '{loop_id}' has Supabase telemetry.[/red]")
+            console.print(
+                "[yellow]No growth loops with Supabase telemetry found.[/yellow]\n"
+                "Add telemetry with type 'supabase' (table, operation, properties) via skene build."
+            )
             raise typer.Exit(1)
 
-    if not loops_with_telemetry:
-        console.print(
-            "[yellow]No growth loops with Supabase telemetry found.[/yellow]\n"
-            "Add telemetry with type 'supabase' (table, operation, properties) via skene build."
-        )
-        raise typer.Exit(1)
-
     try:
-        migration_path, edge_path = deploy_loops_to_supabase(
-            loops_with_telemetry,
-            path,
-        )
-        console.print(f"[green]Migration:[/green] {migration_path}")
-        console.print(f"[green]Edge function:[/green] {edge_path}")
-        console.print(
-            "\n[dim]Configure app.settings in Postgres for pg_net:\n"
-            "  ALTER DATABASE postgres SET app.settings.supabase_url = 'https://YOUR_PROJECT.supabase.co';\n"
-            "  ALTER DATABASE postgres SET app.settings.supabase_anon_key = 'YOUR_ANON_KEY';[/dim]"
-        )
+        if not push_only:
+            migration_path, edge_path = deploy_loops_to_supabase(
+                loops_with_telemetry,
+                path,
+            )
+            console.print(f"[green]Migration:[/green] {migration_path}")
+            console.print(f"[green]Edge function:[/green] {edge_path}")
+        else:
+            ctx = context or path / "skene-context"
+            if (ctx / "growth-loops").is_dir():
+                loops_with_telemetry = [
+                    l
+                    for l in load_existing_growth_loops(ctx)
+                    if extract_supabase_telemetry(l)
+                ]
+
+        if resolved_upstream:
+            if push_only:
+                migrations_dir = path / "supabase" / "migrations"
+                for p in sorted(migrations_dir.glob("*.sql")):
+                    if "skene_growth" in p.name.lower():
+                        console.print(f"[green]Migration:[/green] {p}")
+                edge_path = path / "supabase" / "functions" / "skene-growth-process" / "index.ts"
+                if edge_path.exists():
+                    console.print(f"[green]Edge function:[/green] {edge_path}")
+            if not resolved_token:
+                console.print(
+                    "[yellow]No token. Run skene login to authenticate.[/yellow]"
+                )
+            else:
+                loops_dir = (context / "growth-loops") if context else None
+                if loops_dir and loops_dir.exists():
+                    console.print(f"[green]Growth loops:[/green] {loops_dir}")
+                result = push_deploy_to_upstream(
+                    project_root=path,
+                    upstream_url=resolved_upstream,
+                    token=resolved_token,
+                    loops=loops_with_telemetry,
+                    context=context,
+                )
+                if result.get("ok"):
+                    loops_dir = (context / "growth-loops") if context else None
+                    growth_loops_count = (
+                        len(list(loops_dir.glob("*.json")))
+                        if loops_dir and loops_dir.exists()
+                        else 0
+                    )
+                    sent_parts = ["migrations", "edge function"]
+                    if growth_loops_count:
+                        sent_parts.append(f"growth-loops ({growth_loops_count} file{'s' if growth_loops_count != 1 else ''})")
+                    console.print(
+                        f"[green]Pushed to upstream[/green] commit_hash={result.get('commit_hash', '?')} "
+                        f"({', '.join(sent_parts)})"
+                    )
+                else:
+                    msg = result.get("message", "Push failed.")
+                    if result.get("error") == "auth":
+                        console.print(f"[red]{msg}[/red]")
+                    else:
+                        console.print(f"[yellow]{msg}[/yellow]")
+
+        if not push_only:
+            console.print(
+                "\n[dim]Two-stage deploy (handled by upstream service):\n"
+                "  pg_cron and pg_net must be enabled in the Supabase dashboard.\n"
+                "  Configure secrets via the upstream service dashboard.\n"
+                "  Deployment step 1: Upstream service sets app.settings (supabase_url, keys) from the upstream project secrets.\n"
+                "  Deployment step 2: Upstream service runs schema, processor, and telemetry migrations.[/dim]\n\n"
+            )
     except Exception as e:
         console.print(f"[red]Deploy failed:[/red] {e}")
         raise typer.Exit(1)
@@ -1103,6 +1262,12 @@ def build(
         "--debug",
         help="Log all LLM input/output to .skene-growth/debug/",
     ),
+    feature: Optional[str] = typer.Option(
+        None,
+        "--feature",
+        "-f",
+        help="Bias toward this feature name when linking the loop",
+    ),
 ):
     """
     Build an AI prompt from your growth plan using LLM, then choose where to send it.
@@ -1131,7 +1296,7 @@ def build(
         Set api_key and provider in .skene-growth.config or ~/.config/skene-growth/config
     """
     # Run async logic
-    asyncio.run(_build_async(plan, context, api_key, provider, model, debug))
+    asyncio.run(_build_async(plan, context, api_key, provider, model, debug, feature))
 
 
 async def _build_async(
@@ -1141,6 +1306,7 @@ async def _build_async(
     provider: Optional[str],
     model: Optional[str],
     debug: bool = False,
+    bias_feature: Optional[str] = None,
 ):
     """Async implementation of build command."""
     # Load config to get LLM settings
@@ -1276,6 +1442,10 @@ async def _build_async(
         else:
             base_output_dir = Path(config.output_dir)
 
+        from skene_growth.feature_registry import load_features_for_build
+
+        features = load_features_for_build(base_output_dir)
+
         # Generate loop definition with LLM (telemetry format depends on run_target)
         console.print("\n[dim]Please wait...Generating growth loop definition...[/dim]")
         console.print("")
@@ -1285,6 +1455,8 @@ async def _build_async(
             plan_path=plan.resolve(),
             codebase_path=Path.cwd(),
             run_target=run_target,
+            features=features if features else None,
+            bias_feature_name=bias_feature,
         )
 
         # Extract loop_id and name from generated definition (in case LLM changed them)
@@ -1407,6 +1579,9 @@ async def _build_async(
             console.print(f"[yellow]Prompt saved to:[/yellow] {prompt_file}")
             console.print("[dim]You can run Claude manually with the saved prompt file.[/dim]\n")
             raise typer.Exit(1)
+
+
+app.add_typer(features_app, name="features")
 
 
 @app.command()
@@ -1621,8 +1796,11 @@ def skene_entry_point():
     skene_app.command()(chat)
     skene_app.command()(validate)
     skene_app.command()(status)
+    skene_app.command()(login)
+    skene_app.command()(logout)
     skene_app.command()(deploy)
     skene_app.command()(build)
+    skene_app.add_typer(features_app, name="features")
     skene_app.command()(config)
 
     # Add callback to handle default case (no subcommand) - launches chat

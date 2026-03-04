@@ -115,7 +115,7 @@ def save_config(config_path: Path, provider: str, model: str, api_key: str, base
         lines.append(f'base_url = "{base_url}"')
         lines.append("")
 
-    # Preserve other settings
+    # Preserve other settings (including upstream, upstream_token)
     for key, value in existing_config.items():
         if key not in ["api_key", "provider", "model", "base_url"]:
             if isinstance(value, str):
@@ -274,6 +274,8 @@ def interactive_config_setup() -> tuple[Path, str, str, str, str | None]:
 
 def show_config_status(cfg, project_cfg, user_cfg):
     """Display current configuration status."""
+    from skene_growth.config import resolve_upstream_token
+
     console.print(Panel.fit("[bold blue]Configuration[/bold blue]", title="skene-growth"))
 
     table = Table(title="Config Files")
@@ -315,6 +317,19 @@ def show_config_status(cfg, project_cfg, user_cfg):
     values_table.add_row("model", current_model, "config/default")
     values_table.add_row("output_dir", cfg.output_dir, "config/default")
     values_table.add_row("verbose", str(cfg.verbose), "config/default")
+
+    from skene_growth.config import load_project_upstream
+
+    project = load_project_upstream()
+    upstream_val = (project.get("upstream") if project else None) or cfg.upstream or "[dim]Not set[/dim]"
+    source = ".skene-upstream" if (project and project.get("upstream")) else "config/env"
+    values_table.add_row("upstream", upstream_val, source)
+    token = resolve_upstream_token(cfg)
+    if token:
+        masked = token[:4] + "..." + token[-4:] if len(token) > 8 else "***"
+        values_table.add_row("upstream_token", masked, "credentials")
+    else:
+        values_table.add_row("upstream_token", "[dim]Not set[/dim]", "-")
 
     console.print(values_table)
 

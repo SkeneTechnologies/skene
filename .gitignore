@@ -75,6 +75,7 @@ node_modules/
 .env.production
 .env.development
 .skene-growth.config
+.skene-upstream
 
 # Test coverage
 .coverage
@@ -84,6 +85,9 @@ htmlcov/
 # Database
 *.db
 *.sqlite3
+
+# Supabase
+supabase/
 
 # Jupyter Notebook
 .ipynb_checkpoints

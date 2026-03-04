@@ -70,6 +70,14 @@ class GrowthFeature(BaseModel):
         default_factory=list,
         description="List of growth opportunities for this feature",
     )
+    growth_pillars: list[str] = Field(
+        default_factory=list,
+        description="Growth pillars: onboarding, engagement, retention (0-3)",
+    )
+    loop_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs of loops that implement or enhance this feature",
+    )
 
 
 class GrowthOpportunity(BaseModel):
@@ -83,6 +91,10 @@ class GrowthOpportunity(BaseModel):
     )
     priority: Literal["high", "medium", "low"] = Field(
         description="Priority level for addressing this opportunity",
+    )
+    growth_pillars: list[str] = Field(
+        default_factory=list,
+        description="Growth pillars: onboarding, engagement, retention (0-3)",
     )
 
 

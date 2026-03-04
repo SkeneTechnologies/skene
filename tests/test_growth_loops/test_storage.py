@@ -135,9 +135,8 @@ class TestGenerateTimestampedFilename:
     def test_generates_timestamped_filename(self):
         """Should generate filename with timestamp."""
         result = generate_timestamped_filename("discovery_engine")
-        assert result.startswith("discovery_engine_")
-        assert result.endswith(".json")
-        assert len(result.split("_")) >= 4  # loop_id, YYYYMMDD, HHMMSS, json
+        assert result.endswith("_discovery_engine.json")
+        assert result[:-len("_discovery_engine.json")].replace("_", "").isdigit()
 
     def test_unique_timestamps(self):
         """Should generate unique filenames on repeated calls."""
@@ -147,20 +146,13 @@ class TestGenerateTimestampedFilename:
         assert result1 != result2
 
     def test_format_matches_spec(self):
-        """Should match format: <loop_id>_YYYYMMDD_HHMMSS.json"""
+        """Should match format: YYYYMMDD_HHMMSS_<loop_id>.json"""
         result = generate_timestamped_filename("test_loop")
-        # Should have format: test_loop_20260203_143022.json
+        # Should have format: 20260203_143022_test_loop.json
         parts = result.replace(".json", "").split("_")
-        assert len(parts) >= 3  # loop_id may have underscores, then YYYYMMDD, HHMMSS
-        # Find the date part (8 digits) and time part (6 digits)
-        date_idx = None
-        for i, part in enumerate(parts):
-            if len(part) == 8 and part.isdigit():  # YYYYMMDD
-                date_idx = i
-                break
-        assert date_idx is not None, "Should contain YYYYMMDD date"
-        assert len(parts[date_idx]) == 8  # YYYYMMDD
-        assert len(parts[date_idx + 1]) == 6  # HHMMSS
+        assert len(parts) >= 3  # YYYYMMDD, HHMMSS, loop_id (may have underscores)
+        assert len(parts[0]) == 8 and parts[0].isdigit()  # YYYYMMDD
+        assert len(parts[1]) == 6 and parts[1].isdigit()  # HHMMSS
 
 
 class TestWriteGrowthLoopJson:
@@ -286,6 +278,10 @@ class TestGenerateLoopDefinitionWithLlm:
         assert "verification_commands" in result
         assert "test_coverage" in result
         assert "metrics" in result
+        # Feature linking fields (added in Phase 2)
+        assert "linked_feature" in result
+        assert "linked_feature_id" in result
+        assert "growth_pillars" in result
 
     @pytest.mark.asyncio
     async def test_handles_markdown_code_fences(self):

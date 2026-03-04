@@ -76,6 +76,7 @@ For each growth feature you identify, provide:
 4. **confidence_score**: How confident are you (0.0 to 1.0)?
 5. **entry_point**: URL path or function name users interact with (if identifiable)
 6. **growth_potential**: List of specific improvements that could boost growth
+7. **growth_pillars**: 0-3 of "onboarding", "engagement", "retention" — infer from detected_intent
 
 Return your analysis as a JSON array of current growth features.
 Focus on quality over quantity - identify the most impactful features.
@@ -159,7 +160,7 @@ Return a complete growth manifest as JSON with:
 - current_growth_features: From the growth features analysis
 - revenue_leakage: From the revenue leakage analysis
 - industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
-- growth_opportunities: Your identified opportunities with priority (high/medium/low)
+- growth_opportunities: Your identified opportunities with feature_name, description, priority (high/medium/low), growth_pillars (0-3 of "onboarding", "engagement", "retention")
 """
     return base_prompt
 
@@ -339,7 +340,7 @@ Return a complete manifest as JSON with:
 - industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
 - features: From the features documentation
 - current_growth_features: From the growth features analysis
-- growth_opportunities: Your identified opportunities with priority (high/medium/low)
+- growth_opportunities: Your identified opportunities with feature_name, description, priority, growth_pillars (0-3 of onboarding/engagement/retention)
 """
     return base_prompt
 

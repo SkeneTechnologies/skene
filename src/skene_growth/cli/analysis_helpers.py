@@ -103,10 +103,18 @@ async def run_analysis(
                     console.print(json.dumps(result.data, indent=2, default=json_serializer))
                 return None, None
 
-            # Save output - unwrap "output" key if present
+            # Unwrap manifest data
+            manifest_data = result.data.get("output", result.data) if "output" in result.data else result.data
+
+            # Merge features into registry and enrich manifest
+            progress.update(task, description="Merging feature registry...")
+            from skene_growth.feature_registry import merge_registry_and_enrich_manifest
+
+            merge_registry_and_enrich_manifest(manifest_data, existing_loops, output)
+
+            # Write manifest (current snapshot)
             progress.update(task, description="Saving manifest...")
             output.parent.mkdir(parents=True, exist_ok=True)
-            manifest_data = result.data.get("output", result.data) if "output" in result.data else result.data
             output.write_text(json.dumps(manifest_data, indent=2, default=json_serializer))
 
             progress.update(task, description="Complete!")
