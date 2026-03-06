@@ -392,21 +392,11 @@ func isSelectLine(line string) bool {
 		strings.Contains(lower, "enter your choice")
 }
 
+// buildCommonFlags returns CLI flags for the skene command.
+// Provider, model, and API key are read from the config file by the CLI,
+// so they are not passed as flags here.
 func (e *Engine) buildCommonFlags() []string {
-	var flags []string
-	if e.config.Provider != "" {
-		flags = append(flags, "--provider", e.config.Provider)
-	}
-	if e.config.Model != "" {
-		flags = append(flags, "--model", e.config.Model)
-	}
-	if e.config.APIKey != "" {
-		flags = append(flags, "--api-key", e.config.APIKey)
-	}
-	if e.config.BaseURL != "" {
-		flags = append(flags, "--base-url", e.config.BaseURL)
-	}
-	return flags
+	return nil
 }
 
 func (e *Engine) buildEnvVars() []string {
