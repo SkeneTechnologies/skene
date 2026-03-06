@@ -3,9 +3,9 @@
 This monorepo contains two independently released packages. Each has its own CI/CD pipeline, versioning, and distribution channel.
 
 | Package | Directory | Distribution | Tag pattern |
-|---------|-----------|-------------|-------------|
-| Python CLI (`skene`) | `src/skene/` | [PyPI](https://pypi.org/project/skene/) | `v*` (e.g. `v0.3.0`) |
-| TUI (`skene`) | `tui/` | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) | `tui-v*` (e.g. `tui-v0.3.0`) |
+|--------|-----------|-------------|-------------|
+| Python CLI | `src/skene/` | [PyPI](https://pypi.org/project/skene/) | `v*` (e.g. `v0.3.0`) |
+| TUI | `tui/` | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) | `tui-v*` (e.g. `tui-v0.3.0`) |
 
 ## Pre-release versions
 
@@ -19,7 +19,7 @@ Pre-release TUI builds are automatically marked as pre-release on GitHub (not "l
 
 ---
 
-## Python CLI (`skene`)
+## Python CLI
 
 ### Files to update
 
@@ -52,7 +52,7 @@ gh release create vX.Y.Zrc1 --prerelease --title "vX.Y.Zrc1" --generate-notes
 
 ---
 
-## TUI (`skene`)
+## TUI
 
 ### Files to update
 
