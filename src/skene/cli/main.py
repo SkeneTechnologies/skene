@@ -24,7 +24,6 @@ from typing import Any, Optional
 import click
 import typer
 from pydantic import SecretStr
-from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
@@ -32,6 +31,9 @@ from rich.table import Table
 from typer.core import TyperGroup
 
 from skene import __version__
+from skene.output import console
+from skene.output import error as output_error
+from skene.output import status as output_status
 from skene.cli.analysis_helpers import (
     run_analysis,
     run_cycle,
@@ -92,8 +94,6 @@ app = typer.Typer(
     no_args_is_help=True,
     cls=SectionedHelpGroup,
 )
-
-console = Console()
 
 
 def version_callback(value: bool):
@@ -176,11 +176,11 @@ def analyze(
         envvar="SKENE_BASE_URL",
         help="Base URL for OpenAI-compatible API endpoint (required for generic provider)",
     ),
-    verbose: bool = typer.Option(
+    quiet: bool = typer.Option(
         False,
-        "-v",
-        "--verbose",
-        help="Enable verbose output",
+        "-q",
+        "--quiet",
+        help="Suppress status messages; show only errors and final results",
     ),
     product_docs: bool = typer.Option(
         False,
@@ -205,7 +205,7 @@ def analyze(
     debug: bool = typer.Option(
         False,
         "--debug",
-        help="Log all LLM input/output to .skene/debug/",
+        help="Show diagnostic messages and log all LLM input/output to ~/.local/state/skene/debug/",
     ),
     no_fallback: bool = typer.Option(
         False,
@@ -250,6 +250,15 @@ def analyze(
     """
     # Load config with fallbacks
     config = load_config()
+
+    # Set verbosity
+    from skene.output import set_debug, set_quiet
+
+    resolved_debug = debug or config.debug
+    if quiet:
+        set_quiet()
+    elif resolved_debug:
+        set_debug()
 
     # Apply config defaults
     resolved_api_key = api_key or config.api_key
@@ -336,9 +345,6 @@ def analyze(
         # Merge CLI excludes with config excludes (deduplicate)
         exclude_folders = list(set(exclude_folders + exclude))
 
-    # Resolve debug flag (CLI overrides config)
-    resolved_debug = debug or config.debug
-
     # Run async analysis - execute and handle output
 
     from skene.llm import create_llm_client
@@ -359,7 +365,7 @@ def analyze(
                 path,
                 resolved_output,
                 llm,
-                verbose,
+                resolved_debug,
                 exclude_folders=exclude_folders if exclude_folders else None,
             )
             registry_path = resolved_output.parent / "feature-registry.json"
@@ -373,7 +379,7 @@ def analyze(
                 path,
                 resolved_output,
                 llm,
-                verbose,
+                resolved_debug,
                 product_docs,
                 exclude_folders=exclude_folders if exclude_folders else None,
             )
@@ -477,11 +483,11 @@ def plan(
         envvar="SKENE_BASE_URL",
         help="Base URL for OpenAI-compatible API endpoint (required for generic provider)",
     ),
-    verbose: bool = typer.Option(
+    quiet: bool = typer.Option(
         False,
-        "-v",
-        "--verbose",
-        help="Enable verbose output",
+        "-q",
+        "--quiet",
+        help="Suppress status messages; show only errors and final results",
     ),
     activation: bool = typer.Option(
         False,
@@ -496,7 +502,7 @@ def plan(
     debug: bool = typer.Option(
         False,
         "--debug",
-        help="Log all LLM input/output to .skene/debug/",
+        help="Show diagnostic messages and log all LLM input/output to ~/.local/state/skene/debug/",
     ),
     no_fallback: bool = typer.Option(
         False,
@@ -531,6 +537,15 @@ def plan(
     """
     # Load config with fallbacks
     config = load_config()
+
+    # Set verbosity
+    from skene.output import set_debug, set_quiet
+
+    resolved_debug = debug or config.debug
+    if quiet:
+        set_quiet()
+    elif resolved_debug:
+        set_debug()
 
     # Apply config defaults
     resolved_api_key = api_key or config.api_key
@@ -673,9 +688,6 @@ def plan(
             if potential_context.exists():
                 context_dir_for_loops = potential_context
 
-    # Resolve debug flag (CLI overrides config)
-    resolved_debug = debug or config.debug
-
     # Run async cycle generation - execute and handle output
     async def execute_cycle():
         memo_content, todo_data = await run_cycle(
@@ -685,7 +697,7 @@ def plan(
             api_key=resolved_api_key,
             provider=resolved_provider,
             model=resolved_model,
-            verbose=verbose,
+            verbose=resolved_debug,
             activation=activation,
             context_dir=context_dir_for_loops,
             user_prompt=prompt,
@@ -796,10 +808,16 @@ def chat(
         "--tool-output-limit",
         help="Max tool output characters kept in context",
     ),
+    quiet: bool = typer.Option(
+        False,
+        "-q",
+        "--quiet",
+        help="Suppress status messages; show only errors and final results",
+    ),
     debug: bool = typer.Option(
         False,
         "--debug",
-        help="Log all LLM input/output to .skene/debug/",
+        help="Show diagnostic messages and log all LLM input/output to ~/.local/state/skene/debug/",
     ),
 ):
     """
@@ -812,6 +830,15 @@ def chat(
         uvx skene chat ./my-project --provider gemini --model gemini-3-flash-preview
     """
     config = load_config()
+
+    # Set verbosity
+    from skene.output import set_debug, set_quiet
+
+    resolved_debug = debug or config.debug
+    if quiet:
+        set_quiet()
+    elif resolved_debug:
+        set_debug()
 
     resolved_api_key = api_key or config.api_key
     resolved_provider = provider or config.provider
@@ -846,9 +873,6 @@ def chat(
                 "Set --api-key, SKENE_API_KEY env var, or add to .skene.config"
             )
             raise typer.Exit(1)
-
-    # Resolve debug flag (CLI overrides config)
-    resolved_debug = debug or config.debug
 
     from skene.cli.chat import run_chat
 
@@ -1351,10 +1375,16 @@ def build(
         envvar="SKENE_BASE_URL",
         help="Base URL for OpenAI-compatible API endpoint (required for generic provider)",
     ),
+    quiet: bool = typer.Option(
+        False,
+        "-q",
+        "--quiet",
+        help="Suppress status messages; show only errors and final results",
+    ),
     debug: bool = typer.Option(
         False,
         "--debug",
-        help="Log all LLM input/output to .skene/debug/",
+        help="Show diagnostic messages and log all LLM input/output to ~/.local/state/skene/debug/",
     ),
     no_fallback: bool = typer.Option(
         False,
@@ -1417,7 +1447,7 @@ def build(
         raise typer.Exit(1)
 
     # Run async logic
-    asyncio.run(_build_async(plan, context, api_key, provider, model, debug, target, base_url, no_fallback, feature))
+    asyncio.run(_build_async(plan, context, api_key, provider, model, debug, target, base_url, no_fallback, feature, quiet))
 
 
 async def _build_async(
@@ -1431,10 +1461,20 @@ async def _build_async(
     base_url: Optional[str] = None,
     no_fallback: Optional[bool] = False,
     bias_feature: Optional[str] = None,
+    quiet: bool = False,
 ):
     """Async implementation of build command."""
     # Load config to get LLM settings
     config = load_config()
+
+    # Set verbosity
+    from skene.output import set_debug, set_quiet
+
+    resolved_debug = debug or config.debug
+    if quiet:
+        set_quiet()
+    elif resolved_debug:
+        set_debug()
     api_key = api_key or config.api_key
     provider = provider or config.provider
     base_url = base_url or config.base_url
@@ -1570,6 +1610,7 @@ async def _build_async(
         # Generate loop definition with LLM (telemetry format depends on run_target)
         console.print("\n[dim]Please wait...Generating growth loop definition...[/dim]")
         console.print("")
+        output_status("Generating growth loop definition")
         loop_definition = await generate_loop_definition_with_llm(
             llm=llm,
             technical_execution=technical_execution,
@@ -1601,12 +1642,13 @@ async def _build_async(
             payload=loop_definition,
         )
 
+        output_status(f"Saved growth loop to: {saved_path}")
         console.print(f"[dim]Saved growth loop to: {saved_path}[/dim]\n")
 
     except Exception as e:
         # Don't fail the whole build if storage fails
         console.print(f"[yellow]Warning:[/yellow] Failed to save growth loop: {e}")
-        if config.verbose:
+        if resolved_debug:
             import traceback
 
             console.print(traceback.format_exc())
@@ -1662,6 +1704,7 @@ async def _build_async(
 
     # 4. Prompt build
     console.print("\n[dim]Generating implementation prompt...[/dim]\n")
+    output_status("Generating implementation prompt")
     try:
         prompt = await build_prompt_with_llm(plan.resolve(), technical_execution, llm)
     except Exception as e:

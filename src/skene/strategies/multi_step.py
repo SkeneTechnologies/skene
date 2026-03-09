@@ -2,11 +2,9 @@
 Multi-step analysis strategy.
 """
 
-from loguru import logger
-from rich.console import Console
-
 from skene.codebase import CodebaseExplorer
 from skene.llm import LLMClient
+from skene.output import debug, error, status
 from skene.strategies.base import (
     AnalysisResult,
     AnalysisStrategy,
@@ -14,8 +12,6 @@ from skene.strategies.base import (
 )
 from skene.strategies.context import AnalysisContext
 from skene.strategies.steps.base import AnalysisStep
-
-console = Console()
 
 
 class MultiStepStrategy(AnalysisStrategy):
@@ -105,13 +101,15 @@ class MultiStepStrategy(AnalysisStrategy):
         total_steps = len(self.steps)
 
         if total_steps == 0:
+            from loguru import logger
+
             logger.warning("MultiStepStrategy has no steps defined")
             return AnalysisResult.error_result(
                 error="No steps defined in strategy",
                 metadata=context.metadata,
             )
 
-        console.print(f"Starting MultiStepStrategy with {total_steps} steps")
+        status(f"Starting MultiStepStrategy with {total_steps} steps")
 
         # Execute each step
         for i, step in enumerate(self.steps):
@@ -123,7 +121,7 @@ class MultiStepStrategy(AnalysisStrategy):
                 progress = (i / total_steps) * 100
                 on_progress(f"Step {step_num}/{total_steps}: {step_name}", progress)
 
-            console.print(f"Executing step {step_num}/{total_steps}: {step_name}")
+            status(f"Executing step {step_num}/{total_steps}: {step_name}")
 
             try:
                 # Execute the step
@@ -134,7 +132,7 @@ class MultiStepStrategy(AnalysisStrategy):
 
                 # Check for errors
                 if not result.success:
-                    logger.error(f"Step {step_name} failed: {result.error}")
+                    error(f"Step {step_name} failed: {result.error}")
                     if on_progress:
                         on_progress(f"Failed at step {step_name}", -1)
                     return AnalysisResult.error_result(
@@ -142,10 +140,10 @@ class MultiStepStrategy(AnalysisStrategy):
                         metadata=context.metadata,
                     )
 
-                console.print(f"Step {step_name} completed successfully")
+                debug(f"Step {step_name} completed successfully")
 
             except Exception as e:
-                logger.exception(f"Step {step_name} raised exception: {e}")
+                error(f"Step {step_name} raised exception: {e}")
                 if on_progress:
                     on_progress(f"Error in step {step_name}", -1)
                 return AnalysisResult.error_result(
@@ -157,7 +155,7 @@ class MultiStepStrategy(AnalysisStrategy):
         if on_progress:
             on_progress("Complete", 100.0)
 
-        console.print(
+        status(
             f"MultiStepStrategy completed successfully. "
             f"Files read: {len(context.metadata.files_read)}, "
             f"Tokens used: {context.metadata.tokens_used}"

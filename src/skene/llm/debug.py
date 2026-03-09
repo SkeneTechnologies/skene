@@ -10,15 +10,16 @@ from typing import AsyncGenerator
 from loguru import logger
 
 from skene.llm.base import LLMClient
+from skene.output import DEBUG_DIR
 
 _SESSION_TIMESTAMP = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-_DEBUG_DIR = Path(".skene") / "debug"
+_DEBUG_DIR = DEBUG_DIR
 
 
 class DebugLLMClient(LLMClient):
     """Wraps any LLMClient and logs prompts and responses to a debug log file.
 
-    Log files are written to ``.skene/debug/debug_<timestamp>.log``,
+    Log files are written to ``~/.local/state/skene/debug/debug_<timestamp>.log``,
     one file per session (process invocation).
     """
 

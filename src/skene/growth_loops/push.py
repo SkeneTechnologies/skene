@@ -11,11 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
-
 from skene.growth_loops.schema_sql import BASE_SCHEMA_SQL
-
-console = Console()
 
 BASE_SCHEMA_MIGRATION_PREFIX = "20260201000000"
 BASE_SCHEMA_MIGRATION_NAME = "skene_schema"

@@ -5,9 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from rich.console import Console
-
-console = Console()
+from skene.output import console, error as output_error, warning
 
 
 def decline_plan(context: Optional[Path], output: Path) -> Path | None:
@@ -25,7 +23,7 @@ def decline_plan(context: Optional[Path], output: Path) -> Path | None:
     elif not plan_path.suffix:
         plan_path = plan_path / "growth-plan.md"
     if not plan_path.exists():
-        console.print("[red]Error:[/red] No growth plan found to decline.")
+        output_error("No growth plan found to decline.")
         return None
 
     plans_dir = plan_path.parent / "plans" / "declined"
@@ -65,6 +63,6 @@ def load_declined_plans(base_dir: Path, limit: int = 5) -> list[str]:
             content = p.read_text()
             plans.append(content)
         except OSError as e:
-            console.print(f"[yellow]Warning:[/yellow] Could not read {p.name}: {e}", style="dim")
+            warning(f"Could not read {p.name}: {e}")
             continue
     return plans

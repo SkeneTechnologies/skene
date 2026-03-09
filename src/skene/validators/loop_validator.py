@@ -23,14 +23,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from loguru import logger
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 
 from skene.growth_loops.storage import load_existing_growth_loops
-
-console = Console()
 
 
 # ---------------------------------------------------------------------------
@@ -887,9 +881,18 @@ _STATUS_ICON = {
 
 
 def print_validation_report(results: list[LoopValidationResult]) -> None:
-    """Print a Rich-formatted validation report to the console."""
+    """Print a Rich-formatted validation report to the console.
+
+    Uses the shared console from output.py for all rendering.
+    """
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+
+    from skene.output import console, warning
+
     if not results:
-        console.print("[yellow]No growth loops found to validate.[/yellow]")
+        warning("No growth loops found to validate.")
         return
 
     total_loops = len(results)
@@ -904,7 +907,7 @@ def print_validation_report(results: list[LoopValidationResult]) -> None:
     )
 
     for result in results:
-        _print_loop_result(result)
+        _print_loop_result(result, console, Table, Text)
 
     # Summary
     console.print()
@@ -915,11 +918,16 @@ def print_validation_report(results: list[LoopValidationResult]) -> None:
         console.print(f"[bold yellow]{pending} loop(s) have unmet requirements.[/bold yellow]")
 
 
-def _print_loop_result(result: LoopValidationResult) -> None:
+def _print_loop_result(
+    result: LoopValidationResult,
+    console: Any,
+    Table: type,
+    Text: type,
+) -> None:
     """Print detailed results for a single loop."""
-    status = "[green]COMPLETE[/green]" if result.all_passed else "[red]INCOMPLETE[/red]"
+    loop_status = "[green]COMPLETE[/green]" if result.all_passed else "[red]INCOMPLETE[/red]"
     header = Text.from_markup(
-        f"[bold]{result.loop_name}[/bold] ({result.loop_id})  {status}"
+        f"[bold]{result.loop_name}[/bold] ({result.loop_id})  {loop_status}"
         f"[dim]({result.passed_checks}/{result.total_checks} checks, {result.elapsed_ms:.0f}ms)[/dim]"
     )
     console.print(header)

@@ -5,13 +5,12 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from skene.llm import LLMClient
-
-console = Console()
+from skene.output import console, status as output_status
+from skene.output import error as output_error
 
 
 async def _show_progress_indicator(stop_event: asyncio.Event) -> None:
@@ -44,7 +43,7 @@ async def run_analysis(
     path: Path,
     output: Path,
     llm: LLMClient,
-    verbose: bool,
+    debug: bool,
     product_docs: Optional[bool] = False,
     exclude_folders: Optional[list[str]] = None,
 ):
@@ -98,8 +97,8 @@ async def run_analysis(
             )
 
             if not result.success:
-                console.print("[red]Analysis failed[/red]")
-                if verbose and result.data:
+                output_error("Analysis failed")
+                if debug and result.data:
                     console.print(json.dumps(result.data, indent=2, default=json_serializer))
                 return None, None
 
@@ -122,8 +121,8 @@ async def run_analysis(
             return result, manifest_data
 
         except Exception as e:
-            console.print(f"[red]Error:[/red] {e}")
-            if verbose:
+            output_error(str(e))
+            if debug:
                 import traceback
 
                 console.print(traceback.format_exc())
@@ -134,7 +133,7 @@ async def run_features_analysis(
     path: Path,
     output: Path,
     llm: LLMClient,
-    verbose: bool,
+    debug: bool,
     exclude_folders: Optional[list[str]] = None,
 ):
     """
@@ -172,8 +171,8 @@ async def run_features_analysis(
             )
 
             if not result.success:
-                console.print("[red]Analysis failed[/red]")
-                if verbose and result.data:
+                output_error("Features analysis failed")
+                if debug and result.data:
                     console.print(json.dumps(result.data, indent=2, default=json_serializer))
                 return None, None
 
@@ -192,8 +191,8 @@ async def run_features_analysis(
             progress.update(task, description="Complete!")
             return result, manifest_data
         except Exception as e:
-            console.print(f"[red]Error:[/red] {e}")
-            if verbose:
+            output_error(str(e))
+            if debug:
                 import traceback
 
                 console.print(traceback.format_exc())
@@ -487,6 +486,7 @@ async def run_cycle(
 
             # Connect to LLM
             progress.update(task, description="Connecting to LLM provider...")
+            output_status(f"Connecting to LLM provider ({provider}/{model})")
             llm = create_llm_client(
                 provider, SecretStr(api_key), model, debug=debug, base_url=base_url, no_fallback=no_fallback
             )
@@ -494,6 +494,7 @@ async def run_cycle(
             # Generate memo
             memo_type = "activation memo" if activation else "Council memo"
             progress.update(task, description=f"Generating {memo_type}...")
+            output_status(f"Generating {memo_type}")
             from skene.planner import Planner
 
             planner = Planner()
@@ -533,6 +534,7 @@ async def run_cycle(
 
             # Write output
             progress.update(task, description="Writing output...")
+            output_status(f"Writing output to {output_path}")
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(memo_content)
 
@@ -542,9 +544,11 @@ async def run_cycle(
                 json_path.write_text(growth_plan.model_dump_json(indent=2))
 
             progress.update(task, description="Complete!")
+            output_status("Memo generation complete")
 
             # Generate todo list from memo + structured project context
             progress.update(task, description="Generating todo list...")
+            output_status("Generating todo list")
             todo_list = await generate_todo_list(llm, memo_content, manifest_data, growth_plan=growth_plan)
 
             if growth_plan is not None:
@@ -563,7 +567,7 @@ async def run_cycle(
             return memo_content, (executive_summary, todo_summary, todo_list)
 
         except Exception as e:
-            console.print(f"[red]Error:[/red] {e}")
+            output_error(str(e))
             if verbose:
                 import traceback
 

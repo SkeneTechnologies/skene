@@ -4,15 +4,13 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
 
 from skene.feature_registry import (
     FEATURE_REGISTRY_FILENAME,
     export_registry_to_format,
     load_feature_registry,
 )
-
-console = Console()
+from skene.output import console
 
 features_app = typer.Typer(help="Manage growth feature registry.")
 

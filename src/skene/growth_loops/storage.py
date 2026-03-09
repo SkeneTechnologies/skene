@@ -11,12 +11,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from rich.console import Console
-
 from skene.feature_registry import derive_feature_id
 from skene.llm.base import LLMClient
-
-console = Console()
+from skene.output import console, status
 
 
 async def _show_progress_indicator(stop_event: asyncio.Event) -> None:

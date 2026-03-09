@@ -9,7 +9,6 @@ import getpass
 from pathlib import Path
 
 import typer
-from rich.console import Console
 from rich.table import Table
 
 from skene.config import (
@@ -21,7 +20,7 @@ from skene.config import (
 )
 from skene.growth_loops.upstream import _api_base_from_upstream, _workspace_slug_from_url, validate_token
 
-console = Console()
+from skene.output import console
 
 
 def cmd_login(upstream_url: str | None = None) -> None:

@@ -2,9 +2,7 @@
 
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from skene.output import console
 
 
 def write_product_docs(manifest_data: dict, manifest_path: Path) -> None:

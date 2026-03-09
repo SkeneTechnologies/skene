@@ -4,12 +4,11 @@ import os
 import sys
 from pathlib import Path
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 
-console = Console()
+from skene.output import console
 
 
 def _set_config_permissions(config_path: Path) -> None:
@@ -132,10 +131,10 @@ def save_config(config_path: Path, provider: str, model: str, api_key: str, base
         lines.append("# Default output directory")
         lines.append('output_dir = "./skene-context"')
 
-    if "verbose" not in existing_config:
+    if "debug" not in existing_config:
         lines.append("")
-        lines.append("# Enable verbose output")
-        lines.append("verbose = false")
+        lines.append("# Enable debug output (diagnostics + LLM tracing)")
+        lines.append("debug = false")
 
     config_path.write_text("\n".join(lines))
     _set_config_permissions(config_path)

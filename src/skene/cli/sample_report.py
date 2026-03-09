@@ -4,10 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from rich.console import Console
 from rich.panel import Panel
 
-console = Console()
+from skene.output import console
 
 
 def generate_sample_growth_analysis() -> str:
