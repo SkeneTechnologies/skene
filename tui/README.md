@@ -1,19 +1,19 @@
 # Skene
 
-A terminal interface for [Skene Growth](https://github.com/SkeneTechnologies/skene). Guides you through selecting a repository, choosing an AI provider, and running growth analysis — all from the terminal.
+A terminal interface for [Skene](https://github.com/SkeneTechnologies/skene). Guides you through selecting a repository, choosing an AI provider, and running growth analysis — all from the terminal.
 
 Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ## What It Does
 
-Skene terminal is the interactive front-end for **Skene Growth** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
+Skene terminal is the interactive front-end for **Skene** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
 
 The tool itself does **not** perform any analysis. It orchestrates `uvx skene` in your selected repository directory and displays the results.
 
 ## Features
 
 - Step-by-step wizard — provider, model, authentication, project selection
-- Multiple AI providers — Skene, OpenAI, Anthropic, Gemini, Ollama, LM Studio, or any OpenAI-compatible endpoint
+- Multiple AI providers — OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint
 - Authentication — Skene magic link, API key entry, local model auto-detection
 - Existing analysis detection — detects previous `skene-context/` output and offers to view or re-run
 - Live terminal output during analysis
@@ -75,7 +75,7 @@ Run `skene` and follow the steps:
 
 ```
 Welcome
-  → AI Provider (Skene, OpenAI, Anthropic, Gemini, Ollama, LM Studio, Generic)
+  → AI Provider (OpenAI, Anthropic, Gemini, Generic)
     → Model selection
       → Authentication (magic link / API key / local model)
         → Project directory
@@ -123,12 +123,9 @@ Example `.skene.config`:
 
 | Provider | ID | Auth |
 |----------|----|------|
-| Skene | `skene` | Magic link or API key |
 | OpenAI | `openai` | API key |
 | Anthropic | `anthropic` | API key |
 | Gemini | `gemini` | API key |
-| Ollama | `ollama` | None (local) |
-| LM Studio | `lmstudio` | None (local) |
 | Generic | `generic` | API key + base URL |
 
 ## Development
