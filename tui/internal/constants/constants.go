@@ -1,5 +1,7 @@
 package constants
 
+import "fmt"
+
 // Version and repository information
 var (
 	Version    = "dev"
@@ -25,7 +27,8 @@ const (
 
 // Package and directory names
 const (
-	GrowthPackageName = "skene"
+	GrowthPackageName    = "skene"
+	GrowthPackageVersion = "0.3.0"
 	OutputDirName     = "skene-context"
 	DefaultOutputDir  = "./skene-context"
 	SkeneCacheDir     = ".skene"
@@ -34,6 +37,11 @@ const (
 	UserConfigDir     = ".config/skene"
 	UserConfigFile    = "config"
 )
+
+// GrowthPackageSpec returns the versioned package specifier for uvx (e.g. "skene==0.3.0").
+func GrowthPackageSpec() string {
+	return fmt.Sprintf("%s==%s", GrowthPackageName, GrowthPackageVersion)
+}
 
 // Output file names
 const (

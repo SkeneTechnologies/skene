@@ -56,9 +56,11 @@ gh release create vX.Y.Zrc1 --prerelease --title "vX.Y.Zrc1" --generate-notes
 
 ### Version handling
 
-The binary version is automatically injected via `-ldflags` at build time — `tui/internal/constants/constants.go` does _not_ need to be updated manually.
+The binary version is automatically injected via `-ldflags` at build time — `tui/internal/constants/constants.go` does _not_ need to be updated manually for the TUI version.
 
-- **Stable releases:** Update `VERSION` in `tui/Makefile` (e.g. `VERSION=tui-v0.3.0`). This is used by the no-Go fallback download path and for local builds, and should always point to the latest stable release.
+The TUI pins the Python CLI version it depends on via `GrowthPackageVersion` in `tui/internal/constants/constants.go`. When releasing a new Python CLI version that the TUI should use, update this constant.
+
+- **Stable releases:** Update `VERSION` in `tui/Makefile` (e.g. `VERSION=tui-v0.3.0`). This is used by the no-Go fallback download path and for local builds, and should always point to the latest stable release. If the pinned Python CLI version needs bumping, also update `GrowthPackageVersion` in `tui/internal/constants/constants.go`.
 - **Pre-releases:** Do _not_ update the Makefile. The CI workflow reads the version from the git tag directly, so the Makefile should keep pointing to the latest stable release.
 
 ### Stable release steps
@@ -66,9 +68,11 @@ The binary version is automatically injected via `-ldflags` at build time — `t
 ```bash
 # 1. Update VERSION in tui/Makefile
 #    Set it to the tag you're about to create, e.g. VERSION=tui-v0.3.0
+# 2. If needed, update GrowthPackageVersion in tui/internal/constants/constants.go
+#    to match the Python CLI version the TUI should use
 
-# 2. Commit the version bump
-git add tui/Makefile
+# 3. Commit the version bump
+git add tui/Makefile tui/internal/constants/constants.go
 git commit -m "Bump TUI version to X.Y.Z"
 git push origin main
 
@@ -123,6 +127,7 @@ The CI pipelines run independently — Python changes don't trigger Go CI and vi
 
 ### TUI stable release
 - [ ] `VERSION` updated in `tui/Makefile`
+- [ ] `GrowthPackageVersion` updated in `tui/internal/constants/constants.go` (if Python CLI version changed)
 - [ ] Changes committed and pushed to `main`
 - [ ] Tag created and pushed (`git tag tui-vX.Y.Z && git push origin tui-vX.Y.Z`)
 - [ ] Verify on [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases)

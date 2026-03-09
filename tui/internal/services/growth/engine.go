@@ -105,7 +105,7 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting analysis via uvx skene...")
 
-	args := []string{constants.GrowthPackageName, "analyze", "."}
+	args := []string{constants.GrowthPackageSpec(), "analyze", "."}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(ctx, args); err != nil {
@@ -127,7 +127,7 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 func (e *Engine) GeneratePlan() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{constants.GrowthPackageName, "plan"}
+	args := []string{constants.GrowthPackageSpec(), "plan"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -144,7 +144,7 @@ func (e *Engine) GeneratePlan() *AnalysisResult {
 func (e *Engine) GenerateBuild() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{constants.GrowthPackageName, "build"}
+	args := []string{constants.GrowthPackageSpec(), "build"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -162,7 +162,7 @@ func (e *Engine) ValidateManifest() *AnalysisResult {
 	result := &AnalysisResult{}
 
 	manifestPath := filepath.Join(e.resolveOutputDir(), constants.GrowthManifestFile)
-	args := []string{constants.GrowthPackageName, "validate", manifestPath}
+	args := []string{constants.GrowthPackageSpec(), "validate", manifestPath}
 
 	if err := e.runUVX(context.Background(), args); err != nil {
 		result.Error = fmt.Errorf("validation failed: %w", err)
