@@ -24,7 +24,7 @@ Pre-release TUI builds are automatically marked as pre-release on GitHub (not "l
 ### Files to update
 
 1. **`pyproject.toml`** — `version = "X.Y.Z"`
-2. **`src/skene/__init__.py`** — `__version__ = "X.Y.Z"` (if present)
+2. **`src/skene/__init__.py`** — `__version__ = "X.Y.Z"`
 
 ### Steps
 
@@ -56,7 +56,9 @@ gh release create vX.Y.Zrc1 --prerelease --title "vX.Y.Zrc1" --generate-notes
 
 ### Files to update
 
-1. **`tui/Makefile`** — `VERSION=tui-vX.Y.Z` (used by the no-Go fallback download path)
+1. **`tui/Makefile`** — `VERSION=tui-vX.Y.Z` (used by the no-Go fallback download path and injected into the binary at build time)
+
+> **Note:** `tui/internal/constants/constants.go` does _not_ need to be updated. The version is automatically injected into the binary via `-ldflags` at build time, using the `VERSION` from the Makefile (local builds) or the git tag (CI builds).
 
 ### Steps
 
@@ -105,7 +107,7 @@ The CI pipelines run independently — Python changes don't trigger Go CI and vi
 
 ### Python release
 - [ ] Version bumped in `pyproject.toml`
-- [ ] Version bumped in `src/skene/__init__.py` (if applicable)
+- [ ] Version bumped in `src/skene/__init__.py`
 - [ ] Changes committed and pushed to `main`
 - [ ] GitHub Release created (`gh release create vX.Y.Z`)
 - [ ] Verify on [PyPI](https://pypi.org/project/skene/)

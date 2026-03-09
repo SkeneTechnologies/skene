@@ -8,8 +8,8 @@ BUILD_DIR=build
 REPO=SkeneTechnologies/skene
 VERSION=tui-v0.3.0
 
-# Build flags
-LDFLAGS=-ldflags "-s -w"
+# Build flags — VERSION is injected into the binary at compile time
+LDFLAGS=-ldflags "-s -w -X skene/internal/constants.Version=$(subst tui-,,$(VERSION))"
 HAS_GO := $(shell which go >/dev/null 2>&1 && echo yes || echo no)
 
 # Default target

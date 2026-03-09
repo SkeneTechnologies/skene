@@ -47,7 +47,8 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY="${BINARY}.exe"
           fi
-          go build -ldflags "-s -w" -o "../build/${BINARY}" ./cmd/skene/
+          VERSION="${GITHUB_REF_NAME#tui-}"
+          go build -ldflags "-s -w -X skene/internal/constants.Version=${VERSION}" -o "../build/${BINARY}" ./cmd/skene/
 
       - name: Package archive
         run: |
