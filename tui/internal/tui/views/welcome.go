@@ -1,6 +1,8 @@
 package views
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"skene/internal/constants"
 	"skene/internal/tui/components"
@@ -15,6 +17,10 @@ type WelcomeView struct {
 	height int
 	time   float64
 	anim   components.ASCIIMotionModel
+
+	// Update notification (set asynchronously)
+	newVersion string
+	updateCmd  string
 }
 
 // NewWelcomeView creates a new welcome view
@@ -49,6 +55,12 @@ func (v *WelcomeView) InitAnimation() tea.Cmd {
 	return v.anim.Init()
 }
 
+// SetUpdateAvailable sets the update notification info
+func (v *WelcomeView) SetUpdateAvailable(newVersion, updateCmd string) {
+	v.newVersion = newVersion
+	v.updateCmd = updateCmd
+}
+
 // ResetAnimation recreates the animation so it plays from the start
 func (v *WelcomeView) ResetAnimation() tea.Cmd {
 	v.anim = components.NewASCIIMotion(styles.IsDarkBackground)
@@ -79,6 +91,14 @@ func (v *WelcomeView) Render() string {
 	// Version info
 	version := center.Render(styles.Muted.Render(constants.Version + " • " + constants.Repository))
 
+	// Update notification
+	var updateNotice string
+	if v.newVersion != "" {
+		notice := fmt.Sprintf("Update available: %s (current: %s)", v.newVersion, constants.Version)
+		updateNotice = center.Render(styles.Accent.Render(notice))
+		updateNotice += "\n" + center.Render(styles.Muted.Render(v.updateCmd))
+	}
+
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
@@ -86,8 +106,7 @@ func (v *WelcomeView) Render() string {
 	})
 
 	// Combine elements
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+	elements := []string{
 		logo,
 		"",
 		"",
@@ -96,6 +115,13 @@ func (v *WelcomeView) Render() string {
 		subtitle,
 		"",
 		version,
+	}
+	if updateNotice != "" {
+		elements = append(elements, "", updateNotice)
+	}
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		elements...,
 	)
 
 	centered := lipgloss.Place(
