@@ -5,7 +5,7 @@
   <a href="https://www.reddit.com/r/plgbuilders/"><img src="https://img.shields.io/badge/r%2Fplgbuilders-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>
 
-# skene
+# Skene
 
 [![PyPI version](https://img.shields.io/pypi/v/skene)](https://pypi.org/project/skene/)
 [![Downloads](https://static.pepy.tech/badge/skene/month)](https://pepy.tech/projects/skene)
@@ -24,6 +24,10 @@ uvx skene build           # Build an implementation prompt
 uvx skene status          # Check loop implementation status
 uvx skene push            # Deploy telemetry to Supabase + upstream
 ```
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
+<p>
 
 ## What It Does
 
