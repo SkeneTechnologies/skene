@@ -11,14 +11,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// ResultsFocus represents which element is focused
-type ResultsFocus int
-
-const (
-	ResultsFocusTabs ResultsFocus = iota
-	ResultsFocusContent
-)
-
 // ResultsView shows the analysis results in a tabbed dashboard
 type ResultsView struct {
 	width     int
@@ -27,7 +19,6 @@ type ResultsView struct {
 	activeTab int
 	contents  map[string]string
 	viewport  viewport.Model
-	focus     ResultsFocus
 	header    *components.WizardHeader
 }
 
@@ -47,7 +38,6 @@ func NewResultsViewWithContent(growthPlan, manifest, growthTemplate string) *Res
 		activeTab: 0,
 		contents:  make(map[string]string),
 		viewport:  vp,
-		focus:     ResultsFocusTabs,
 		header:    components.NewTitleHeader(constants.StepNameResults),
 	}
 
@@ -99,7 +89,7 @@ func (v *ResultsView) SetSize(width, height int) {
 
 // HandleLeft moves tab left
 func (v *ResultsView) HandleLeft() {
-	if v.focus == ResultsFocusTabs && v.activeTab > 0 {
+	if v.activeTab > 0 {
 		v.activeTab--
 		v.updateContent()
 	}
@@ -107,7 +97,7 @@ func (v *ResultsView) HandleLeft() {
 
 // HandleRight moves tab right
 func (v *ResultsView) HandleRight() {
-	if v.focus == ResultsFocusTabs && v.activeTab < len(v.tabs)-1 {
+	if v.activeTab < len(v.tabs)-1 {
 		v.activeTab++
 		v.updateContent()
 	}
@@ -115,25 +105,12 @@ func (v *ResultsView) HandleRight() {
 
 // HandleUp scrolls content up
 func (v *ResultsView) HandleUp() {
-	if v.focus == ResultsFocusContent {
-		v.viewport.ScrollUp(3)
-	}
+	v.viewport.ScrollUp(3)
 }
 
 // HandleDown scrolls content down
 func (v *ResultsView) HandleDown() {
-	if v.focus == ResultsFocusContent {
-		v.viewport.ScrollDown(3)
-	}
-}
-
-// HandleTab cycles focus
-func (v *ResultsView) HandleTab() {
-	if v.focus == ResultsFocusTabs {
-		v.focus = ResultsFocusContent
-	} else {
-		v.focus = ResultsFocusTabs
-	}
+	v.viewport.ScrollDown(3)
 }
 
 func (v *ResultsView) updateContent() {
@@ -210,33 +187,20 @@ func (v *ResultsView) renderTabs() string {
 }
 
 func (v *ResultsView) renderContentBox() string {
-	borderColor := styles.MidGray
-	if v.focus == ResultsFocusContent {
-		borderColor = styles.Cream
-	}
-
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(borderColor).
+		BorderForeground(styles.Cream).
 		Padding(1, 2).
 		Width(v.viewport.Width + 6)
 
 	return boxStyle.Render(v.viewport.View())
 }
 
-// GetHelpItems returns context-specific help
+// GetHelpItems returns help items for the results view
 func (v *ResultsView) GetHelpItems() []components.HelpItem {
-	if v.focus == ResultsFocusTabs {
-		return []components.HelpItem{
-			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSwitchTabs},
-			{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocusContent},
-			{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
-			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}
-	}
 	return []components.HelpItem{
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSwitchTabs},
 		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
-		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocusTabs},
 		{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}

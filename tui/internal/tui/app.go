@@ -244,6 +244,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 
+	case tea.MouseMsg:
+		if a.state == StateResults && a.resultsView != nil {
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				a.resultsView.HandleUp()
+			case tea.MouseButtonWheelDown:
+				a.resultsView.HandleDown()
+			}
+		}
+
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
@@ -861,8 +871,6 @@ func (a *App) handleResultsKeys(key string) tea.Cmd {
 		a.resultsView.HandleUp()
 	case "down", "j":
 		a.resultsView.HandleDown()
-	case "tab":
-		a.resultsView.HandleTab()
 	case "n", "enter":
 		a.state = StateNextSteps
 		a.nextStepsView = views.NewNextStepsView()
