@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from skene.llm import LLMClient
+from skene.output import debug, status
 from skene.planner.schema import GrowthPlan, parse_plan_json, render_plan_to_markdown
 
 
@@ -47,16 +48,19 @@ class Planner:
         Returns:
             Tuple of (markdown content, validated GrowthPlan)
         """
+        status("Preparing council memo...")
         # Build context for memo generation
         manifest_summary = self._format_manifest_summary(manifest_data)
 
         template_section = ""
         if template_data:
+            debug("Including growth template context")
             template_summary = self._format_template_summary(template_data)
             template_section = f"\n### Growth Journey (Lifecycle Template)\n{template_summary}\n"
 
         growth_loops_section = ""
         if growth_loops:
+            debug(f"Including {len(growth_loops)} growth loop(s) as context")
             from skene.growth_loops.storage import format_growth_loops_summary
 
             growth_loops_summary = format_growth_loops_summary(growth_loops)
@@ -72,6 +76,7 @@ class Planner:
         if user_prompt:
             user_context_section = f"### User Context\n{user_prompt}\n"
 
+        status("Generating growth plan (this may take a moment)...")
         prompt = f"""You are not an assistant. You are a Council of Growth Engineers. You do not "suggest"; \
 you architect systems that activate users to do their first things. You operate at the intersection of product, \
 data, and psychology to engineer immediate user activation—getting users to their first value moment, not \
@@ -256,10 +261,12 @@ Respond ONLY with the JSON object. No markdown code fences, no explanation.
 """
 
         response = await llm.generate_content(prompt)
+        debug("LLM response received, parsing plan JSON")
 
         project_name = manifest_data.get("project_name", "Project")
         plan = parse_plan_json(response)
         markdown = render_plan_to_markdown(plan, project_name, current_time_str)
+        status("Growth plan generated successfully")
         return markdown, plan
 
     async def generate_activation_memo(
@@ -287,16 +294,19 @@ Respond ONLY with the JSON object. No markdown code fences, no explanation.
         Returns:
             Markdown content for the memo
         """
+        status("Preparing activation memo...")
         # Build context for memo generation
         manifest_summary = self._format_manifest_summary(manifest_data)
 
         template_section = ""
         if template_data:
+            debug("Including growth template context")
             template_summary = self._format_template_summary(template_data)
             template_section = f"\n### Growth Journey (Lifecycle Template)\n{template_summary}\n"
 
         growth_loops_section = ""
         if growth_loops:
+            debug(f"Including {len(growth_loops)} growth loop(s) as context")
             from skene.growth_loops.storage import format_growth_loops_summary
 
             growth_loops_summary = format_growth_loops_summary(growth_loops)
@@ -312,6 +322,7 @@ Respond ONLY with the JSON object. No markdown code fences, no explanation.
         if user_prompt:
             user_context_section = f"### User Context\n{user_prompt}\n"
 
+        status("Generating activation memo (this may take a moment)...")
         prompt = f"""You write internal strategy memos. Your job is to produce a Value Realisation \
 Plan — a step-by-step activation strategy told from the customer's perspective as a journey.
 
@@ -411,6 +422,7 @@ product functionality producing real output.
 """
 
         response = await llm.generate_content(prompt)
+        status("Activation memo generated successfully")
         return response
 
     def _format_manifest_summary(self, manifest_data: dict[str, Any]) -> str:
