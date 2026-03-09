@@ -27,16 +27,6 @@ uvx skene plan
 
 No `pip install` needed. `uvx` downloads the package into an isolated environment on first run and caches it for subsequent calls.
 
-### The `skene` shorthand
-
-The package also registers a `skene` entry point that launches the interactive chat interface:
-
-```bash
-uvx --from skene skene
-```
-
-> **Note:** Because `skene` is not the package name, you need `--from skene` when using `uvx`. If you install via pip (Option 2), you can run `skene` directly.
-
 ---
 
 ## Option 2: pip

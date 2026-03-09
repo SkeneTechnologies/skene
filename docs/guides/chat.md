@@ -16,11 +16,11 @@ uvx skene chat
 # Chat about a specific codebase
 uvx skene chat /path/to/project
 
-# Using the `skene` shorthand (defaults to chat)
-uvx --from skene skene
+# Using the shorthand (defaults to chat)
+uvx skene
 ```
 
-The `skene` entry point defaults to the `chat` command, providing a convenient shorthand for interactive sessions.
+Running `skene` without a subcommand defaults to the `chat` command, providing a convenient shorthand for interactive sessions.
 
 ## Flags
 
