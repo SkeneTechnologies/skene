@@ -84,7 +84,7 @@ The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experie
 
 ## Contributing
 
-Contributions are welcome. Please open an issue or submit a pull request on [GitHub](https://github.com/SkeneTechnologies/skene).
+Contributions are welcome. Please [open an issue](https://github.com/SkeneTechnologies/skene/issues) or submit a [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## License
 
