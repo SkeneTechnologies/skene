@@ -22,7 +22,6 @@ func main() {
 	p := tea.NewProgram(
 		app,
 		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 	)
 
 	// Set program reference for background task communication
