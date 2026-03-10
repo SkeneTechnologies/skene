@@ -1,4 +1,5 @@
 <p align="center">
+  <img width="2000" height="400" alt="Skene_git" src="https://github.com/user-attachments/assets/86018223-e653-45de-90d2-334f6f4de589" />
   <a href="https://www.skene.ai"><img src="https://img.shields.io/badge/Website-007ACC?style=flat&logo=google-chrome&logoColor=white" alt="Website"></a>
   <a href="https://www.skene.ai/resources/docs/skene"><img src="https://img.shields.io/badge/Docs-555?style=flat&logo=bookstack&logoColor=white" alt="Docs"></a>
   <a href="https://www.skene.ai/resources/blog"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Blog"></a>
