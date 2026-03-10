@@ -44,6 +44,8 @@ uvx skene push            # Deploy telemetry to Supabase + upstream
 
 Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible endpoint. Free local audit available with no API key required.
 
+<img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
+
 ## Installation
 
 ```bash
