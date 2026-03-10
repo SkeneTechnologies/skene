@@ -8,9 +8,11 @@ import (
 
 	"skene/internal/constants"
 	"skene/internal/game"
+	"github.com/atotto/clipboard"
 	"skene/internal/services/auth"
 	"skene/internal/services/config"
 	"skene/internal/services/growth"
+	"skene/internal/services/versioncheck"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 	"skene/internal/tui/views"
@@ -95,6 +97,11 @@ type AuthCallbackMsg struct {
 	APIKey string
 	Model  string
 	Error  error
+}
+
+// VersionCheckMsg is sent when the background version check completes
+type VersionCheckMsg struct {
+	Result *versioncheck.Result
 }
 
 // authVerifiedMsg triggers the transition from verifying to success state
@@ -201,6 +208,7 @@ func (a *App) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	cmds = append(cmds, tick())
 	cmds = append(cmds, textinput.Blink)
+	cmds = append(cmds, checkForUpdate())
 	// Initialize welcome animation
 	if a.welcomeView != nil {
 		animCmd := a.welcomeView.InitAnimation()
@@ -310,6 +318,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if a.authView != nil {
 			a.authView.SetCountdown(a.authCountdown)
 			cmds = append(cmds, countdown(a.authCountdown-1))
+		}
+
+	case VersionCheckMsg:
+		if msg.Result != nil && a.welcomeView != nil {
+			a.welcomeView.SetUpdateAvailable(msg.Result.NewVersion, msg.Result.UpdateCmd)
 		}
 
 	case AnalysisDoneMsg:
@@ -532,6 +545,13 @@ func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 		} else {
 			a.state = StateProviderSelect
 			a.providerView.SetSize(a.width, a.height)
+		}
+		return nil
+	case "c":
+		if a.welcomeView != nil && a.welcomeView.HasUpdate() {
+			if clipboard.WriteAll(a.welcomeView.GetUpdateCmd()) == nil {
+				a.welcomeView.SetCopied()
+			}
 		}
 		return nil
 	}
@@ -1652,6 +1672,12 @@ func tick() tea.Cmd {
 	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
 		return TickMsg(t)
 	})
+}
+
+func checkForUpdate() tea.Cmd {
+	return func() tea.Msg {
+		return VersionCheckMsg{Result: versioncheck.Check()}
+	}
 }
 
 func countdown(seconds int) tea.Cmd {

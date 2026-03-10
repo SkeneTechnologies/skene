@@ -124,6 +124,13 @@ const (
 	WelcomeCTA      = "> ENTER <"
 )
 
+// Update notice (welcome view)
+const (
+	UpdateNoticeFormat   = "Update available: %s (current: %s)"
+	UpdateNoticeHintCopy = "Press c to copy update command"
+	UpdateNoticeCopied   = "Copied to clipboard!"
+)
+
 // Auth view
 const (
 	AuthOpeningBrowser  = "Opening browser for Skene authentication"
@@ -222,6 +229,7 @@ const (
 	HelpKeyG         = "g"
 	HelpKeyM         = "m"
 	HelpKeyR         = "r"
+	HelpKeyC         = "c"
 )
 
 // Help descriptions
@@ -265,4 +273,5 @@ const (
 	HelpDescToggleOption     = "toggle option"
 	HelpDescOpenFolder       = "open folder"
 	HelpDescTabs             = "tabs"
+	HelpDescCopyUpdateCmd    = "copy update cmd"
 )

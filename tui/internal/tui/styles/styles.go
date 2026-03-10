@@ -174,6 +174,12 @@ var FooterHelp lipgloss.Style
 // Spinner style
 var Spinner lipgloss.Style
 
+// UpdateNotice style — framed box for update + hint
+var UpdateNotice lipgloss.Style
+
+// UpdateNoticeText style — main update message (white)
+var UpdateNoticeText lipgloss.Style
+
 // rebuildStyles constructs all lipgloss styles from the current color
 // variables. Called by Init() after colors have been set.
 func rebuildStyles() {
@@ -290,6 +296,15 @@ func rebuildStyles() {
 
 	// Spinner style
 	Spinner = lipgloss.NewStyle().Foreground(Amber)
+
+	// UpdateNotice — bordered box for update + hint (no bg; centered text)
+	UpdateNotice = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(MidGray).
+		Padding(1, 1).
+		Align(lipgloss.Center).
+		MarginTop(1)
+	UpdateNoticeText = lipgloss.NewStyle().Foreground(White)
 }
 
 // init sets up the default dark-theme styles at package load time.
