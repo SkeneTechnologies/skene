@@ -16,15 +16,14 @@ PLG (Product-Led Growth) codebase analysis toolkit. Scan your codebase, detect g
 
 ## Quick Start
 
+Install and launch the interactive terminal UI:
+
 ```bash
-uvx skene config --init   # Create config file
-uvx skene config          # Set provider, model, API key
-uvx skene analyze .       # Analyze your codebase
-uvx skene plan            # Generate a growth plan
-uvx skene build           # Build an implementation prompt
-uvx skene status          # Check loop implementation status
-uvx skene push            # Deploy telemetry to Supabase + upstream
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
+skene
 ```
+
+The wizard walks you through provider selection, authentication, and analysis — no configuration needed upfront.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
@@ -48,20 +47,34 @@ Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible en
 
 ## Installation
 
+### Terminal UI (recommended)
+
+The TUI is an interactive wizard that guides you through the entire workflow. No prerequisites — the installer handles everything.
+
+```bash
+# Install the TUI
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
+
+# Launch it
+skene
+```
+
+### Python CLI
+
+If you prefer the command line, you can run Skene directly with `uvx` (no install needed) or install it globally:
+
 ```bash
 # Install uv (if you don't have it)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Recommended (no install needed)
+# Run directly (no install needed)
 uvx skene
 
 # Or install globally
 pip install skene
 ```
 
-## Documentation
-
-Full documentation: [www.skene.ai/resources/docs/skene](https://www.skene.ai/resources/docs/skene)
+For CLI usage details, see the [documentation](https://www.skene.ai/resources/docs/skene).
 
 ## Monorepo Structure
 
@@ -83,4 +96,3 @@ Contributions are welcome. Please open an issue or submit a pull request on [Git
 [MIT](https://opensource.org/licenses/MIT)
 
 <img width="4000" height="800" alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" />
-
