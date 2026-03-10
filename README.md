@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="2000" height="400" alt="Skene_git" src="https://github.com/user-attachments/assets/86018223-e653-45de-90d2-334f6f4de589">
+  <img width="4000" height="800" alt="Skene_git" src="https://github.com/user-attachments/assets/2be11c04-6b98-4e26-8905-bf3250c4addb" />
   <a href="https://www.skene.ai"><img width="120" height="42" alt="website" src="https://github.com/user-attachments/assets/04e469ab-cd02-4526-bc5b-e5e0ca440fc6"></a>
   <a href="https://www.skene.ai/resources/docs/skene"><img width="103" height="42" alt="docs" src="https://github.com/user-attachments/assets/c63f96cb-52a9-4154-881b-37526b850f9b"></a>
   <a href="https://www.skene.ai/resources/blog"><img width="100" height="42" alt="blog" src="https://github.com/user-attachments/assets/baabe37b-0557-443e-9b01-6ae3951cf91b"></a>
@@ -79,3 +79,6 @@ Contributions are welcome. Please open an issue or submit a pull request on [Git
 ## License
 
 [MIT](https://opensource.org/licenses/MIT)
+
+<img width="4000" height="800" alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" />
+
