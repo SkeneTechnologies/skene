@@ -174,9 +174,10 @@ func (v *LocalModelView) Render() string {
 
 func (v *LocalModelView) renderDetecting(width int) string {
 	displayName := v.providerName
-	if displayName == "lmstudio" {
+	switch displayName {
+	case "lmstudio":
 		displayName = "LM Studio"
-	} else if displayName == "ollama" {
+	case "ollama":
 		displayName = "Ollama"
 	}
 

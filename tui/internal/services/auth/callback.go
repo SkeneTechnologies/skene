@@ -35,7 +35,7 @@ func NewCallbackServer() (*CallbackServer, error) {
 		return nil, fmt.Errorf("failed to find free port: %w", err)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	cs := &CallbackServer{
 		port:     port,
@@ -128,7 +128,7 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 
 	case "POST":
 		// API key passed as JSON body
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
 			http.Error(w, "invalid request body", http.StatusBadRequest)
 			return
@@ -155,5 +155,5 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 	// Return a simple success response
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "Authentication complete. You can close this window.")
+	_, _ = fmt.Fprint(w, "Authentication complete. You can close this window.")
 }

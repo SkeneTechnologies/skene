@@ -182,12 +182,38 @@ const (
 	AnalysisConfigRunButton = "Run Analysis"
 )
 
-// Analyzing view
+// Status labels (used across analyzing view, game, etc.)
 const (
-	AnalyzingFailed   = "Failed"
-	AnalyzingComplete = "Complete"
-	AnalyzingRunning  = "Running..."
-	AnalyzingDone     = "Done"
+	StatusFailed     = "Failed"
+	StatusCompleted  = "Completed"
+	StatusInProgress = "In progress"
+	StatusDone       = "Done"
+
+	StatusIconFailed    = "✗"
+	StatusIconCompleted = "✓"
+)
+
+// Game strings
+const (
+	GameTitle        = "TIME TO"
+	GameOver         = "GAME OVER"
+	GameAutoFire     = "auto-fire is on"
+	GameThrustUp     = "thrust up"
+	GameThrustDown   = "thrust down"
+	GameStatScore    = "Score    "
+	GameStatDistance  = "Distance "
+	GameStatDefeated = "Defeated "
+	GameHUDFormat    = " SCORE: %d  HP: %s  DIST: %d "
+)
+
+// Engine phase names
+const (
+	PhaseScanningCodebase  = "Scanning codebase"
+	PhaseDetectingFeatures = "Detecting product features"
+	PhaseGrowthLoops       = "Growth loop analysis"
+	PhaseMonetisation      = "Monetisation analysis"
+	PhaseOpportunities     = "Opportunity modelling"
+	PhaseGeneratingDocs    = "Generating manifests & docs"
 )
 
 // Analysis phase names are now defined in internal/services/growth/engine.go
@@ -274,4 +300,7 @@ const (
 	HelpDescOpenFolder       = "open folder"
 	HelpDescTabs             = "tabs"
 	HelpDescCopyUpdateCmd    = "copy update cmd"
+	HelpDescMove             = "move"
+	HelpDescPlayAgain        = "play again"
+	HelpDescStartGame        = "start"
 )

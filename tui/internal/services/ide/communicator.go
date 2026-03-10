@@ -111,16 +111,16 @@ func (c *Communicator) writeIssueToFile(issue IDEIssue) error {
 func (c *Communicator) generateMarkdown(issue IDEIssue) string {
 	var md strings.Builder
 
-	md.WriteString(fmt.Sprintf("# %s\n\n", issue.Title))
-	md.WriteString(fmt.Sprintf("%s\n\n", issue.Description))
-	md.WriteString(fmt.Sprintf("**Type:** `%s`  \n", issue.Type))
-	md.WriteString(fmt.Sprintf("**Timestamp:** %s\n\n", issue.Timestamp))
+	fmt.Fprintf(&md, "# %s\n\n", issue.Title)
+	fmt.Fprintf(&md, "%s\n\n", issue.Description)
+	fmt.Fprintf(&md, "**Type:** `%s`  \n", issue.Type)
+	fmt.Fprintf(&md, "**Timestamp:** %s\n\n", issue.Timestamp)
 
 	md.WriteString("## Failed Checks\n\n")
 	for i, check := range issue.FailedChecks {
-		md.WriteString(fmt.Sprintf("### %d. %s\n\n", i+1, check.Name))
-		md.WriteString(fmt.Sprintf("- **Message:** %s\n", check.Message))
-		md.WriteString(fmt.Sprintf("- **Required:** %v\n", check.Required))
+		fmt.Fprintf(&md, "### %d. %s\n\n", i+1, check.Name)
+		fmt.Fprintf(&md, "- **Message:** %s\n", check.Message)
+		fmt.Fprintf(&md, "- **Required:** %v\n", check.Required)
 
 		if check.FixCommand != "" {
 			commands := strings.Split(check.FixCommand, "\n")
@@ -129,16 +129,16 @@ func (c *Communicator) generateMarkdown(issue IDEIssue) string {
 				cmd = strings.TrimSpace(cmd)
 				if cmd != "" {
 					if strings.HasPrefix(cmd, "Alternative") {
-						md.WriteString(fmt.Sprintf("  **%s**\n", cmd))
+						fmt.Fprintf(&md, "  **%s**\n", cmd)
 					} else {
-						md.WriteString(fmt.Sprintf("  ```bash\n  %s\n  ```\n", cmd))
+						fmt.Fprintf(&md, "  ```bash\n  %s\n  ```\n", cmd)
 					}
 				}
 			}
 		}
 
 		if check.FixURL != "" {
-			md.WriteString(fmt.Sprintf("- **More Info:** %s\n", check.FixURL))
+			fmt.Fprintf(&md, "- **More Info:** %s\n", check.FixURL)
 		}
 
 		md.WriteString("\n")
