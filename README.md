@@ -1,11 +1,12 @@
 <p align="center">
-  <a href="https://www.skene.ai"><img src="https://img.shields.io/badge/Website-007ACC?style=flat&logo=google-chrome&logoColor=white" alt="Website"></a>
-  <a href="https://www.skene.ai/resources/docs/skene"><img src="https://img.shields.io/badge/Docs-555?style=flat&logo=bookstack&logoColor=white" alt="Docs"></a>
-  <a href="https://www.skene.ai/resources/blog"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Blog"></a>
-  <a href="https://www.reddit.com/r/plgbuilders/"><img src="https://img.shields.io/badge/r%2Fplgbuilders-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
+  <img width="4000" height="800" alt="Skene_git" src="https://github.com/user-attachments/assets/2be11c04-6b98-4e26-8905-bf3250c4addb" />
+  <a href="https://www.skene.ai"><img width="120" height="42" alt="website" src="https://github.com/user-attachments/assets/04e469ab-cd02-4526-bc5b-e5e0ca440fc6"></a>
+  <a href="https://www.skene.ai/resources/docs/skene"><img width="103" height="42" alt="docs" src="https://github.com/user-attachments/assets/c63f96cb-52a9-4154-881b-37526b850f9b"></a>
+  <a href="https://www.skene.ai/resources/blog"><img width="100" height="42" alt="blog" src="https://github.com/user-attachments/assets/baabe37b-0557-443e-9b01-6ae3951cf91b"></a>
+  <a href="https://www.reddit.com/r/plgbuilders/"><img width="153" height="42" alt="reddit" src="https://github.com/user-attachments/assets/18d0df1b-81d9-4112-83f6-0a8fde5c189a"></a>
 </p>
 
-# skene
+# Skene
 
 [![PyPI version](https://img.shields.io/pypi/v/skene)](https://pypi.org/project/skene/)
 [![Downloads](https://static.pepy.tech/badge/skene/month)](https://pepy.tech/projects/skene)
@@ -25,6 +26,10 @@ uvx skene status          # Check loop implementation status
 uvx skene push            # Deploy telemetry to Supabase + upstream
 ```
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
+<p>
+
 ## What It Does
 
 - **Tech stack detection** -- identifies frameworks, databases, auth, deployment
@@ -38,6 +43,8 @@ uvx skene push            # Deploy telemetry to Supabase + upstream
 - **Interactive chat** -- ask questions about your codebase in the terminal
 
 Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible endpoint. Free local audit available with no API key required.
+
+<img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
 ## Installation
 
@@ -55,24 +62,6 @@ pip install skene
 ## Documentation
 
 Full documentation: [www.skene.ai/resources/docs/skene](https://www.skene.ai/resources/docs/skene)
-
-## MCP Server
-
-skene includes an MCP server for integration with AI assistants. Add to your assistant config:
-
-```json
-{
-  "mcpServers": {
-    "skene": {
-      "command": "uvx",
-      "args": ["--from", "skene[mcp]", "skene-mcp"],
-      "env": {
-        "SKENE_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
 
 ## Monorepo Structure
 
@@ -92,3 +81,6 @@ Contributions are welcome. Please open an issue or submit a pull request on [Git
 ## License
 
 [MIT](https://opensource.org/licenses/MIT)
+
+<img width="4000" height="800" alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" />
+
