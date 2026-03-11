@@ -76,6 +76,13 @@ var (
 		Light: lipgloss.CompleteColor{TrueColor: "#FF800F", ANSI: "0"},
 	}
 
+	// InvertedTextColor is dark-on-light / light-on-dark — for text on
+	// accent-colored backgrounds.
+	InvertedTextColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#1A1410", ANSI: "0"},
+		Light: lipgloss.CompleteColor{TrueColor: "#FFFFFF", ANSI: "15"},
+	}
+
 	MutedColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
 		Dark:  lipgloss.CompleteColor{TrueColor: "#4A4A4A", ANSI: "8"},
 		Light: lipgloss.CompleteColor{TrueColor: "#6B6058", ANSI: "15"},
@@ -271,9 +278,12 @@ func rebuildStyles() {
 		BorderForeground(MutedColor).
 		Foreground(TextColor).
 		Padding(0, 3)
-	ButtonActive = accent.
+	ButtonActive = lipgloss.NewStyle().
+		Background(BoldTextColor).
+		Foreground(InvertedTextColor).
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(BoldTextColor).
+		BorderForeground(InvertedTextColor).
+		BorderBackground(BoldTextColor).
 		Padding(0, 3)
 	ButtonMuted = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
