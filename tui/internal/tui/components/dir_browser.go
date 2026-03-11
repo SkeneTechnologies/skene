@@ -292,7 +292,7 @@ func (b *DirBrowser) Render(width int) string {
 }
 
 func formatScrollPos(start, end, total int) string {
-	return lipgloss.NewStyle().Foreground(styles.MidGray).Render(
+	return lipgloss.NewStyle().Foreground(styles.MutedColor).Render(
 		"[" + itoa(start) + "-" + itoa(end) + " of " + itoa(total) + "]",
 	)
 }

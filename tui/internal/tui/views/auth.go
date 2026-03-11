@@ -276,8 +276,8 @@ func (v *AuthView) renderFallback() string {
 
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
-	message := lipgloss.NewStyle().Foreground(styles.White).Width(sectionWidth-8).Render(constants.AuthFallbackMessage)
-	subMessage := lipgloss.NewStyle().Foreground(styles.MidGray).Width(sectionWidth-8).Render(constants.AuthFallbackSub)
+	message := lipgloss.NewStyle().Foreground(styles.TextColor).Width(sectionWidth-8).Render(constants.AuthFallbackMessage)
+	subMessage := lipgloss.NewStyle().Foreground(styles.MutedColor).Width(sectionWidth-8).Render(constants.AuthFallbackSub)
 	hint := styles.AccentStyle().Width(sectionWidth-8).Render(constants.AuthFallbackHint)
 
 	content := lipgloss.JoinVertical(

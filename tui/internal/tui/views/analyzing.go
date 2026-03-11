@@ -280,7 +280,7 @@ func (v *AnalyzingView) Render() string {
 		statusLine = styles.Error.Render(constants.StatusIconFailed + " " + constants.StatusFailed)
 		if v.failMessage != "" {
 			statusLine += "\n" + lipgloss.NewStyle().
-				Foreground(styles.MidGray).
+				Foreground(styles.MutedColor).
 				Width(sectionWidth).
 				Render("  "+v.failMessage)
 		}
@@ -397,7 +397,7 @@ func (v *AnalyzingView) renderPrompt(width int) string {
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MidGray).
+		BorderForeground(styles.MutedColor).
 		Padding(0, 1).
 		Width(width - 2).
 		Render(inner)

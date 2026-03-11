@@ -140,7 +140,7 @@ func (v *NextStepsView) renderActions(width int) string {
 			desc = styles.AccentStyle().PaddingLeft(2).Width(descWidth).Render(action.Description)
 		} else {
 			name = styles.ListItem.Render(action.Name)
-			desc = lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(action.Description)
+			desc = lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(action.Description)
 		}
 
 		item := name + "\n" + desc

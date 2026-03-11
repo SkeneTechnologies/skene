@@ -243,13 +243,13 @@ func (t *TerminalOutput) Render(width int) string {
 		Foreground(styles.TextColor).
 		Width(contentWidth)
 	errorStyle := lipgloss.NewStyle().
-		Foreground(styles.Coral).
+		Foreground(styles.ErrorColor).
 		Width(contentWidth)
 	successStyle := lipgloss.NewStyle().
-		Foreground(styles.Success).
+		Foreground(styles.SuccessColor).
 		Width(contentWidth)
 	warningStyle := lipgloss.NewStyle().
-		Foreground(styles.Warning).
+		Foreground(styles.WarningColor).
 		Width(contentWidth)
 
 	for i := startIdx; i < endIdx && i < totalWrapped; i++ {
@@ -285,7 +285,7 @@ func (t *TerminalOutput) Render(width int) string {
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MidGray).
+		BorderForeground(styles.MutedColor).
 		Padding(0, 1).
 		Width(width - 2)
 

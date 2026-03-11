@@ -98,10 +98,10 @@ func (v *AnalysisConfigView) renderSummary(width int) string {
 		valueWidth = 30
 	}
 	rows := []string{
-		styles.Label.Render("Provider:   ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.providerName),
-		styles.Label.Render("Model:      ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.modelName),
-		styles.Label.Render("Directory:  ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.projectDir),
-		styles.Label.Render("Output:     ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(constants.DefaultOutputDir+"/"),
+		styles.Label.Render("Provider:   ") + lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.providerName),
+		styles.Label.Render("Model:      ") + lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.modelName),
+		styles.Label.Render("Directory:  ") + lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.projectDir),
+		styles.Label.Render("Output:     ") + lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(constants.DefaultOutputDir+"/"),
 	}
 
 	content := lipgloss.JoinVertical(

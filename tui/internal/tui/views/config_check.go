@@ -110,9 +110,9 @@ func (v *ConfigCheckView) renderList(width int) string {
 		valueWidth = 30
 	}
 	configRows := lipgloss.JoinVertical(lipgloss.Left,
-		styles.Label.Render("Provider:  ")+lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.providerName),
-		styles.Label.Render("Model:     ")+lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.modelName),
-		styles.Label.Render("API Key:   ")+lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.maskedAPIKey),
+		styles.Label.Render("Provider:  ")+lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.providerName),
+		styles.Label.Render("Model:     ")+lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.modelName),
+		styles.Label.Render("API Key:   ")+lipgloss.NewStyle().Foreground(styles.TextColor).Width(valueWidth).Render(v.maskedAPIKey),
 	)
 
 	separator := styles.Muted.Render("How would you like to proceed?")
@@ -125,11 +125,11 @@ func (v *ConfigCheckView) renderList(width int) string {
 		var item string
 		if isSelected {
 			name := styles.ListItemSelected.Render(opt.name)
-			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(opt.desc)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(opt.desc)
 			item = name + "\n" + desc
 		} else {
 			name := styles.ListItem.Render(opt.name)
-			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(opt.desc)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(opt.desc)
 			item = name + "\n" + desc
 		}
 

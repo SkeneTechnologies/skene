@@ -796,7 +796,7 @@ func (g *Game) Render() string {
 
 	gameBox := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MidGray).
+		BorderForeground(styles.MutedColor).
 		Render(sb.String())
 
 	footer := components.FooterHelp([]components.HelpItem{

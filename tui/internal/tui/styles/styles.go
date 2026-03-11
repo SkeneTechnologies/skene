@@ -104,28 +104,6 @@ var (
 	}
 )
 
-// ═══════════════════════════════════════════════════════════════════
-// ALIASES — keep old exported names working so consumers compile.
-// Every old color maps to one of the 6 semantic colors above.
-// ═══════════════════════════════════════════════════════════════════
-
-var (
-	Cream     = BoldTextColor
-	Sand      = BoldTextColor
-	Amber     = BoldTextColor
-	Rust      = BoldTextColor
-	White     = TextColor
-	MidGray   = MutedColor
-	LightGray = MutedColor
-	Coral     = ErrorColor
-	Success   = SuccessColor
-	Warning   = WarningColor
-
-	// Charcoal/DarkGray were used as background fills on buttons/boxes.
-	// They now map to the terminal's own background vicinity via muted.
-	Charcoal = MutedColor
-	DarkGray = MutedColor
-)
 
 // ═══════════════════════════════════════════════════════════════════
 // STYLES (rebuilt from current color values)

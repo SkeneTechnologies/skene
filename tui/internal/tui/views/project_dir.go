@@ -489,7 +489,7 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 	header := styles.SectionHeader.Render(constants.ProjectDirExistingHeader)
 	msg := styles.Body.Render(constants.ProjectDirExistingMsg)
 	path := lipgloss.NewStyle().
-		Foreground(styles.MidGray).Width(width-8).
+		Foreground(styles.MutedColor).Width(width-8).
 		Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")
 	question := styles.Accent.Render(constants.ProjectDirExistingQ)
 
@@ -555,7 +555,7 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 	if !v.isValid && v.validMsg != "" {
 		validationLine = styles.Error.Render("X " + v.validMsg)
 	} else if v.warningMsg != "" {
-		validationLine = lipgloss.NewStyle().Foreground(styles.Warning).Width(width-8).Render("! " + v.warningMsg)
+		validationLine = lipgloss.NewStyle().Foreground(styles.WarningColor).Width(width-8).Render("! " + v.warningMsg)
 	} else if v.isValid && v.hasSkeneContext {
 		validationLine = styles.SuccessText.Render(constants.ProjectDirValidExisting)
 	} else if v.isValid {
