@@ -73,7 +73,7 @@ var (
 	// directly only for borders, backgrounds, or other non-foreground uses.
 	BoldTextColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
 		Dark:  lipgloss.CompleteColor{TrueColor: "#FEC089", ANSI: "15"},
-		Light: lipgloss.CompleteColor{TrueColor: "#FF800F", ANSI: "0"},
+		Light: lipgloss.CompleteColor{TrueColor: "#CE6100", ANSI: "0"},
 	}
 
 	// InvertedTextColor is dark-on-light / light-on-dark — for text on
@@ -85,17 +85,17 @@ var (
 
 	MutedColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
 		Dark:  lipgloss.CompleteColor{TrueColor: "#4A4A4A", ANSI: "8"},
-		Light: lipgloss.CompleteColor{TrueColor: "#6B6058", ANSI: "15"},
+		Light: lipgloss.CompleteColor{TrueColor: "#E1D8D1", ANSI: "15"},
 	}
 
 	ErrorColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
 		Dark:  lipgloss.CompleteColor{TrueColor: "#F25246", ANSI: "9"},
-		Light: lipgloss.CompleteColor{TrueColor: "#F25246", ANSI: "1"},
+		Light: lipgloss.CompleteColor{TrueColor: "#F33E31", ANSI: "1"},
 	}
 
 	SuccessColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
 		Dark:  lipgloss.CompleteColor{TrueColor: "#D7F4AB", ANSI: "10"},
-		Light: lipgloss.CompleteColor{TrueColor: "#7EC017", ANSI: "2"},
+		Light: lipgloss.CompleteColor{TrueColor: "#578908", ANSI: "2"},
 	}
 
 	WarningColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
