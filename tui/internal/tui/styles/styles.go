@@ -279,12 +279,8 @@ func rebuildStyles() {
 		Foreground(TextColor).
 		Padding(0, 3)
 	ButtonActive = lipgloss.NewStyle().
-		Background(BoldTextColor).
-		Foreground(InvertedTextColor).
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(InvertedTextColor).
-		BorderBackground(BoldTextColor).
-		Padding(0, 3)
+		Reverse(true).
+		Padding(1, 4)
 	ButtonMuted = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(MutedColor).
