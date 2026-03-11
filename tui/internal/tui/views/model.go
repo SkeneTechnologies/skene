@@ -90,7 +90,7 @@ func (v *ModelView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardSelectHelp())
+		Render(components.WizardSelectHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(

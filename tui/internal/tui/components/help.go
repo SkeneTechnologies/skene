@@ -71,42 +71,61 @@ func (h *HelpOverlay) Render(width, height int) string {
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, box)
 }
 
-// FooterHelp renders inline footer help
-func FooterHelp(items []HelpItem) string {
+// FooterHelp renders inline footer help. Items that would cause the line
+// to exceed the terminal width are dropped so the footer never wraps.
+func FooterHelp(items []HelpItem, widths ...int) string {
+	maxWidth := 0
+	if len(widths) > 0 {
+		maxWidth = widths[0]
+	}
+
+	sep := styles.HelpSeparator.String()
+	sepW := lipgloss.Width(sep)
+
 	var parts []string
+	totalWidth := 0
 	for _, item := range items {
 		part := styles.HelpKey.Render(item.Key) + " " + styles.HelpDesc.Render(item.Desc)
+		partW := lipgloss.Width(part)
+		newWidth := totalWidth + partW
+		if len(parts) > 0 {
+			newWidth += sepW
+		}
+		if maxWidth > 0 && newWidth > maxWidth {
+			break
+		}
 		parts = append(parts, part)
+		totalWidth = newWidth
 	}
-	return strings.Join(parts, styles.HelpSeparator.String())
+	return strings.Join(parts, sep)
 }
 
 // WizardSelectHelp returns help for selection screens
-func WizardSelectHelp() string {
+func WizardSelectHelp(width int) string {
 	return FooterHelp([]HelpItem{
 		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
+	}, width)
 }
 
 // WizardInputHelp returns help for input screens
-func WizardInputHelp() string {
+func WizardInputHelp(width int) string {
 	return FooterHelp([]HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
 		{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchFocus},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
+	}, width)
 }
 
 // WizardResultsHelp returns help for results screens
-func WizardResultsHelp() string {
+func WizardResultsHelp(width int) string {
 	return FooterHelp([]HelpItem{
 		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescTabs},
 		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 		{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
+	}, width)
 }

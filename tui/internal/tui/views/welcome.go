@@ -134,7 +134,7 @@ func (v *WelcomeView) Render() string {
 	if v.newVersion != "" {
 		helpItems = append(helpItems, components.HelpItem{Key: constants.HelpKeyC, Desc: constants.HelpDescCopyUpdateCmd})
 	}
-	footer := components.FooterHelp(helpItems)
+	footer := components.FooterHelp(helpItems, v.width)
 
 	// Combine elements
 	elements := []string{

@@ -418,7 +418,7 @@ func (v *ProjectDirView) Render() string {
 				{Key: constants.HelpKeyEnter, Desc: constants.HelpDescOpenFolder},
 				{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchFocus},
 				{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
-			}))
+			}, v.width))
 
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,
@@ -460,7 +460,7 @@ func (v *ProjectDirView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardInputHelp())
+		Render(components.WizardInputHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -518,7 +518,7 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}))
+		}, v.width))
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

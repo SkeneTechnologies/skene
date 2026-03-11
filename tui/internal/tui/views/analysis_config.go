@@ -66,7 +66,7 @@ func (v *AnalysisConfigView) Render() string {
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStartAnalysis},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}))
+		}, v.width))
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

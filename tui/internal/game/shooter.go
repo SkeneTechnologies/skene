@@ -802,7 +802,7 @@ func (g *Game) Render() string {
 	footer := components.FooterHelp([]components.HelpItem{
 		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescMove},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-	})
+	}, g.width)
 
 	var progressIndicator string
 	if g.showProgress {
@@ -870,7 +870,7 @@ func (g *Game) titleScreen() string {
 	footer := components.FooterHelp([]components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStartGame},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-	})
+	}, g.width)
 
 	parts := []string{box}
 	if g.showProgress {
@@ -919,7 +919,7 @@ func (g *Game) deathScreen() string {
 	footer := components.FooterHelp([]components.HelpItem{
 		{Key: constants.HelpKeyR, Desc: constants.HelpDescPlayAgain},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-	})
+	}, g.width)
 
 	parts := []string{box}
 	if g.showProgress {

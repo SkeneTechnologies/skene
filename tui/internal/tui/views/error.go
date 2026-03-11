@@ -141,7 +141,7 @@ func (v *ErrorView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.FooterHelp(helpItems))
+		Render(components.FooterHelp(helpItems, v.width))
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

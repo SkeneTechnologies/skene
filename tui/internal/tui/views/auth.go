@@ -150,7 +150,7 @@ func (v *AuthView) Render() string {
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyM, Desc: constants.HelpDescManualEntry},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
-		}))
+		}, v.width))
 
 	// Combine
 	fullContent := lipgloss.JoinVertical(
@@ -300,7 +300,7 @@ func (v *AuthView) renderFallback() string {
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
-		}))
+		}, v.width))
 
 	fullContent := lipgloss.JoinVertical(
 		lipgloss.Left,

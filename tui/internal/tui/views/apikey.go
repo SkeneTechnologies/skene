@@ -196,7 +196,7 @@ func (v *APIKeyView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardInputHelp())
+		Render(components.WizardInputHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
