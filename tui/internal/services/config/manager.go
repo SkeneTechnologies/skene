@@ -1,24 +1,24 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"skene/internal/constants"
 )
 
-// Config represents the skene-growth configuration
+// Config represents the skene configuration
 type Config struct {
-	Provider     string `json:"provider"`
-	Model        string `json:"model"`
-	APIKey       string `json:"api_key"`
-	OutputDir    string `json:"output_dir"`
-	Verbose      bool   `json:"verbose"`
-	ProjectDir   string `json:"project_dir"`
-	BaseURL      string `json:"base_url,omitempty"`
-	UseGrowth bool `json:"use_growth"`
+	Provider   string
+	Model      string
+	APIKey     string
+	OutputDir  string
+	Verbose    bool
+	ProjectDir string
+	BaseURL    string
+	UseGrowth  bool
 }
 
 // Manager handles configuration file operations
@@ -79,28 +79,44 @@ func (m *Manager) CheckConfigs() []ConfigStatus {
 	return statuses
 }
 
-// LoadConfig loads configuration from files (project takes precedence)
+// LoadConfig loads configuration from files.
+// User config is loaded first, then project config is merged on top
+// (project values take precedence), matching the Python CLI behaviour.
 func (m *Manager) LoadConfig() error {
-	// Try project config first
-	if fileExists(m.ProjectConfigPath) {
-		config, err := m.loadConfigFile(m.ProjectConfigPath)
-		if err == nil {
-			m.Config = config
-			return nil
-		}
-	}
-
-	// Fall back to user config
 	if fileExists(m.UserConfigPath) {
-		config, err := m.loadConfigFile(m.UserConfigPath)
-		if err == nil {
-			m.Config = config
-			return nil
+		if cfg, err := m.loadConfigFile(m.UserConfigPath); err == nil {
+			mergeConfig(m.Config, cfg)
 		}
 	}
 
-	// No config found, use defaults
+	if fileExists(m.ProjectConfigPath) {
+		if cfg, err := m.loadConfigFile(m.ProjectConfigPath); err == nil {
+			mergeConfig(m.Config, cfg)
+		}
+	}
+
 	return nil
+}
+
+func mergeConfig(dst, src *Config) {
+	if src.Provider != "" {
+		dst.Provider = src.Provider
+	}
+	if src.Model != "" {
+		dst.Model = src.Model
+	}
+	if src.APIKey != "" {
+		dst.APIKey = src.APIKey
+	}
+	if src.BaseURL != "" {
+		dst.BaseURL = src.BaseURL
+	}
+	if src.OutputDir != "" {
+		dst.OutputDir = src.OutputDir
+	}
+	if src.ProjectDir != "" {
+		dst.ProjectDir = src.ProjectDir
+	}
 }
 
 func (m *Manager) loadConfigFile(path string) (*Config, error) {
@@ -109,51 +125,73 @@ func (m *Manager) loadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
+	kv := parseTOML(string(data))
+	config := &Config{}
+	for key, value := range kv {
+		switch key {
+		case "provider":
+			config.Provider = value
+		case "model":
+			config.Model = value
+		case "api_key":
+			config.APIKey = value
+		case "output_dir":
+			config.OutputDir = value
+		case "base_url":
+			config.BaseURL = value
+		case "verbose":
+			config.Verbose = strings.EqualFold(value, "true")
+		case "use_growth":
+			config.UseGrowth = strings.EqualFold(value, "true")
+		case "project_dir":
+			config.ProjectDir = value
+		}
 	}
-
-	return &config, nil
+	return config, nil
 }
 
-// SaveConfig saves configuration to project config file
+// SaveConfig saves configuration to project config file in TOML format.
 func (m *Manager) SaveConfig() error {
-	// Ensure directory exists
-	dir := filepath.Dir(m.ProjectConfigPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	data, err := json.MarshalIndent(m.Config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(m.ProjectConfigPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	return nil
+	return m.writeConfigToPath(m.ProjectConfigPath)
 }
 
-// SaveUserConfig saves configuration to user config file
+// SaveUserConfig saves configuration to user config file in TOML format.
 func (m *Manager) SaveUserConfig() error {
-	// Ensure directory exists
-	dir := filepath.Dir(m.UserConfigPath)
+	return m.writeConfigToPath(m.UserConfigPath)
+}
+
+func (m *Manager) writeConfigToPath(path string) error {
+	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(m.Config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+	existing := make(map[string]string)
+	if data, err := os.ReadFile(path); err == nil {
+		existing = parseTOML(string(data))
 	}
 
-	if err := os.WriteFile(m.UserConfigPath, data, 0644); err != nil {
+	if m.Config.APIKey != "" {
+		existing["api_key"] = m.Config.APIKey
+	}
+	if m.Config.Provider != "" {
+		existing["provider"] = m.Config.Provider
+	}
+	if m.Config.Model != "" {
+		existing["model"] = m.Config.Model
+	}
+	if m.Config.BaseURL != "" {
+		existing["base_url"] = m.Config.BaseURL
+	}
+	if m.Config.OutputDir != "" {
+		existing["output_dir"] = m.Config.OutputDir
+	}
+
+	content := writeTOML(existing)
+
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
-
 	return nil
 }
 
@@ -208,6 +246,59 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// parseTOML parses a flat TOML file (no nested tables) into key-value pairs.
+func parseTOML(content string) map[string]string {
+	result := make(map[string]string)
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "[") {
+			continue
+		}
+		idx := strings.Index(line, "=")
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		value := strings.TrimSpace(line[idx+1:])
+		value = unquoteTOML(value)
+		result[key] = value
+	}
+	return result
+}
+
+func unquoteTOML(s string) string {
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		s = s[1 : len(s)-1]
+		s = strings.ReplaceAll(s, `\"`, `"`)
+		s = strings.ReplaceAll(s, `\\`, `\`)
+	}
+	return s
+}
+
+// writeTOML serialises a flat key-value map as TOML with comments.
+func writeTOML(kv map[string]string) string {
+	var b strings.Builder
+	b.WriteString("# skene configuration\n")
+	b.WriteString("# See: https://github.com/skene-technologies/skene\n\n")
+
+	ordered := []string{"api_key", "provider", "model", "base_url", "output_dir"}
+	written := make(map[string]bool)
+	for _, key := range ordered {
+		if val, ok := kv[key]; ok && val != "" {
+			fmt.Fprintf(&b, "%s = %q\n", key, val)
+			written[key] = true
+		}
+	}
+
+	for key, val := range kv {
+		if written[key] || val == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "%s = %q\n", key, val)
+	}
+	return b.String()
+}
+
 // Provider represents an LLM provider with its models
 type Provider struct {
 	ID          string
@@ -219,6 +310,7 @@ type Provider struct {
 	IsLocal     bool   // For local models (Ollama, LM Studio)
 	IsGeneric   bool   // For generic OpenAI-compatible APIs
 	DefaultBase string // Default base URL for local/generic providers
+	Hidden      bool   // Hidden from provider list (kept for upcoming release)
 }
 
 // Model represents an LLM model
@@ -237,19 +329,20 @@ func GetProviders() []Provider {
 			Description: "Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
 			AuthURL:     constants.SkeneAuthURL,
+			Hidden:      true,
 			Models: []Model{
-				{ID: "skene-growth-v1", Name: "skene-growth-v1", Description: "Growth analysis model"},
+				{ID: "skene-v1", Name: "skene-v1", Description: "Growth analysis model"},
 			},
 		},
 		{
 			ID:          "openai",
 			Name:        "OpenAI",
-			Description: "GPT-4o and GPT-4 models",
+			Description: "OpenAI GPT models",
 			RequiresKey: true,
 			Models: []Model{
-				{ID: "gpt-4o", Name: "gpt-4o", Description: "Most capable, multimodal"},
-				{ID: "gpt-4-turbo", Name: "gpt-4-turbo", Description: "Fast GPT-4 variant"},
-				{ID: "gpt-3.5-turbo", Name: "gpt-3.5-turbo", Description: "Fast and affordable"},
+				{ID: "gpt-5.4", Name: "GPT-5.4", Description: "Most capable model for professional work"},
+				{ID: "gpt-5.1", Name: "GPT-5.1", Description: "Best for coding and agentic tasks"},
+				{ID: "gpt-5-mini", Name: "GPT-5 mini", Description: "Fast, cost-efficient for well-defined tasks"},
 			},
 		},
 		{
@@ -259,8 +352,7 @@ func GetProviders() []Provider {
 			RequiresKey: true,
 			Models: []Model{
 				{ID: "claude-opus-4-6", Name: "claude-opus-4-6", Description: "Most capable model for complex tasks"},
-				{ID: "claude-sonnet-4-5", Name: "claude-sonnet-4-5", Description: "Best combination of speed and intelligence"},
-				{ID: "claude-haiku-4-5", Name: "claude-haiku-4-5", Description: "Fastest model with near-frontier intelligence"},
+				{ID: "claude-sonnet-4-6", Name: "claude-sonnet-4-6", Description: "Best combination of speed and intelligence"},
 			},
 		},
 		{
@@ -269,9 +361,9 @@ func GetProviders() []Provider {
 			Description: "Google's Gemini models",
 			RequiresKey: true,
 			Models: []Model{
-				{ID: "gemini-3-flash-preview", Name: "gemini-3-flash-preview", Description: "Fast and efficient"},
-				{ID: "gemini-3-pro-preview", Name: "gemini-3-pro-preview", Description: "Advanced capability"},
-				{ID: "gemini-2.5-flash", Name: "gemini-2.5-flash", Description: "Balanced performance"},
+				{ID: "gemini-3-pro-preview", Name: "gemini-3-pro", Description: "Most capable Gemini model"},
+				{ID: "gemini-3-flash-preview", Name: "gemini-3-flash", Description: "Fast and efficient"},
+				{ID: "gemini-2.5-pro", Name: "gemini-2.5-pro", Description: "Advanced reasoning"},
 			},
 		},
 		// TODO: re-enable local model providers after testing

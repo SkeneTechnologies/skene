@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from skene_growth.mcp.cache import AnalysisCache
-from skene_growth.mcp.tools import (
+from skene.mcp.cache import AnalysisCache
+from skene.mcp.tools import (
     clear_cache,
     get_codebase_overview,
     get_manifest,
@@ -18,7 +18,7 @@ class TestServerToolDefinitions:
 
     def test_all_expected_tools_exist(self):
         """Verify all expected tools are importable from tools module."""
-        from skene_growth.mcp import tools
+        from skene.mcp import tools
 
         # Tier 1: Quick Tools
         assert hasattr(tools, "get_codebase_overview")

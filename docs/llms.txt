@@ -1,60 +1,60 @@
-# skene-growth
+# skene
 
 > PLG (Product-Led Growth) codebase analysis toolkit. Analyzes codebases to detect growth opportunities, revenue leakage, and generates actionable growth plans.
 
 - Version: 0.2.1
 - License: MIT
 - Python: >=3.11
-- PyPI: skene-growth
-- Docs: https://www.skene.ai/resources/docs/skene-growth
+- PyPI: skene
+- Docs: https://www.skene.ai/resources/docs/skene
 
 ## Commands
 
-skene-growth analyze [PATH]
+skene analyze [PATH]
   Analyze a codebase. Generates growth-manifest.json and growth-template.json.
   Flags: -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --product-docs, -e/--exclude, --debug, --no-fallback
 
-skene-growth plan
+skene plan
   Generate a growth plan from manifest and template using Council of Growth Engineers.
   Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --activation, --prompt, --debug, --no-fallback
 
-skene-growth build
+skene build
   Generate implementation prompt from growth plan. Send to Cursor, Claude, or display in terminal.
   Flags: --plan, -c/--context, --api-key, -p/--provider, -m/--model, --base-url, --debug, --no-fallback, -t/--target (cursor|claude|show|file — skips interactive menu)
 
-skene-growth status [PATH]
+skene status [PATH]
   Check implementation status of growth loop requirements. Uses AST parsing to verify files, functions, and patterns.
   Flags: -c/--context, --find-alternatives, --api-key, -p/--provider, -m/--model
 
-skene-growth push [PATH]
+skene push [PATH]
   Build Supabase migrations from growth loop telemetry and push to upstream.
   Flags: -c/--context, -l/--loop, -u/--upstream, --push-only
 
-skene-growth login
+skene login
   Log in to Skene Cloud upstream for push.
   Flags: -u/--upstream, -s/--status
 
-skene-growth logout
+skene logout
   Log out from upstream (remove saved token).
 
-skene-growth init [PATH]
-  Create skene_growth base schema migration (event_log, failed_events, enrichment_map).
+skene init [PATH]
+  Create skene base schema migration (event_log, failed_events, enrichment_map).
 
-skene-growth features export [PATH]
+skene features export [PATH]
   Export feature registry in json, csv, or markdown format.
   Flags: -c/--context, -f/--format, -o/--output
 
-skene-growth chat [PATH]
-  Interactive terminal chat with function calling. LLM invokes skene-growth tools.
+skene chat [PATH]
+  Interactive terminal chat with function calling. LLM invokes skene tools.
   Flags: --api-key, -p/--provider, -m/--model, --base-url, --max-steps, --tool-output-limit, --debug
 
-skene-growth config
+skene config
   Manage configuration. --init creates config file, --show displays current values, no flags for interactive editing.
 
-skene-growth validate MANIFEST
+skene validate MANIFEST
   Validate a growth-manifest.json against the schema.
 
-skene-growth-mcp
+skene-mcp
   MCP server exposing 12 tools for AI assistants (Claude Desktop, Claude Code).
 
 ## LLM Providers
@@ -68,8 +68,8 @@ generic — model: custom-model — any OpenAI-compatible endpoint, requires --b
 
 ## Configuration
 
-File: .skene-growth.config (TOML, project-level)
-File: ~/.config/skene-growth/config (TOML, user-level)
+File: .skene.config (TOML, project-level)
+File: ~/.config/skene/config (TOML, user-level)
 Priority: user config < project config < env vars < CLI flags
 
 Options: api_key, provider, model, base_url, output_dir, verbose, debug, exclude_folders, upstream
@@ -100,7 +100,7 @@ Tier 2 (analysis, cached): analyze_tech_stack, analyze_product_overview, analyze
 Tier 3 (generation): generate_manifest, generate_growth_template, write_analysis_outputs
 Utility: get_manifest, clear_cache
 
-Cache: SKENE_CACHE_ENABLED (true), SKENE_CACHE_DIR (~/.cache/skene-growth-mcp), SKENE_CACHE_TTL (3600s)
+Cache: SKENE_CACHE_ENABLED (true), SKENE_CACHE_DIR (~/.cache/skene-mcp), SKENE_CACHE_TTL (3600s)
 
 ## Python API
 

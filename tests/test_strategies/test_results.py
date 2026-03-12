@@ -3,7 +3,7 @@
 import time
 from datetime import datetime
 
-from skene_growth.strategies.base import AnalysisMetadata, AnalysisResult
+from skene.strategies.base import AnalysisMetadata, AnalysisResult
 
 
 class TestAnalysisMetadata:

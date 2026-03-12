@@ -1,6 +1,6 @@
-# skene-growth Benchmarking Suite
+# skene Benchmarking Suite
 
-Compare `skene-growth` pipeline output quality across LLM providers and models.
+Compare `skene` pipeline output quality across LLM providers and models.
 
 ## Quick Start
 

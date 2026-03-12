@@ -21,7 +21,7 @@ def _build_analyze_command(
     return [
         "uv",
         "run",
-        "skene-growth",
+        "skene",
         "analyze",
         str(codebase_path),
         "--provider",
@@ -48,7 +48,7 @@ def _build_plan_command(
     return [
         "uv",
         "run",
-        "skene-growth",
+        "skene",
         "plan",
         "--context",
         str(context_dir),
@@ -75,7 +75,7 @@ def _build_build_command(
     return [
         "uv",
         "run",
-        "skene-growth",
+        "skene",
         "build",
         "--context",
         str(context_dir),

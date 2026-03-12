@@ -11,19 +11,19 @@ The `features` command manages the growth feature registry -- a persistent recor
 Export the feature registry as JSON (to stdout):
 
 ```bash
-uvx skene-growth features export
+uvx skene features export
 ```
 
 Export as Markdown to a file:
 
 ```bash
-uvx skene-growth features export --format markdown -o features.md
+uvx skene features export --format markdown -o features.md
 ```
 
 Export as CSV:
 
 ```bash
-uvx skene-growth features export --format csv -o features.csv
+uvx skene features export --format csv -o features.csv
 ```
 
 ## Flag reference
@@ -97,7 +97,7 @@ Human-readable format suitable for documentation, wikis, or README files.
 To update the feature registry without running a full analysis (skipping opportunities and revenue leakage):
 
 ```bash
-uvx skene-growth analyze . --features
+uvx skene analyze . --features
 ```
 
 This is faster than a full analysis and useful when you only need to refresh the feature registry.

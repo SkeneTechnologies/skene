@@ -14,7 +14,7 @@ Before running `status`, you need:
 Check the implementation status of all growth loops in the current project:
 
 ```bash
-uvx skene-growth status
+uvx skene status
 ```
 
 The command auto-detects `skene-context/growth-loops/` relative to the current directory and validates every growth loop JSON file found there.
@@ -22,19 +22,19 @@ The command auto-detects `skene-context/growth-loops/` relative to the current d
 Specify a different project root:
 
 ```bash
-uvx skene-growth status ./my-project
+uvx skene status ./my-project
 ```
 
 Point to a specific context directory:
 
 ```bash
-uvx skene-growth status --context ./my-project/skene-context
+uvx skene status --context ./my-project/skene-context
 ```
 
 Use LLM-powered semantic matching to find alternative implementations for missing requirements:
 
 ```bash
-uvx skene-growth status --find-alternatives --api-key "your-key"
+uvx skene status --find-alternatives --api-key "your-key"
 ```
 
 ## Flag reference
@@ -95,7 +95,7 @@ When `--find-alternatives` is enabled, the command extracts all function definit
 Alternative matches are displayed below the validation table with a confidence score (only matches above 60% confidence are shown).
 
 ```bash
-uvx skene-growth status --find-alternatives
+uvx skene status --find-alternatives
 ```
 
 The LLM configuration is loaded from your config file and can be overridden with `--api-key`, `--provider`, and `--model`.

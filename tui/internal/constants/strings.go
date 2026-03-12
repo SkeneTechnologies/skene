@@ -78,25 +78,25 @@ var NextStepActions = []NextStepDef{
 		ID:          "plan",
 		Name:        "Generate Growth Plan",
 		Description: "Create a prioritized growth plan with implementation roadmap",
-		Command:     "uvx skene-growth plan",
+		Command:     "uvx skene plan",
 	},
 	{
 		ID:          "build",
 		Name:        "Build Implementation Prompt",
 		Description: "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
-		Command:     "uvx skene-growth build",
+		Command:     "uvx skene build",
 	},
 	{
 		ID:          "validate",
 		Name:        "Validate Manifest",
 		Description: "Validate the growth manifest against the schema",
-		Command:     "uvx skene-growth validate",
+		Command:     "uvx skene validate",
 	},
 	{
 		ID:          "rerun",
 		Name:        "Re-run Analysis",
 		Description: "Analyze the codebase again with the current configuration",
-		Command:     "uvx skene-growth analyze .",
+		Command:     "uvx skene analyze .",
 	},
 	{
 		ID:          "open",
@@ -122,6 +122,13 @@ var NextStepActions = []NextStepDef{
 const (
 	WelcomeSubtitle = "Product-Led Growth analysis for your codebase"
 	WelcomeCTA      = "> ENTER <"
+)
+
+// Update notice (welcome view)
+const (
+	UpdateNoticeFormat   = "Update available: %s (current: %s)"
+	UpdateNoticeHintCopy = "Press c to copy update command"
+	UpdateNoticeCopied   = "Copied to clipboard!"
 )
 
 // Auth view
@@ -175,12 +182,38 @@ const (
 	AnalysisConfigRunButton = "Run Analysis"
 )
 
-// Analyzing view
+// Status labels (used across analyzing view, game, etc.)
 const (
-	AnalyzingFailed   = "Failed"
-	AnalyzingComplete = "Complete"
-	AnalyzingRunning  = "Running..."
-	AnalyzingDone     = "Done"
+	StatusFailed     = "Failed"
+	StatusCompleted  = "Completed"
+	StatusInProgress = "In progress"
+	StatusDone       = "Done"
+
+	StatusIconFailed    = "✗"
+	StatusIconCompleted = "✓"
+)
+
+// Game strings
+const (
+	GameTitle        = "TIME TO"
+	GameOver         = "GAME OVER"
+	GameAutoFire     = "auto-fire is on"
+	GameThrustUp     = "thrust up"
+	GameThrustDown   = "thrust down"
+	GameStatScore    = "Score    "
+	GameStatDistance  = "Distance "
+	GameStatDefeated = "Defeated "
+	GameHUDFormat    = " SCORE: %d  HP: %s  DIST: %d "
+)
+
+// Engine phase names
+const (
+	PhaseScanningCodebase  = "Scanning codebase"
+	PhaseDetectingFeatures = "Detecting product features"
+	PhaseGrowthLoops       = "Growth loop analysis"
+	PhaseMonetisation      = "Monetisation analysis"
+	PhaseOpportunities     = "Opportunity modelling"
+	PhaseGeneratingDocs    = "Generating manifests & docs"
 )
 
 // Analysis phase names are now defined in internal/services/growth/engine.go
@@ -222,6 +255,7 @@ const (
 	HelpKeyG         = "g"
 	HelpKeyM         = "m"
 	HelpKeyR         = "r"
+	HelpKeyC         = "c"
 )
 
 // Help descriptions
@@ -265,4 +299,8 @@ const (
 	HelpDescToggleOption     = "toggle option"
 	HelpDescOpenFolder       = "open folder"
 	HelpDescTabs             = "tabs"
+	HelpDescCopyUpdateCmd    = "copy update cmd"
+	HelpDescMove             = "move"
+	HelpDescPlayAgain        = "play again"
+	HelpDescStartGame        = "start"
 )

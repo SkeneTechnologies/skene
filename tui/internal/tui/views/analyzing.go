@@ -156,7 +156,7 @@ func (v *AnalyzingView) UpdatePhaseByName(phaseName string, progress float64, me
 // SetDone marks the command as successfully completed
 func (v *AnalyzingView) SetDone() {
 	v.done = true
-	v.terminal.AddLine("✓ " + constants.AnalyzingDone)
+	v.terminal.AddLine(constants.StatusIconCompleted + " " + constants.StatusDone)
 }
 
 // SetCommandFailed marks the view as failed with the error visible in terminal
@@ -277,7 +277,7 @@ func (v *AnalyzingView) Render() string {
 	// Current phase status
 	var statusLine string
 	if v.failed {
-		statusLine = styles.Error.Render("✗ " + constants.AnalyzingFailed)
+		statusLine = styles.Error.Render(constants.StatusIconFailed + " " + constants.StatusFailed)
 		if v.failMessage != "" {
 			statusLine += "\n" + lipgloss.NewStyle().
 				Foreground(styles.MidGray).
@@ -285,9 +285,9 @@ func (v *AnalyzingView) Render() string {
 				Render("  "+v.failMessage)
 		}
 	} else if v.done {
-		statusLine = styles.SuccessText.Render("✓ " + constants.AnalyzingComplete)
+		statusLine = styles.SuccessText.Render(constants.StatusIconCompleted + " " + constants.StatusCompleted)
 	} else if len(v.phases) > 0 && v.AllPhasesDone() {
-		statusLine = styles.SuccessText.Render("✓ " + constants.AnalyzingComplete)
+		statusLine = styles.SuccessText.Render(constants.StatusIconCompleted + " " + constants.StatusCompleted)
 	} else {
 		currentPhase := ""
 		for _, p := range v.phases {
@@ -299,7 +299,7 @@ func (v *AnalyzingView) Render() string {
 		if currentPhase != "" {
 			statusLine = v.spinner.Render() + " " + styles.Body.Render(currentPhase)
 		} else {
-			statusLine = v.spinner.Render() + " " + styles.Body.Render(constants.AnalyzingRunning)
+			statusLine = v.spinner.Render() + " " + styles.Body.Render(constants.StatusInProgress)
 		}
 	}
 
@@ -320,8 +320,17 @@ func (v *AnalyzingView) Render() string {
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		})
-	} else if v.done || v.failed {
+	} else if v.failed {
 		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},
+			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+		})
+	} else if v.done {
+		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
@@ -403,8 +412,18 @@ func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
-	if v.done || v.failed {
+	if v.failed {
 		return []components.HelpItem{
+			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},
+			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+		}
+	}
+	if v.done {
+		return []components.HelpItem{
+			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},

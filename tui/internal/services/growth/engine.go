@@ -30,19 +30,19 @@ const (
 func (p AnalysisPhase) String() string {
 	switch p {
 	case PhaseScanCodebase:
-		return "Scanning codebase"
+		return constants.PhaseScanningCodebase
 	case PhaseDetectFeatures:
-		return "Detecting product features"
+		return constants.PhaseDetectingFeatures
 	case PhaseGrowthLoops:
-		return "Growth loop analysis"
+		return constants.PhaseGrowthLoops
 	case PhaseMonetisation:
-		return "Monetisation analysis"
+		return constants.PhaseMonetisation
 	case PhaseOpportunities:
-		return "Opportunity modelling"
+		return constants.PhaseOpportunities
 	case PhaseGenerateDocs:
-		return "Generating manifests & docs"
+		return constants.PhaseGeneratingDocs
 	default:
-		return "Analyzing..."
+		return constants.StatusInProgress
 	}
 }
 
@@ -99,13 +99,13 @@ func (e *Engine) SetPromptHandler(fn func(InteractivePrompt)) {
 	e.promptFn = fn
 }
 
-// Run executes the analysis by spawning uvx skene-growth analyze
+// Run executes the analysis by spawning uvx skene analyze
 func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 	result := &AnalysisResult{}
 
-	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting analysis via uvx skene-growth...")
+	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting analysis via uvx skene...")
 
-	args := []string{constants.GrowthPackageName, "analyze", "."}
+	args := []string{constants.GrowthPackageSpec(), "analyze", "."}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(ctx, args); err != nil {
@@ -123,11 +123,11 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 	return result
 }
 
-// GeneratePlan spawns uvx skene-growth plan
+// GeneratePlan spawns uvx skene plan
 func (e *Engine) GeneratePlan() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{constants.GrowthPackageName, "plan"}
+	args := []string{constants.GrowthPackageSpec(), "plan"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -140,11 +140,11 @@ func (e *Engine) GeneratePlan() *AnalysisResult {
 	return result
 }
 
-// GenerateBuild spawns uvx skene-growth build
+// GenerateBuild spawns uvx skene build
 func (e *Engine) GenerateBuild() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{constants.GrowthPackageName, "build"}
+	args := []string{constants.GrowthPackageSpec(), "build"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -157,12 +157,12 @@ func (e *Engine) GenerateBuild() *AnalysisResult {
 	return result
 }
 
-// ValidateManifest spawns uvx skene-growth validate
+// ValidateManifest spawns uvx skene validate
 func (e *Engine) ValidateManifest() *AnalysisResult {
 	result := &AnalysisResult{}
 
 	manifestPath := filepath.Join(e.resolveOutputDir(), constants.GrowthManifestFile)
-	args := []string{constants.GrowthPackageName, "validate", manifestPath}
+	args := []string{constants.GrowthPackageSpec(), "validate", manifestPath}
 
 	if err := e.runUVX(context.Background(), args); err != nil {
 		result.Error = fmt.Errorf("validation failed: %w", err)
@@ -263,9 +263,9 @@ func (e *Engine) runUVX(ctx context.Context, args []string) error {
 		})
 		select {
 		case answer := <-responseCh:
-			fmt.Fprintln(stdin, answer)
+			_, _ = fmt.Fprintln(stdin, answer)
 		case <-ctx.Done():
-			stdin.Close()
+			_ = stdin.Close()
 		}
 		collectingOptions = false
 		pendingOptions = nil
@@ -328,7 +328,7 @@ func (e *Engine) runUVX(ctx context.Context, args []string) error {
 				firePrompt()
 			case <-ctx.Done():
 				timer.Stop()
-				stdin.Close()
+				_ = stdin.Close()
 				goto done
 			}
 		} else {
@@ -339,7 +339,7 @@ func (e *Engine) runUVX(ctx context.Context, args []string) error {
 				}
 				processLine(r.line)
 			case <-ctx.Done():
-				stdin.Close()
+				_ = stdin.Close()
 				goto done
 			}
 		}
@@ -392,21 +392,11 @@ func isSelectLine(line string) bool {
 		strings.Contains(lower, "enter your choice")
 }
 
+// buildCommonFlags returns CLI flags for the skene command.
+// Provider, model, and API key are read from the config file by the CLI,
+// so they are not passed as flags here.
 func (e *Engine) buildCommonFlags() []string {
-	var flags []string
-	if e.config.Provider != "" {
-		flags = append(flags, "--provider", e.config.Provider)
-	}
-	if e.config.Model != "" {
-		flags = append(flags, "--model", e.config.Model)
-	}
-	if e.config.APIKey != "" {
-		flags = append(flags, "--api-key", e.config.APIKey)
-	}
-	if e.config.BaseURL != "" {
-		flags = append(flags, "--base-url", e.config.BaseURL)
-	}
-	return flags
+	return nil
 }
 
 func (e *Engine) buildEnvVars() []string {

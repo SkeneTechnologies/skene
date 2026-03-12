@@ -14,7 +14,7 @@ Before running `build`, you need:
 Build a prompt using auto-detected plan and configured LLM settings:
 
 ```bash
-uvx skene-growth build
+uvx skene build
 ```
 
 The command looks for `growth-plan.md` in `./skene-context/` first, then falls back to the current directory.
@@ -22,19 +22,19 @@ The command looks for `growth-plan.md` in `./skene-context/` first, then falls b
 Override LLM settings:
 
 ```bash
-uvx skene-growth build --api-key "your-key" --provider gemini
+uvx skene build --api-key "your-key" --provider gemini
 ```
 
 Specify a custom plan file:
 
 ```bash
-uvx skene-growth build --plan ./my-plan.md
+uvx skene build --plan ./my-plan.md
 ```
 
 Point to a context directory:
 
 ```bash
-uvx skene-growth build --context ./my-context
+uvx skene build --context ./my-context
 ```
 
 ## Flag reference
@@ -47,7 +47,7 @@ uvx skene-growth build --context ./my-context
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | Model name (uses provider default if not provided) |
 | `--base-url TEXT` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. Also set via `SKENE_BASE_URL` env var or config. |
-| `--debug` | | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 | `--target TEXT` | `-t` | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
 | `--feature TEXT` | `-f` | Bias toward this feature name when linking the growth loop to a feature in the registry |
@@ -230,7 +230,7 @@ Growth loop files accumulate over time. The `plan` command reads existing loops 
 
 ## LLM configuration
 
-The build command requires LLM configuration. It loads settings from your config file (`.skene-growth.config` or `~/.config/skene-growth/config`) and can be overridden with CLI flags.
+The build command requires LLM configuration. It loads settings from your config file (`.skene.config` or `~/.config/skene/config`) and can be overridden with CLI flags.
 
 If neither an API key nor a provider is configured, the command exits with an error listing all configuration options.
 
@@ -243,10 +243,10 @@ If the LLM fails during prompt generation, the command falls back to a static te
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene-growth/debug/`:
+The `--debug` flag logs all LLM input and output to `.skene/debug/`:
 
 ```bash
-uvx skene-growth build --debug
+uvx skene build --debug
 ```
 
 You can also enable debug mode permanently in your config file:

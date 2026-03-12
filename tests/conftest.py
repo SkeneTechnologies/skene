@@ -1,10 +1,10 @@
-"""Shared pytest fixtures for skene-growth tests."""
+"""Shared pytest fixtures for skene tests."""
 
 from pathlib import Path
 
 import pytest
 
-from skene_growth.codebase import CodebaseExplorer
+from skene.codebase import CodebaseExplorer
 
 
 @pytest.fixture

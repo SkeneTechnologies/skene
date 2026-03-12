@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from skene_growth.growth_loops.upstream import (
+from skene.growth_loops.upstream import (
     _api_base_from_upstream,
     _sha256_checksum,
     _workspace_slug_from_url,
@@ -34,7 +34,7 @@ class TestBuildPackage:
         (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
         (tmp_path / "skene-context" / "growth-loops" / "loop1.json").write_text('{"loop_id": "loop1"}')
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql"
         telemetry_sql.write_text("CREATE TRIGGER")
 
         package = build_package(tmp_path)
@@ -45,8 +45,8 @@ class TestBuildPackage:
 
     def test_package_excludes_schema_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")
-        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_schema.sql").write_text("CREATE SCHEMA")
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql"
         telemetry_sql.write_text("CREATE TRIGGER")
 
         package = build_package(tmp_path)
@@ -55,8 +55,8 @@ class TestBuildPackage:
 
     def test_package_uses_latest_telemetry_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "20260218164139_skene_growth_telemetry.sql").write_text("-- older")
-        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql").write_text("-- latest")
+        (tmp_path / "supabase" / "migrations" / "20260218164139_skene_telemetry.sql").write_text("-- older")
+        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql").write_text("-- latest")
 
         package = build_package(tmp_path)
         assert package["telemetry_sql"] == "-- latest"
@@ -85,19 +85,19 @@ class TestBuildPushManifest:
 
 
 class TestValidateToken:
-    @patch("skene_growth.growth_loops.upstream.httpx.get")
+    @patch("skene.growth_loops.upstream.httpx.get")
     def test_valid_token(self, mock_get):
         mock_get.return_value.status_code = 200
         assert validate_token("https://x.com/api/v1", "sk_xxx") is True
 
-    @patch("skene_growth.growth_loops.upstream.httpx.get")
+    @patch("skene.growth_loops.upstream.httpx.get")
     def test_invalid_token(self, mock_get):
         mock_get.return_value.status_code = 401
         assert validate_token("https://x.com/api/v1", "bad") is False
 
 
 class TestPushToUpstream:
-    @patch("skene_growth.growth_loops.upstream.httpx.post")
+    @patch("skene.growth_loops.upstream.httpx.post")
     def test_push_success(self, mock_post, tmp_path: Path):
         (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
         (tmp_path / "skene-context" / "growth-loops" / "loop.json").write_text("{}")
@@ -121,7 +121,7 @@ class TestPushToUpstream:
         assert "growth_loops" in payload["package"]
         assert "telemetry_sql" in payload["package"]
 
-    @patch("skene_growth.growth_loops.upstream.httpx.post")
+    @patch("skene.growth_loops.upstream.httpx.post")
     def test_push_401_returns_auth_error(self, mock_post, tmp_path: Path):
         mock_post.return_value.status_code = 401
         result = push_to_upstream(tmp_path, "https://x.com/workspace/w", "bad", [], 0)

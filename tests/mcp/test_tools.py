@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from skene_growth.mcp.cache import AnalysisCache
-from skene_growth.mcp.tools import (
+from skene.mcp.cache import AnalysisCache
+from skene.mcp.tools import (
     get_codebase_overview,
     search_codebase,
 )

@@ -1,6 +1,6 @@
 # Python API
 
-Programmatic access to skene-growth's codebase analysis, manifest generation, and documentation tools.
+Programmatic access to skene's codebase analysis, manifest generation, and documentation tools.
 
 ## Quick example
 
@@ -8,8 +8,8 @@ Programmatic access to skene-growth's codebase analysis, manifest generation, an
 import asyncio
 from pathlib import Path
 from pydantic import SecretStr
-from skene_growth import CodebaseExplorer, ManifestAnalyzer
-from skene_growth.llm import create_llm_client
+from skene import CodebaseExplorer, ManifestAnalyzer
+from skene.llm import create_llm_client
 
 async def main():
     codebase = CodebaseExplorer(Path("/path/to/repo"))
@@ -39,7 +39,7 @@ Safe, sandboxed access to codebase files. Automatically excludes common build/ca
 
 ```python
 from pathlib import Path
-from skene_growth import CodebaseExplorer, DEFAULT_EXCLUDE_FOLDERS
+from skene import CodebaseExplorer, DEFAULT_EXCLUDE_FOLDERS
 
 # Create with default exclusions
 explorer = CodebaseExplorer(Path("/path/to/repo"))
@@ -73,7 +73,7 @@ explorer = CodebaseExplorer(
 Runs a full codebase analysis and produces a growth manifest.
 
 ```python
-from skene_growth import ManifestAnalyzer
+from skene import ManifestAnalyzer
 
 analyzer = ManifestAnalyzer()
 result = await analyzer.run(
@@ -90,7 +90,7 @@ manifest = result.data["output"]
 Detects the technology stack of a codebase.
 
 ```python
-from skene_growth import TechStackAnalyzer
+from skene import TechStackAnalyzer
 
 analyzer = TechStackAnalyzer()
 result = await analyzer.run(codebase=codebase, llm=llm)
@@ -102,7 +102,7 @@ tech_stack = result.data["output"]
 Identifies existing growth features in a codebase.
 
 ```python
-from skene_growth import GrowthFeaturesAnalyzer
+from skene import GrowthFeaturesAnalyzer
 
 analyzer = GrowthFeaturesAnalyzer()
 result = await analyzer.run(codebase=codebase, llm=llm)
@@ -112,7 +112,7 @@ features = result.data["output"]
 ## Configuration
 
 ```python
-from skene_growth import Config, load_config
+from skene import Config, load_config
 
 # Load config from files + env vars
 config = load_config()
@@ -136,9 +136,9 @@ config.set("provider", "gemini")
 ### Upstream credentials
 
 ```python
-from skene_growth.config import (
-    save_upstream_to_config,    # Save upstream URL, workspace, API key to .skene-growth.config
-    remove_upstream_from_config,# Remove upstream credentials from .skene-growth.config
+from skene.config import (
+    save_upstream_to_config,    # Save upstream URL, workspace, API key to .skene.config
+    remove_upstream_from_config,# Remove upstream credentials from .skene.config
     resolve_upstream_token,     # Resolve token from env/config
 )
 ```
@@ -147,14 +147,14 @@ from skene_growth.config import (
 
 ```python
 from pydantic import SecretStr
-from skene_growth.llm import create_llm_client, LLMClient
+from skene.llm import create_llm_client, LLMClient
 
 client: LLMClient = create_llm_client(
     provider="openai",          # openai, gemini, anthropic, ollama, lmstudio, generic
     api_key=SecretStr("key"),
     model="gpt-4o",
     base_url=None,              # Required for generic provider
-    debug=False,                # Log LLM I/O to .skene-growth/debug/
+    debug=False,                # Log LLM I/O to .skene/debug/
 )
 ```
 
@@ -163,7 +163,7 @@ client: LLMClient = create_llm_client(
 All schemas are Pydantic v2 models. See [Manifest schema reference](manifest-schema.md) for full field details.
 
 ```python
-from skene_growth import (
+from skene import (
     GrowthManifest,     # v1.0 manifest
     DocsManifest,       # v2.0 manifest (extends GrowthManifest)
     TechStack,
@@ -200,7 +200,7 @@ from skene_growth import (
 ## Feature registry
 
 ```python
-from skene_growth.feature_registry import (
+from skene.feature_registry import (
     load_feature_registry,              # Load registry from disk
     write_feature_registry,             # Write registry to disk
     merge_features_into_registry,       # Merge new features with existing registry
@@ -224,7 +224,7 @@ from skene_growth.feature_registry import (
 ## Growth loops
 
 ```python
-from skene_growth.growth_loops.storage import (
+from skene.growth_loops.storage import (
     load_existing_growth_loops,         # Load all loop JSONs from growth-loops/
     write_growth_loop_json,             # Write a loop JSON to disk
     generate_loop_definition_with_llm,  # Generate loop definition via LLM
@@ -232,7 +232,7 @@ from skene_growth.growth_loops.storage import (
     derive_loop_name,                   # Derive name from technical execution
 )
 
-from skene_growth.growth_loops.push import (
+from skene.growth_loops.push import (
     ensure_base_schema_migration,       # Create base schema migration
     build_loops_to_supabase,            # Build Supabase migrations from loops
     build_migration_sql,                # Generate migration SQL
@@ -240,7 +240,7 @@ from skene_growth.growth_loops.push import (
     push_to_upstream,                   # Push to upstream API
 )
 
-from skene_growth.growth_loops.upstream import (
+from skene.growth_loops.upstream import (
     validate_token,                     # Validate token via upstream API
     build_package,                      # Assemble deployment package
     build_push_manifest,                # Create push manifest with checksum
@@ -251,7 +251,7 @@ from skene_growth.growth_loops.upstream import (
 ## Plan decline
 
 ```python
-from skene_growth.planner.decline import (
+from skene.planner.decline import (
     decline_plan,           # Archive a declined plan with executive summary only
     load_declined_plans,    # Load recent declined plans for reference
 )
@@ -260,7 +260,7 @@ from skene_growth.planner.decline import (
 ## Documentation generation
 
 ```python
-from skene_growth import DocsGenerator, GrowthManifest
+from skene import DocsGenerator, GrowthManifest
 
 manifest = GrowthManifest.model_validate_json(open("growth-manifest.json").read())
 
@@ -276,7 +276,7 @@ The `PSEOBuilder` class generates programmatic SEO content from manifests.
 The analysis pipeline is built on a composable strategy framework:
 
 ```python
-from skene_growth.strategies import (
+from skene.strategies import (
     AnalysisStrategy,    # Base strategy class
     AnalysisResult,      # Result container with data + metadata
     AnalysisMetadata,    # Timing, token usage, step info
@@ -284,7 +284,7 @@ from skene_growth.strategies import (
     MultiStepStrategy,   # Chains multiple steps together
 )
 
-from skene_growth.strategies.steps import (
+from skene.strategies.steps import (
     AnalysisStep,        # Base step class
     SelectFilesStep,     # Select relevant files for analysis
     ReadFilesStep,       # Read file contents
@@ -298,8 +298,8 @@ These classes are primarily used internally by the analyzers but can be composed
 ## Planner
 
 ```python
-from skene_growth.planner import Planner
-from skene_growth.planner.schema import GrowthPlan, TechnicalExecution, PlanSection
+from skene.planner import Planner
+from skene.planner.schema import GrowthPlan, TechnicalExecution, PlanSection
 ```
 
 The `Planner` class generates growth plans from manifests and templates. It is used internally by the `plan` CLI command.

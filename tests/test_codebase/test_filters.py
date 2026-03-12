@@ -1,6 +1,6 @@
 """Tests for the filters module."""
 
-from skene_growth.codebase.filters import DEFAULT_EXCLUDE_FOLDERS, should_exclude
+from skene.codebase.filters import DEFAULT_EXCLUDE_FOLDERS, should_exclude
 
 
 class TestDefaultExcludeFolders:

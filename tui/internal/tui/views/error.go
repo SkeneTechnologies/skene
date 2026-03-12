@@ -29,26 +29,17 @@ type ErrorInfo struct {
 
 // ErrorView displays errors with suggested fixes and retry
 type ErrorView struct {
-	width       int
-	height      int
-	error       *ErrorInfo
-	buttonGroup *components.ButtonGroup
-	header      *components.WizardHeader
+	width  int
+	height int
+	error  *ErrorInfo
+	header *components.WizardHeader
 }
 
 // NewErrorView creates a new error view
 func NewErrorView(err *ErrorInfo) *ErrorView {
-	var buttons *components.ButtonGroup
-	if err.Retryable {
-		buttons = components.NewButtonGroup("Retry", "Go Back", "Quit")
-	} else {
-		buttons = components.NewButtonGroup("Go Back", "Quit")
-	}
-
 	return &ErrorView{
-		error:       err,
-		buttonGroup: buttons,
-		header:      components.NewWizardHeader(0, "Error"),
+		error:  err,
+		header: components.NewWizardHeader(0, "Error"),
 	}
 }
 
@@ -64,19 +55,9 @@ func (v *ErrorView) SetError(err *ErrorInfo) {
 	v.error = err
 }
 
-// HandleLeft moves button focus left
-func (v *ErrorView) HandleLeft() {
-	v.buttonGroup.Previous()
-}
-
-// HandleRight moves button focus right
-func (v *ErrorView) HandleRight() {
-	v.buttonGroup.Next()
-}
-
-// GetSelectedButton returns selected button
-func (v *ErrorView) GetSelectedButton() string {
-	return v.buttonGroup.GetActiveLabel()
+// IsRetryable returns whether the error supports retry
+func (v *ErrorView) IsRetryable() bool {
+	return v.error != nil && v.error.Retryable
 }
 
 // Render the error view
@@ -89,7 +70,6 @@ func (v *ErrorView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Severity icon and label
 	var severityIcon, severityLabel string
 	var titleColor lipgloss.Color
 	switch v.error.Severity {
@@ -109,18 +89,14 @@ func (v *ErrorView) Render() string {
 
 	severityStyle := lipgloss.NewStyle().Foreground(titleColor).Bold(true)
 
-	// Error header with icon and code
 	errorHeader := severityStyle.Render(severityIcon+" "+severityLabel) +
 		"  " + styles.Muted.Render("["+v.error.Code+"]")
 
-	// Title
 	title := lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(v.error.Title)
 
-	// Message
 	messageStyle := lipgloss.NewStyle().Foreground(styles.White).Width(sectionWidth - 8)
 	message := messageStyle.Render(v.error.Message)
 
-	// Suggestion box
 	suggestionHeader := styles.SectionHeader.Render("Suggested Fix")
 	suggestion := lipgloss.NewStyle().
 		Foreground(styles.Success).
@@ -138,13 +114,6 @@ func (v *ErrorView) Render() string {
 		Width(sectionWidth - 4).
 		Render(suggestionContent)
 
-	// Buttons
-	buttons := lipgloss.NewStyle().
-		Width(sectionWidth).
-		Align(lipgloss.Center).
-		Render(v.buttonGroup.Render())
-
-	// Build the main content area
 	innerContent := lipgloss.JoinVertical(
 		lipgloss.Left,
 		errorHeader,
@@ -160,23 +129,23 @@ func (v *ErrorView) Render() string {
 		Width(sectionWidth).
 		Render(innerContent)
 
-	// Footer help
+	helpItems := []components.HelpItem{}
+	if v.error.Retryable {
+		helpItems = append(helpItems, components.HelpItem{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry})
+	}
+	helpItems = append(helpItems,
+		components.HelpItem{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		components.HelpItem{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+	)
+
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.FooterHelp([]components.HelpItem{
-			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelect},
-			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
-			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
-			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}))
+		Render(components.FooterHelp(helpItems))
 
-	// Combine all sections
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		mainBox,
-		"",
-		buttons,
 	)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
@@ -194,12 +163,15 @@ func (v *ErrorView) Render() string {
 
 // GetHelpItems returns context-specific help
 func (v *ErrorView) GetHelpItems() []components.HelpItem {
-	return []components.HelpItem{
-		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelectOption},
-		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
-		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+	items := []components.HelpItem{}
+	if v.error != nil && v.error.Retryable {
+		items = append(items, components.HelpItem{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry})
 	}
+	items = append(items,
+		components.HelpItem{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		components.HelpItem{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+	)
+	return items
 }
 
 // Common errors
@@ -216,7 +188,7 @@ var (
 	ErrPipFailed = &ErrorInfo{
 		Code:       "PIP_FAILED",
 		Title:      "Package Installation Failed",
-		Message:    "pip failed to install skene-growth package.",
+		Message:    "pip failed to install skene package.",
 		Suggestion: "Run 'pip install --upgrade pip' and try again.",
 		Severity:   SeverityError,
 		Retryable:  true,

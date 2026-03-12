@@ -74,7 +74,7 @@ func downloadUV(cacheDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to download uv from %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download uv: HTTP %d from %s", resp.StatusCode, url)
@@ -111,7 +111,7 @@ func extractTarGz(r io.Reader, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	tr := tar.NewReader(gz)
 	wantNames := map[string]bool{
@@ -139,10 +139,10 @@ func extractTarGz(r io.Reader, destDir string) error {
 			return fmt.Errorf("failed to create %s: %w", destPath, err)
 		}
 		if _, err := io.Copy(f, tr); err != nil {
-			f.Close()
+			_ = f.Close()
 			return fmt.Errorf("failed to write %s: %w", destPath, err)
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	uvxPath := filepath.Join(destDir, "uvx")
@@ -158,19 +158,19 @@ func extractZip(r io.Reader, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
 	if _, err := io.Copy(tmpFile, r); err != nil {
 		return fmt.Errorf("failed to download zip: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	zr, err := zip.OpenReader(tmpFile.Name())
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %w", err)
 	}
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 
 	wantNames := map[string]bool{
 		"uv.exe":  true,
@@ -191,16 +191,16 @@ func extractZip(r io.Reader, destDir string) error {
 
 		out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
-			rc.Close()
+			_ = rc.Close()
 			return fmt.Errorf("failed to create %s: %w", destPath, err)
 		}
 		if _, err := io.Copy(out, rc); err != nil {
-			out.Close()
-			rc.Close()
+			_ = out.Close()
+			_ = rc.Close()
 			return fmt.Errorf("failed to write %s: %w", destPath, err)
 		}
-		out.Close()
-		rc.Close()
+		_ = out.Close()
+		_ = rc.Close()
 	}
 
 	uvxPath := filepath.Join(destDir, "uvx.exe")

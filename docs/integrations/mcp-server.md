@@ -1,6 +1,6 @@
 # MCP Server
 
-skene-growth provides an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that exposes codebase analysis capabilities to AI assistants like Claude Desktop and Claude Code.
+skene provides an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that exposes codebase analysis capabilities to AI assistants like Claude Desktop and Claude Code.
 
 The server communicates via stdio and exposes 12 tools organized into tiers by speed and complexity. Tier 1 tools run in under a second with no LLM calls. Tier 2 tools perform LLM-powered analysis with automatic caching. Tier 3 tools combine cached results into final outputs.
 
@@ -10,16 +10,16 @@ Install with the `mcp` optional dependency:
 
 ```bash
 # With pip
-pip install skene-growth[mcp]
+pip install skene[mcp]
 
 # With uv
-uv pip install skene-growth[mcp]
+uv pip install skene[mcp]
 ```
 
 Or run directly with `uvx` (no installation required):
 
 ```bash
-uvx --from "skene-growth[mcp]" skene-growth-mcp
+uvx --from "skene[mcp]" skene-mcp
 ```
 
 ## Configuration
@@ -36,8 +36,8 @@ Add to your Claude Desktop config file:
 ```json
 {
   "mcpServers": {
-    "skene-growth": {
-      "command": "skene-growth-mcp",
+    "skene": {
+      "command": "skene-mcp",
       "env": {
         "SKENE_API_KEY": "your-api-key"
       }
@@ -51,9 +51,9 @@ Add to your Claude Desktop config file:
 ```json
 {
   "mcpServers": {
-    "skene-growth": {
+    "skene": {
       "command": "uvx",
-      "args": ["--from", "skene-growth[mcp]", "skene-growth-mcp"],
+      "args": ["--from", "skene[mcp]", "skene-mcp"],
       "env": {
         "SKENE_API_KEY": "your-api-key"
       }
@@ -69,8 +69,8 @@ Add to `.mcp.json` in your project root or `~/.claude/settings.json` for global 
 ```json
 {
   "mcpServers": {
-    "skene-growth": {
-      "command": "skene-growth-mcp",
+    "skene": {
+      "command": "skene-mcp",
       "env": {
         "SKENE_API_KEY": "your-api-key"
       }
@@ -79,7 +79,7 @@ Add to `.mcp.json` in your project root or `~/.claude/settings.json` for global 
 }
 ```
 
-The `uvx` variant works identically -- use `"command": "uvx"` with `"args": ["--from", "skene-growth[mcp]", "skene-growth-mcp"]`.
+The `uvx` variant works identically -- use `"command": "uvx"` with `"args": ["--from", "skene[mcp]", "skene-mcp"]`.
 
 ## Available Tools
 
@@ -165,7 +165,7 @@ Each analysis phase has its own independent cache entry. Running `analyze_tech_s
 | `SKENE_PROVIDER` | LLM provider: `openai`, `gemini`, `anthropic`, `lmstudio`, `ollama`, `generic` | `openai` |
 | `SKENE_MODEL` | Model name to use | Provider default |
 | `SKENE_CACHE_ENABLED` | Enable or disable caching (`true`/`false`) | `true` |
-| `SKENE_CACHE_DIR` | Directory for disk cache | `~/.cache/skene-growth-mcp` |
+| `SKENE_CACHE_DIR` | Directory for disk cache | `~/.cache/skene-mcp` |
 | `SKENE_CACHE_TTL` | Cache time-to-live in seconds | `3600` |
 
 ## Using Local LLMs
@@ -175,8 +175,8 @@ For LM Studio or Ollama, no API key is needed. Set `SKENE_PROVIDER` in the `env`
 ```json
 {
   "mcpServers": {
-    "skene-growth": {
-      "command": "skene-growth-mcp",
+    "skene": {
+      "command": "skene-mcp",
       "env": {
         "SKENE_PROVIDER": "lmstudio",
         "SKENE_MODEL": "your-loaded-model"
@@ -196,10 +196,10 @@ You can start the MCP server directly for testing or debugging:
 
 ```bash
 # Via the entry point
-skene-growth-mcp
+skene-mcp
 
 # Via Python module
-python -m skene_growth.mcp
+python -m skene.mcp
 ```
 
 The server communicates via stdio (standard input/output) as required by the MCP protocol. It is not meant to be run interactively -- it expects JSON-RPC messages on stdin and writes responses to stdout.

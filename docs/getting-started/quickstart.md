@@ -14,10 +14,10 @@ Get from zero to a deployed growth loop.
 
 ```bash
 # Create a config file with sensible defaults
-uvx skene-growth config --init
+uvx skene config --init
 
 # Set up your LLM provider and API key interactively
-uvx skene-growth config
+uvx skene config
 ```
 
 The interactive setup walks you through provider, model, and API key selection.
@@ -29,7 +29,7 @@ The interactive setup walks you through provider, model, and API key selection.
 ### Analyze your codebase
 
 ```bash
-uvx skene-growth analyze .
+uvx skene analyze .
 ```
 
 Scans your codebase and generates files in `./skene-context/`:
@@ -41,7 +41,7 @@ Scans your codebase and generates files in `./skene-context/`:
 ### Generate a growth plan
 
 ```bash
-uvx skene-growth plan
+uvx skene plan
 ```
 
 Produces a prioritized growth plan with executive summary, opportunities, and a technical execution section.
@@ -51,7 +51,7 @@ For activation-focused analysis instead of general growth, add `--activation`.
 ### Build an implementation prompt
 
 ```bash
-uvx skene-growth build
+uvx skene build
 ```
 
 Generates a focused implementation prompt from your growth plan and asks where to send it -- **Cursor**, **Claude**, or **Show** in terminal.
@@ -67,7 +67,7 @@ Also saves a growth loop definition with telemetry specs to `./skene-context/`.
 After implementing the growth loop, verify that all requirements are met:
 
 ```bash
-uvx skene-growth status
+uvx skene status
 ```
 
 Checks that required files, functions, and patterns exist in your codebase. Each loop is marked **COMPLETE** or **INCOMPLETE**. Add `--find-alternatives` to use the LLM to find alternative implementations.
@@ -78,11 +78,11 @@ If your project uses Supabase, initialize the base schema and push growth loop t
 
 ```bash
 # One-time: create the base schema migration - to use in deploying the Skene Growth schema yourself.
-uvx skene-growth init
+uvx skene init
 
 # Generate telemetry triggers and push
-uvx skene-growth login --upstream https://skene.ai/workspace/<my-workspace-name>
-uvx skene-growth push
+uvx skene login --upstream https://skene.ai/workspace/<my-workspace-name>
+uvx skene push
 ```
 
 ## What you get
@@ -103,21 +103,21 @@ Your `./skene-context/` directory contains:
 If you want to try the analysis without setting up a config file first, pass your API key inline:
 
 ```bash
-uvx skene-growth analyze . --api-key "your-key"
+uvx skene analyze . --api-key "your-key"
 ```
 
 This uses the default provider (openai) and model (gpt-4o). To use a different provider:
 
 ```bash
-uvx skene-growth analyze . --api-key "your-key" --provider gemini --model gemini-3-flash-preview
+uvx skene analyze . --api-key "your-key" --provider gemini --model gemini-3-flash-preview
 ```
 
 ## Alternative: Free preview (no API key)
 
-If you want to see what skene-growth does before configuring an LLM, simply run `analyze` without an API key:
+If you want to see what skene does before configuring an LLM, simply run `analyze` without an API key:
 
 ```bash
-uvx skene-growth analyze .
+uvx skene analyze .
 ```
 
 Without an API key (and no local provider), the command falls back to a sample preview showing the kind of output a full analysis produces.

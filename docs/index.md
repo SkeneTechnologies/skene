@@ -1,8 +1,8 @@
-# skene-growth
+# skene
 
 A CLI toolkit for analyzing codebases through the lens of Product-Led Growth (PLG) — detecting growth features, revenue leakage, and generating actionable growth plans.
 
-## What skene-growth does
+## What skene does
 
 - **Analyzes your codebase** to detect tech stack, growth features, and revenue leakage patterns
 - **Generates a growth manifest** — structured JSON output documenting your product's growth surface area
@@ -18,25 +18,25 @@ A CLI toolkit for analyzing codebases through the lens of Product-Led Growth (PL
 
 ```bash
 # 1. Create a config file
-uvx skene-growth config --init
+uvx skene config --init
 
 # 2. Set up your LLM provider and API key interactively
-uvx skene-growth config
+uvx skene config
 
 # 3. Analyze your codebase
-uvx skene-growth analyze .
+uvx skene analyze .
 
 # 4. Generate a growth plan
-uvx skene-growth plan
+uvx skene plan
 
 # 5. Build an implementation prompt
-uvx skene-growth build
+uvx skene build
 
 # 6. Login to Skene Cloud 
-uvx skene-growth login
+uvx skene login
 
 # 7. Push growth loops to Supabase + upstream
-uvx skene-growth push
+uvx skene push
 ```
 
 ## Key concepts
@@ -80,7 +80,7 @@ uvx skene-growth push
 
 ### Integrations
 
-- [MCP server](integrations/mcp-server.md) — Using skene-growth with AI assistants
+- [MCP server](integrations/mcp-server.md) — Using skene with AI assistants
 
 ### Reference
 

@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from skene_growth.llm.base import LLMClient
-from skene_growth.templates.growth_template import (
+from skene.llm.base import LLMClient
+from skene.templates.growth_template import (
     generate_growth_template,
     load_example_templates,
     write_growth_template_outputs,

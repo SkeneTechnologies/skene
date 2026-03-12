@@ -30,8 +30,8 @@ func Init() {
 // Color palette - warm, retro terminal aesthetic (dark-background defaults)
 var (
 	// Primary colors
-	Cream     = lipgloss.Color("#EDC29C")
-	Sand      = lipgloss.Color("#C9A97A")
+	Cream     = lipgloss.Color("#FEC089")
+	Sand      = lipgloss.Color("#FEC089")
 	Charcoal  = lipgloss.Color("#1A1A1A")
 	DarkGray  = lipgloss.Color("#2D2D2D")
 	MidGray   = lipgloss.Color("#4A4A4A")
@@ -39,10 +39,10 @@ var (
 	White     = lipgloss.Color("#FFFFFF")
 
 	// Accent colors
-	Amber   = lipgloss.Color("#EDC29C")
-	Rust    = lipgloss.Color("#D4A574")
-	Coral   = lipgloss.Color("#F05D5E")
-	Success = lipgloss.Color("#7CB374")
+	Amber   = lipgloss.Color("#FEC089")
+	Rust    = lipgloss.Color("#FEC089")
+	Coral   = lipgloss.Color("#F25246")
+	Success = lipgloss.Color("#D7F4AB")
 	Warning = lipgloss.Color("#E6B450")
 
 	// Game colors
@@ -57,8 +57,8 @@ var (
 // or near-white background.
 func applyLightColors() {
 	// Primary colors — dark, high-contrast tones
-	Cream = lipgloss.Color("#5C3310")     // Rich dark brown (headings, titles)
-	Sand = lipgloss.Color("#5A432E")      // Dark warm brown (subtitles)
+	Cream = lipgloss.Color("#FF800F")     // Brand color (headings, titles)
+	Sand = lipgloss.Color("#FF800F")      // Brand color (subtitles)
 	Charcoal = lipgloss.Color("#F5F0EB")  // Off-white (button fill bg)
 	DarkGray = lipgloss.Color("#EDE6DD")  // Warm light gray (box bg)
 	MidGray = lipgloss.Color("#6B6058")   // Medium-dark warm gray (muted text)
@@ -66,10 +66,10 @@ func applyLightColors() {
 	White = lipgloss.Color("#1A1410")     // Near-black warm brown (body text)
 
 	// Accent colors — bold, saturated tones for visibility
-	Amber = lipgloss.Color("#8B4F00")   // Deep amber (primary accent)
-	Rust = lipgloss.Color("#7A4420")    // Dark rust
-	Coral = lipgloss.Color("#B22020")   // Strong red
-	Success = lipgloss.Color("#1B6B14") // Deep green
+	Amber = lipgloss.Color("#FF800F")   // Brand color (primary accent)
+	Rust = lipgloss.Color("#FF800F")    // Brand color
+	Coral = lipgloss.Color("#F25246")   // Strong red
+	Success = lipgloss.Color("#7EC017") // Brand green
 	Warning = lipgloss.Color("#8A6500") // Dark gold
 
 	// Game colors — vivid and saturated for light backgrounds
@@ -173,6 +173,12 @@ var FooterHelp lipgloss.Style
 
 // Spinner style
 var Spinner lipgloss.Style
+
+// UpdateNotice style — framed box for update + hint
+var UpdateNotice lipgloss.Style
+
+// UpdateNoticeText style — main update message (white)
+var UpdateNoticeText lipgloss.Style
 
 // rebuildStyles constructs all lipgloss styles from the current color
 // variables. Called by Init() after colors have been set.
@@ -290,6 +296,15 @@ func rebuildStyles() {
 
 	// Spinner style
 	Spinner = lipgloss.NewStyle().Foreground(Amber)
+
+	// UpdateNotice — bordered box for update + hint (no bg; centered text)
+	UpdateNotice = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(MidGray).
+		Padding(1, 1).
+		Align(lipgloss.Center).
+		MarginTop(1)
+	UpdateNoticeText = lipgloss.NewStyle().Foreground(White)
 }
 
 // init sets up the default dark-theme styles at package load time.

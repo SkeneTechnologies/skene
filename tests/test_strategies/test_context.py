@@ -1,6 +1,6 @@
 """Tests for the AnalysisContext and StepResult classes."""
 
-from skene_growth.strategies.context import AnalysisContext, StepResult
+from skene.strategies.context import AnalysisContext, StepResult
 
 
 class TestStepResult:

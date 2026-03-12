@@ -1,6 +1,8 @@
 package views
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"skene/internal/constants"
 	"skene/internal/tui/components"
@@ -15,6 +17,11 @@ type WelcomeView struct {
 	height int
 	time   float64
 	anim   components.ASCIIMotionModel
+
+	// Update notification (set asynchronously)
+	newVersion string
+	updateCmd  string
+	copied     bool
 }
 
 // NewWelcomeView creates a new welcome view
@@ -49,6 +56,27 @@ func (v *WelcomeView) InitAnimation() tea.Cmd {
 	return v.anim.Init()
 }
 
+// SetUpdateAvailable sets the update notification info
+func (v *WelcomeView) SetUpdateAvailable(newVersion, updateCmd string) {
+	v.newVersion = newVersion
+	v.updateCmd = updateCmd
+}
+
+// HasUpdate returns true if an update notification is present.
+func (v *WelcomeView) HasUpdate() bool {
+	return v.newVersion != ""
+}
+
+// GetUpdateCmd returns the update command string.
+func (v *WelcomeView) GetUpdateCmd() string {
+	return v.updateCmd
+}
+
+// SetCopied marks the update command as copied to clipboard.
+func (v *WelcomeView) SetCopied() {
+	v.copied = true
+}
+
 // ResetAnimation recreates the animation so it plays from the start
 func (v *WelcomeView) ResetAnimation() tea.Cmd {
 	v.anim = components.NewASCIIMotion(styles.IsDarkBackground)
@@ -79,15 +107,37 @@ func (v *WelcomeView) Render() string {
 	// Version info
 	version := center.Render(styles.Muted.Render(constants.Version + " • " + constants.Repository))
 
+	// Update notification — bordered block with update + hint
+	var updateNotice string
+	if v.newVersion != "" {
+		notice := fmt.Sprintf(constants.UpdateNoticeFormat, v.newVersion, constants.Version)
+		hintRaw := constants.UpdateNoticeHintCopy
+		if v.copied {
+			hintRaw = constants.UpdateNoticeCopied
+		}
+		hint := styles.Muted.Render(hintRaw)
+		blockWidth := lipgloss.Width(notice)
+		if w := lipgloss.Width(hintRaw); w > blockWidth {
+			blockWidth = w
+		}
+		blockWidth += 4 // padding
+		content := styles.UpdateNoticeText.Render(notice) + "\n" + hint
+		block := styles.UpdateNotice.Width(blockWidth).Render(content)
+		updateNotice = center.Render(block)
+	}
+
 	// Footer help
-	footer := components.FooterHelp([]components.HelpItem{
+	helpItems := []components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
+	}
+	if v.newVersion != "" {
+		helpItems = append(helpItems, components.HelpItem{Key: constants.HelpKeyC, Desc: constants.HelpDescCopyUpdateCmd})
+	}
+	footer := components.FooterHelp(helpItems)
 
 	// Combine elements
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+	elements := []string{
 		logo,
 		"",
 		"",
@@ -96,6 +146,13 @@ func (v *WelcomeView) Render() string {
 		subtitle,
 		"",
 		version,
+	}
+	if updateNotice != "" {
+		elements = append(elements, "", updateNotice)
+	}
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		elements...,
 	)
 
 	centered := lipgloss.Place(
@@ -118,8 +175,12 @@ func (v *WelcomeView) Render() string {
 
 // GetHelpItems returns context-specific help
 func (v *WelcomeView) GetHelpItems() []components.HelpItem {
-	return []components.HelpItem{
+	items := []components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
+	if v.newVersion != "" {
+		items = append(items, components.HelpItem{Key: constants.HelpKeyC, Desc: constants.HelpDescCopyUpdateCmd})
+	}
+	return items
 }

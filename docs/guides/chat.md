@@ -1,6 +1,6 @@
 # Chat
 
-Interactive terminal chat that lets you converse with an LLM about your codebase while it invokes skene-growth tools to gather information.
+Interactive terminal chat that lets you converse with an LLM about your codebase while it invokes skene tools to gather information.
 
 ## Prerequisites
 
@@ -11,16 +11,16 @@ Interactive terminal chat that lets you converse with an LLM about your codebase
 
 ```bash
 # Chat about the current directory
-uvx skene-growth chat
+uvx skene chat
 
 # Chat about a specific codebase
-uvx skene-growth chat /path/to/project
+uvx skene chat /path/to/project
 
-# Using the `skene` shorthand (defaults to chat)
-uvx --from skene-growth skene
+# Using the shorthand (defaults to chat)
+uvx skene
 ```
 
-The `skene` entry point defaults to the `chat` command, providing a convenient shorthand for interactive sessions.
+Running `skene` without a subcommand defaults to the `chat` command, providing a convenient shorthand for interactive sessions.
 
 ## Flags
 
@@ -32,14 +32,14 @@ The `skene` entry point defaults to the `chat` command, providing a convenient s
 | `--base-url` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. | `SKENE_BASE_URL` env var |
 | `--max-steps` | | Maximum tool calls per user request | `4` |
 | `--tool-output-limit` | | Max tool output characters kept in context | `4000` |
-| `--debug` | | Log all LLM input/output to `.skene-growth/debug/` | Off |
+| `--debug` | | Log all LLM input/output to `.skene/debug/` | Off |
 
 ## How it works
 
 The chat command starts an interactive terminal session where:
 
 1. You type a question or request about your codebase
-2. The LLM decides which skene-growth tools to call (analyze, search, read files, etc.)
+2. The LLM decides which skene tools to call (analyze, search, read files, etc.)
 3. Tool results are fed back to the LLM within the context window
 4. The LLM synthesizes a response based on the tool outputs
 

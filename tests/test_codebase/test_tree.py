@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from skene_growth.codebase.tree import build_directory_tree
+from skene.codebase.tree import build_directory_tree
 
 
 class TestBuildDirectoryTree:

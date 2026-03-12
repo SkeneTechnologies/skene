@@ -12,7 +12,7 @@ The `login` and `logout` commands manage authentication with Skene Cloud upstrea
 Log in to upstream:
 
 ```bash
-uvx skene-growth login --upstream https://skene.ai/workspace/my-app
+uvx skene login --upstream https://skene.ai/workspace/my-app
 ```
 
 The command prompts you for a token, validates it against the upstream API, and saves the credentials.
@@ -20,13 +20,13 @@ The command prompts you for a token, validates it against the upstream API, and 
 Check login status:
 
 ```bash
-uvx skene-growth login --status
+uvx skene login --status
 ```
 
 Log out:
 
 ```bash
-uvx skene-growth logout
+uvx skene logout
 ```
 
 ## Flag reference
@@ -44,7 +44,7 @@ No options. Removes saved credentials for the current project.
 
 ## How credentials are stored
 
-Login saves upstream URL, workspace slug, and API key to `.skene-growth.config` in the project directory (restrictive permissions `0600`). This file is gitignored by default.
+Login saves upstream URL, workspace slug, and API key to `.skene.config` in the project directory (restrictive permissions `0600`). This file is gitignored by default.
 
 Logout removes those fields from the same file, preserving other settings.
 
@@ -53,7 +53,7 @@ Logout removes those fields from the same file, preserving other settings.
 When commands need an upstream token, it is resolved in this order:
 
 1. `SKENE_UPSTREAM_API_KEY` environment variable
-2. `upstream_api_key` field in `.skene-growth.config`
+2. `upstream_api_key` field in `.skene.config`
 
 ## Next steps
 

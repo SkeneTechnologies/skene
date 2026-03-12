@@ -15,28 +15,28 @@ delay_between_calls = 70
 
 [[codebases]]
 name = "bullet_train"
-path = "/Users/miche/skene/test_codebases/skene-growth-benchmarks/bullet_train"
-ground_truth = "/Users/miche/skene/skene-growth/benchmarks/ground_truth/bullet-train.toml"
+path = "/Users/miche/skene/test_codebases/skene-benchmarks/bullet_train"
+ground_truth = "/Users/miche/skene/skene/benchmarks/ground_truth/bullet-train.toml"
 
 [[codebases]]
 name = "cal.com"
-path = "/Users/miche/skene/test_codebases/skene-growth-benchmarks/cal.com"
-ground_truth = "/Users/miche/skene/skene-growth/benchmarks/ground_truth/calcom.toml"
+path = "/Users/miche/skene/test_codebases/skene-benchmarks/cal.com"
+ground_truth = "/Users/miche/skene/skene/benchmarks/ground_truth/calcom.toml"
 
 [[codebases]]
 name = "chatwoot"
-path = "/Users/miche/skene/test_codebases/skene-growth-benchmarks/chatwoot"
-ground_truth = "/Users/miche/skene/skene-growth/benchmarks/ground_truth/chatwoot.toml"
+path = "/Users/miche/skene/test_codebases/skene-benchmarks/chatwoot"
+ground_truth = "/Users/miche/skene/skene/benchmarks/ground_truth/chatwoot.toml"
 
 [[codebases]]
 name = "monica"
-path = "/Users/miche/skene/test_codebases/skene-growth-benchmarks/monica"
-ground_truth = "/Users/miche/skene/skene-growth/benchmarks/ground_truth/monica.toml"
+path = "/Users/miche/skene/test_codebases/skene-benchmarks/monica"
+ground_truth = "/Users/miche/skene/skene/benchmarks/ground_truth/monica.toml"
 
 [[codebases]]
 name = "saas-starter"
-path = "/Users/miche/skene/test_codebases/skene-growth-benchmarks/saas-starter"
-ground_truth = "/Users/miche/skene/skene-growth/benchmarks/ground_truth/saas-starter.toml"
+path = "/Users/miche/skene/test_codebases/skene-benchmarks/saas-starter"
+ground_truth = "/Users/miche/skene/skene/benchmarks/ground_truth/saas-starter.toml"
 
 #################
 # OpenAI Models #

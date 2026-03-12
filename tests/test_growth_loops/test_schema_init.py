@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from skene_growth.growth_loops.push import (
+from skene.growth_loops.push import (
     _build_trigger_function_sql,
     build_migration_sql,
     ensure_base_schema_migration,
 )
-from skene_growth.growth_loops.schema_sql import BASE_SCHEMA_SQL
+from skene.growth_loops.schema_sql import BASE_SCHEMA_SQL
 
 
 class TestBaseSchemaSQL:
@@ -34,7 +34,7 @@ class TestEnsureBaseSchemaMigration:
         out = ensure_base_schema_migration(tmp_path)
         assert out is not None
         assert out.exists()
-        assert "skene_growth_schema" in out.name
+        assert "skene_schema" in out.name
         content = out.read_text()
         assert "event_log" in content
         assert "enrichment_map" in content
@@ -45,7 +45,7 @@ class TestEnsureBaseSchemaMigration:
         second = ensure_base_schema_migration(tmp_path)
         assert second is None
         # Only one migration file
-        migrations = list((tmp_path / "supabase" / "migrations").glob("*skene_growth_schema*.sql"))
+        migrations = list((tmp_path / "supabase" / "migrations").glob("*skene_schema*.sql"))
         assert len(migrations) == 1
 
 
@@ -60,7 +60,7 @@ class TestEventLogTriggers:
             operation="INSERT",
             properties=["id", "workspace_id"],
         )
-        assert "INSERT INTO skene_growth.event_log" in sql
+        assert "INSERT INTO skene.event_log" in sql
         assert "api_keys.insert" in sql
         assert "net.http_post" not in sql
         assert "pg_net" not in sql
@@ -77,4 +77,4 @@ class TestEventLogTriggers:
         migration = build_migration_sql(loops)
         assert "event_log" in migration
         assert "CREATE EXTENSION IF NOT EXISTS pg_net" not in migration
-        assert "skene_growth.actions" not in migration
+        assert "skene.actions" not in migration

@@ -2,7 +2,9 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 	"strings"
@@ -12,45 +14,89 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Entity types
-type EntityType int
-
 const (
-	EntityPlayer EntityType = iota
-	EntityEnemy
-	EntityBullet
-	EntityPowerUp
+	playerX    = 8
+	shootEvery = 3
+
+	terrainAmplitude = 3.0
+	terrainFreq      = 0.08
+	terrainBorder    = 2
 )
 
-// Entity represents a game entity
-type Entity struct {
-	Type   EntityType
-	X, Y   int
-	Width  int
-	Height int
-	Alive  bool
-	Sprite string
+var (
+	styleShip     = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+	styleBullet   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	styleEnemy    = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	styleTerrain  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA552"))
+	styleHUD      = lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
+	styleExplo    = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	styleDead     = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	styleEnemyBul = lipgloss.NewStyle().Foreground(lipgloss.Color("201"))
+)
+
+type vec2 struct{ x, y int }
+
+type enemy struct {
+	pos        vec2
+	alive      bool
+	kind       int // 0=fighter, 1=heavy, 2=shooter, 3=boss
+	hp         int
+	phase      float64
+	vy         float64
+	shootTimer int
 }
 
-// Game represents the space shooter game
+type bullet struct {
+	pos   vec2
+	alive bool
+	speed int
+}
+
+type explosion struct {
+	pos   vec2
+	frame int
+}
+
+type obstacle struct {
+	worldX int
+	y      int
+	width  int
+	height int
+}
+
+// Game is the R-Type side-scroller game.
 type Game struct {
-	width        int
-	height       int
-	player       *Entity
-	enemies      []*Entity
-	bullets      []*Entity
-	powerUps     []*Entity
-	score        int
-	lives        int
-	level        int
-	gameOver     bool
-	paused       bool
-	lastSpawn    time.Time
-	spawnRate    time.Duration
-	tickCount    int
-	enemySpeed   int // enemies move every N ticks
-	
-	// Analysis progress indicator
+	termWidth  int
+	termHeight int
+	width      int
+	height     int
+
+	ceil  []int
+	floor []int
+
+	playerY     int
+	playerVY    float64
+	playerHP    int
+	score       int
+	tick        int
+	shootCd     int
+	dead        bool
+	started     bool
+	scroll      int
+	scrollSpeed float64
+	scrollAccum float64
+	rng         *rand.Rand
+
+	bullets      []bullet
+	enemyBullets []bullet
+	enemies      []enemy
+	explosions   []explosion
+	obstacles    []obstacle
+
+	spawnTimer    int
+	flashTimer    int
+	obstacleTimer int
+
 	showProgress    bool
 	progressPhase   string
 	progressDone    bool
@@ -58,264 +104,503 @@ type Game struct {
 	progressSpinner *components.Spinner
 }
 
-// NewGame creates a new game instance
-func NewGame(width, height int) *Game {
-	g := &Game{
-		width:           width,
-		height:          height,
-		enemies:         make([]*Entity, 0),
-		bullets:         make([]*Entity, 0),
-		powerUps:        make([]*Entity, 0),
-		score:           0,
-		lives:           3,
-		level:           1,
-		gameOver:        false,
-		paused:          false,
-		lastSpawn:       time.Now(),
-		spawnRate:       1200 * time.Millisecond,
-		enemySpeed:      3, // move every 3 ticks (150ms)
-		showProgress:    false,
+func generateTerrain(offset int, count int, h int) (ceil []int, floor []int) {
+	ceil = make([]int, count)
+	floor = make([]int, count)
+	for x := 0; x < count; x++ {
+		col := x + offset
+		wave := terrainAmplitude*math.Sin(float64(col)*terrainFreq) +
+			terrainAmplitude*0.5*math.Sin(float64(col)*terrainFreq*2.3+1.2)
+		mid := float64(h) / 2.0
+		ceilRow := int(math.Round(mid - float64(h)/2.0 + terrainBorder + wave))
+		floorRow := int(math.Round(mid + float64(h)/2.0 - terrainBorder - wave*0.7))
+
+		if ceilRow < 1 {
+			ceilRow = 1
+		}
+		if ceilRow > h-2-terrainBorder {
+			ceilRow = h - 2 - terrainBorder
+		}
+		if floorRow < ceilRow+4 {
+			floorRow = ceilRow + 4
+		}
+		if floorRow >= h-1 {
+			floorRow = h - 2
+		}
+		ceil[x] = ceilRow
+		floor[x] = floorRow
+	}
+	return
+}
+
+// gridDimensions computes the playable grid size from terminal dimensions.
+// Layout: HUD(1) + blank(1) + border-top(1) + grid(H) + border-bottom(1) + progress(1) + footer(1) = H+6
+// Width: border-left(1) + grid(W) + border-right(1), capped to sectionWidth pattern.
+func gridDimensions(termW, termH int) (gridW, gridH int) {
+	sectionW := termW - 20
+	if sectionW < 40 {
+		sectionW = 40
+	}
+	if sectionW > 120 {
+		sectionW = 120
+	}
+	gridW = sectionW - 2
+	gridH = termH - 8
+	if gridH < 10 {
+		gridH = 10
+	}
+	if gridH > 30 {
+		gridH = 30
+	}
+	return
+}
+
+// NewGame creates a new R-Type game instance.
+func NewGame(termW, termH int) *Game {
+	gw, gh := gridDimensions(termW, termH)
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	c, f := generateTerrain(0, gw+20, gh)
+	midY := (c[playerX] + f[playerX]) / 2
+	return &Game{
+		termWidth:       termW,
+		termHeight:      termH,
+		width:           gw,
+		height:          gh,
+		ceil:            c,
+		floor:           f,
+		playerY:         midY,
+		playerHP:        5,
+		scrollSpeed:     0.7,
+		rng:             rng,
+		spawnTimer:      20,
 		progressSpinner: components.NewSpinner(),
 	}
-
-	// Create player
-	g.player = &Entity{
-		Type:   EntityPlayer,
-		X:      width / 2,
-		Y:      height - 3,
-		Width:  3,
-		Height: 2,
-		Alive:  true,
-		Sprite: " ▲ \n/█\\",
-	}
-
-	return g
 }
 
-// SetSize updates game dimensions
-func (g *Game) SetSize(width, height int) {
-	g.width = width
-	g.height = height
-	
-	// Reposition player
-	if g.player != nil {
-		g.player.Y = height - 3
-		if g.player.X > width-3 {
-			g.player.X = width - 3
-		}
-	}
-}
-
-// Update game state
-func (g *Game) Update() {
-	if g.gameOver || g.paused {
+// SetSize updates game dimensions from terminal size.
+func (g *Game) SetSize(termW, termH int) {
+	if termW == g.termWidth && termH == g.termHeight {
 		return
 	}
+	g.termWidth = termW
+	g.termHeight = termH
+	gw, gh := gridDimensions(termW, termH)
+	if gw == g.width && gh == g.height {
+		return
+	}
+	g.width = gw
+	g.height = gh
+	g.ceil, g.floor = generateTerrain(g.scroll, gw+20, gh)
+	col := g.scroll + playerX
+	if col < len(g.ceil) {
+		mid := (g.ceil[playerX] + g.floor[playerX]) / 2
+		if g.playerY < g.ceil[playerX]+1 || g.playerY > g.floor[playerX]-1 {
+			g.playerY = mid
+		}
+	}
+}
 
-	g.tickCount++
+// MoveUp decreases the player Y (thrust up).
+func (g *Game) MoveUp() {
+	if !g.started || g.dead {
+		return
+	}
+	g.playerY--
+}
 
-	// Move bullets (every tick -- fast)
-	for _, b := range g.bullets {
-		if b.Alive {
-			b.Y--
-			if b.Y < 0 {
-				b.Alive = false
+// MoveDown increases the player Y (thrust down).
+func (g *Game) MoveDown() {
+	if !g.started || g.dead {
+		return
+	}
+	g.playerY++
+}
+
+// Start begins the game from the title screen or restarts after death.
+func (g *Game) Start() {
+	if g.dead {
+		g.Restart()
+		g.started = true
+		return
+	}
+	if !g.started {
+		g.started = true
+	}
+}
+
+// IsStarted returns whether the game has been started.
+func (g *Game) IsStarted() bool {
+	return g.started
+}
+
+// Update advances the game by one tick.
+func (g *Game) Update() {
+	if !g.started || g.dead {
+		return
+	}
+	g.gameTick()
+}
+
+func (g *Game) gameTick() {
+	g.tick++
+
+	g.scrollSpeed = 0.7 + float64(g.scroll/500)*0.3
+	g.scrollAccum += g.scrollSpeed
+	for g.scrollAccum >= 1.0 {
+		g.scroll++
+		g.scrollAccum -= 1.0
+	}
+
+	if g.flashTimer > 0 {
+		g.flashTimer--
+	}
+
+	needed := g.scroll + g.width + 20
+	for len(g.ceil) < needed {
+		newC, newF := generateTerrain(len(g.ceil), 20, g.height)
+		g.ceil = append(g.ceil, newC...)
+		g.floor = append(g.floor, newF...)
+	}
+
+	if g.playerVY > 3 {
+		g.playerVY = 3
+	}
+	if g.playerVY < -3 {
+		g.playerVY = -3
+	}
+	g.playerY += int(math.Round(g.playerVY))
+
+	col := g.scroll + playerX
+	if col < len(g.ceil) {
+		if g.playerY <= g.ceil[col] {
+			g.playerY = g.ceil[col] + 1
+			g.playerVY = 0
+			g.playerHP--
+			g.flashTimer = 6
+			if g.playerHP <= 0 {
+				g.dead = true
+				return
+			}
+		}
+		if g.playerY >= g.floor[col] {
+			g.playerY = g.floor[col] - 1
+			g.playerVY = 0
+			g.playerHP--
+			g.flashTimer = 6
+			if g.playerHP <= 0 {
+				g.dead = true
+				return
 			}
 		}
 	}
 
-	// Move enemies (slower -- every N ticks)
-	if g.tickCount%g.enemySpeed == 0 {
-		for _, e := range g.enemies {
-			if e.Alive {
-				e.Y++
-				if e.Y > g.height {
-					e.Alive = false
+	for _, obs := range g.obstacles {
+		if col >= obs.worldX && col < obs.worldX+obs.width {
+			if g.playerY >= obs.y && g.playerY < obs.y+obs.height {
+				g.playerHP--
+				g.flashTimer = 6
+				if g.playerHP <= 0 {
+					g.dead = true
+					return
 				}
 			}
 		}
 	}
 
-	// Check collisions
-	g.checkCollisions()
-
-	// Spawn new enemies
-	if time.Since(g.lastSpawn) > g.spawnRate {
-		g.spawnEnemy()
-		g.lastSpawn = time.Now()
+	g.shootCd--
+	if g.shootCd <= 0 {
+		g.bullets = append(g.bullets, bullet{pos: vec2{playerX + 2, g.playerY}, alive: true, speed: 3})
+		g.shootCd = shootEvery
 	}
 
-	// Clean up dead entities
-	g.cleanup()
-
-	// Check game over
-	if g.lives <= 0 {
-		g.gameOver = true
-	}
-}
-
-// MoveLeft moves player left
-func (g *Game) MoveLeft() {
-	if g.player.X > 1 {
-		g.player.X -= 2
-	}
-}
-
-// MoveRight moves player right
-func (g *Game) MoveRight() {
-	if g.player.X < g.width-4 {
-		g.player.X += 2
-	}
-}
-
-// Shoot fires a bullet
-func (g *Game) Shoot() {
-	bullet := &Entity{
-		Type:   EntityBullet,
-		X:      g.player.X + 1,
-		Y:      g.player.Y - 1,
-		Width:  1,
-		Height: 1,
-		Alive:  true,
-		Sprite: "│",
-	}
-	g.bullets = append(g.bullets, bullet)
-}
-
-// spawnEnemy creates a new enemy
-func (g *Game) spawnEnemy() {
-	enemyTypes := []struct {
-		sprite string
-		width  int
-	}{
-		{"<█>", 3},
-		{"/▼\\", 3},
-		{"[●]", 3},
-		{"{◈}", 3},
-	}
-
-	et := enemyTypes[rand.Intn(len(enemyTypes))]
-
-	enemy := &Entity{
-		Type:   EntityEnemy,
-		X:      rand.Intn(g.width-6) + 2,
-		Y:      0,
-		Width:  et.width,
-		Height: 1,
-		Alive:  true,
-		Sprite: et.sprite,
-	}
-	g.enemies = append(g.enemies, enemy)
-}
-
-// checkCollisions checks for collisions
-func (g *Game) checkCollisions() {
-	// Bullets vs Enemies
-	for _, b := range g.bullets {
-		if !b.Alive {
+	for i := range g.bullets {
+		if !g.bullets[i].alive {
 			continue
 		}
-		for _, e := range g.enemies {
-			if !e.Alive {
+		g.bullets[i].pos.x += g.bullets[i].speed
+		if g.bullets[i].pos.x >= g.width {
+			g.bullets[i].alive = false
+		}
+		bx := g.scroll + g.bullets[i].pos.x
+		by := g.bullets[i].pos.y
+		if bx < len(g.ceil) {
+			if by <= g.ceil[bx] || by >= g.floor[bx] {
+				g.bullets[i].alive = false
+			}
+		}
+		for _, obs := range g.obstacles {
+			if bx >= obs.worldX && bx < obs.worldX+obs.width {
+				if by >= obs.y && by < obs.y+obs.height {
+					g.bullets[i].alive = false
+					break
+				}
+			}
+		}
+	}
+
+	g.spawnTimer--
+	if g.spawnTimer <= 0 {
+		spawnDelay := 15 - g.score/10
+		if spawnDelay < 5 {
+			spawnDelay = 5
+		}
+		g.spawnTimer = spawnDelay + g.rng.Intn(10)
+
+		spawnCol := g.scroll + g.width - 2
+		if spawnCol < len(g.ceil) {
+			ceilY := g.ceil[spawnCol]
+			floorY := g.floor[spawnCol]
+			if floorY-ceilY > 4 {
+				ey := ceilY + 2 + g.rng.Intn(floorY-ceilY-4)
+				kind := 0
+				hp := 1
+				roll := g.rng.Intn(20)
+				if roll < 1 {
+					kind = 3
+					hp = 8
+				} else if roll < 3 {
+					kind = 1
+					hp = 3
+				} else if roll < 10 {
+					kind = 2
+					hp = 2
+				}
+				g.enemies = append(g.enemies, enemy{
+					pos:        vec2{g.width - 2, ey},
+					alive:      true,
+					kind:       kind,
+					hp:         hp,
+					phase:      g.rng.Float64() * math.Pi * 2,
+					vy:         (g.rng.Float64() - 0.5) * 0.5,
+					shootTimer: 20 + g.rng.Intn(20),
+				})
+			}
+		}
+	}
+
+	g.obstacleTimer--
+	if g.obstacleTimer <= 0 {
+		g.obstacleTimer = 12 + g.rng.Intn(15)
+		spawnCol := g.scroll + g.width + 5
+		if spawnCol < len(g.ceil) {
+			ceilY := g.ceil[spawnCol]
+			floorY := g.floor[spawnCol]
+			gap := floorY - ceilY
+			if gap > 10 {
+				h := 3 + g.rng.Intn(3)
+				w := 3 + g.rng.Intn(4)
+				spawnRange := gap - h - 6
+				if spawnRange < 1 {
+					spawnRange = 1
+				}
+				oy := ceilY + 3 + g.rng.Intn(spawnRange)
+				g.obstacles = append(g.obstacles, obstacle{
+					worldX: spawnCol,
+					y:      oy,
+					width:  w,
+					height: h,
+				})
+			}
+		}
+	}
+
+	for i := range g.enemies {
+		if !g.enemies[i].alive {
+			continue
+		}
+		g.enemies[i].pos.x--
+		g.enemies[i].phase += 0.15
+		g.enemies[i].pos.y += int(math.Round(math.Sin(g.enemies[i].phase) * 0.8))
+
+		ec := g.scroll + g.enemies[i].pos.x
+		ey := g.enemies[i].pos.y
+		if ec >= 0 && ec < len(g.ceil) {
+			if ey <= g.ceil[ec] || ey >= g.floor[ec] {
+				g.enemies[i].alive = false
 				continue
 			}
-			if g.collides(b, e) {
-				b.Alive = false
-				e.Alive = false
-				g.score += 100
+		}
 
-				// Level up every 1000 points
-				if g.score > 0 && g.score%1000 == 0 {
-					g.level++
-					if g.spawnRate > 600*time.Millisecond {
-						g.spawnRate -= 100 * time.Millisecond
-					}
-					if g.enemySpeed > 2 {
-						g.enemySpeed--
-					}
-				}
+		if g.enemies[i].pos.x < 0 {
+			g.enemies[i].alive = false
+		}
+
+		hitRangeX := 1
+		hitRangeY := 1
+		if g.enemies[i].kind == 3 {
+			hitRangeX = 3
+			hitRangeY = 2
+		}
+		if iabs(g.enemies[i].pos.x-playerX) <= hitRangeX && iabs(g.enemies[i].pos.y-g.playerY) <= hitRangeY {
+			g.enemies[i].alive = false
+			g.explosions = append(g.explosions, explosion{pos: vec2{playerX, g.playerY}})
+			g.playerHP--
+			g.flashTimer = 6
+			if g.playerHP <= 0 {
+				g.dead = true
+				return
+			}
+		}
+
+		if g.enemies[i].kind == 2 && g.enemies[i].pos.x < g.width-5 {
+			g.enemies[i].shootTimer--
+			if g.enemies[i].shootTimer <= 0 {
+				g.enemies[i].shootTimer = 30 + g.rng.Intn(20)
+				g.enemyBullets = append(g.enemyBullets, bullet{
+					pos:   vec2{g.enemies[i].pos.x - 1, g.enemies[i].pos.y},
+					alive: true,
+					speed: -2,
+				})
 			}
 		}
 	}
 
-	// Enemies vs Player
-	for _, e := range g.enemies {
-		if !e.Alive {
+	for i := range g.enemyBullets {
+		if !g.enemyBullets[i].alive {
 			continue
 		}
-		if g.collides(e, g.player) {
-			e.Alive = false
-			g.lives--
+		g.enemyBullets[i].pos.x += g.enemyBullets[i].speed
+		if g.enemyBullets[i].pos.x < 0 {
+			g.enemyBullets[i].alive = false
+			continue
 		}
+		bx := g.scroll + g.enemyBullets[i].pos.x
+		by := g.enemyBullets[i].pos.y
+		if bx >= 0 && bx < len(g.ceil) {
+			if by <= g.ceil[bx] || by >= g.floor[bx] {
+				g.enemyBullets[i].alive = false
+				continue
+			}
+		}
+		for _, obs := range g.obstacles {
+			if bx >= obs.worldX && bx < obs.worldX+obs.width {
+				if by >= obs.y && by < obs.y+obs.height {
+					g.enemyBullets[i].alive = false
+					break
+				}
+			}
+		}
+		if iabs(g.enemyBullets[i].pos.x-playerX) <= 1 && iabs(g.enemyBullets[i].pos.y-g.playerY) <= 1 {
+			g.enemyBullets[i].alive = false
+			g.playerHP--
+			g.flashTimer = 6
+			if g.playerHP <= 0 {
+				g.dead = true
+				return
+			}
+		}
+	}
+
+	for bi := range g.bullets {
+		if !g.bullets[bi].alive {
+			continue
+		}
+		for ei := range g.enemies {
+			if !g.enemies[ei].alive {
+				continue
+			}
+			hitX := 1
+			hitY := 1
+			if g.enemies[ei].kind == 3 {
+				hitX = 3
+				hitY = 2
+			}
+			if iabs(g.bullets[bi].pos.x-g.enemies[ei].pos.x) <= hitX &&
+				iabs(g.bullets[bi].pos.y-g.enemies[ei].pos.y) <= hitY {
+				g.bullets[bi].alive = false
+				g.enemies[ei].hp--
+				if g.enemies[ei].hp <= 0 {
+					g.enemies[ei].alive = false
+					g.explosions = append(g.explosions, explosion{pos: g.enemies[ei].pos})
+					g.score++
+				}
+				break
+			}
+		}
+	}
+
+	for i := range g.explosions {
+		g.explosions[i].frame++
+	}
+	live := g.explosions[:0]
+	for _, e := range g.explosions {
+		if e.frame < 5 {
+			live = append(live, e)
+		}
+	}
+	g.explosions = live
+
+	if g.tick%60 == 0 {
+		g.gcSlices()
 	}
 }
 
-func (g *Game) collides(a, b *Entity) bool {
-	return a.X < b.X+b.Width &&
-		a.X+a.Width > b.X &&
-		a.Y < b.Y+b.Height &&
-		a.Y+a.Height > b.Y
-}
-
-func (g *Game) cleanup() {
-	// Clean bullets
-	var aliveBullets []*Entity
+func (g *Game) gcSlices() {
+	lb := g.bullets[:0]
 	for _, b := range g.bullets {
-		if b.Alive {
-			aliveBullets = append(aliveBullets, b)
+		if b.alive {
+			lb = append(lb, b)
 		}
 	}
-	g.bullets = aliveBullets
+	g.bullets = lb
 
-	// Clean enemies
-	var aliveEnemies []*Entity
+	leb := g.enemyBullets[:0]
+	for _, b := range g.enemyBullets {
+		if b.alive {
+			leb = append(leb, b)
+		}
+	}
+	g.enemyBullets = leb
+
+	le := g.enemies[:0]
 	for _, e := range g.enemies {
-		if e.Alive {
-			aliveEnemies = append(aliveEnemies, e)
+		if e.alive {
+			le = append(le, e)
 		}
 	}
-	g.enemies = aliveEnemies
+	g.enemies = le
+
+	lo := g.obstacles[:0]
+	for _, o := range g.obstacles {
+		if o.worldX+o.width > g.scroll {
+			lo = append(lo, o)
+		}
+	}
+	g.obstacles = lo
 }
 
-// Restart resets the game
+// Restart resets the game to initial state.
 func (g *Game) Restart() {
-	g.enemies = make([]*Entity, 0)
-	g.bullets = make([]*Entity, 0)
-	g.powerUps = make([]*Entity, 0)
+	g.ceil, g.floor = generateTerrain(0, g.width+20, g.height)
+	midY := (g.ceil[playerX] + g.floor[playerX]) / 2
+	g.playerY = midY
+	g.playerVY = 0
+	g.playerHP = 5
 	g.score = 0
-	g.lives = 3
-	g.level = 1
-	g.gameOver = false
-	g.paused = false
-	g.spawnRate = 1200 * time.Millisecond
-	g.enemySpeed = 3
-	g.tickCount = 0
-	g.player.X = g.width / 2
-	g.player.Y = g.height - 3
-	g.player.Alive = true
+	g.tick = 0
+	g.shootCd = 0
+	g.dead = false
+	g.started = false
+	g.scroll = 0
+	g.scrollSpeed = 0.7
+	g.scrollAccum = 0
+	g.bullets = nil
+	g.enemyBullets = nil
+	g.enemies = nil
+	g.explosions = nil
+	g.obstacles = nil
+	g.spawnTimer = 20
+	g.flashTimer = 0
+	g.obstacleTimer = 0
+	g.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
-// TogglePause toggles pause state
-func (g *Game) TogglePause() {
-	g.paused = !g.paused
-}
-
-// IsGameOver returns if game is over
+// IsGameOver returns whether the player is dead.
 func (g *Game) IsGameOver() bool {
-	return g.gameOver
+	return g.dead
 }
 
-// IsPaused returns if game is paused
-func (g *Game) IsPaused() bool {
-	return g.paused
-}
-
-// GetScore returns current score
-func (g *Game) GetScore() int {
-	return g.score
-}
-
-// SetProgressInfo updates the analysis progress indicator
+// SetProgressInfo updates the analysis progress indicator shown below the game.
 func (g *Game) SetProgressInfo(phase string, done, failed bool) {
 	g.showProgress = true
 	g.progressPhase = phase
@@ -323,7 +608,7 @@ func (g *Game) SetProgressInfo(phase string, done, failed bool) {
 	g.progressFailed = failed
 }
 
-// ClearProgressInfo hides the progress indicator
+// ClearProgressInfo hides the progress indicator.
 func (g *Game) ClearProgressInfo() {
 	g.showProgress = false
 	g.progressPhase = ""
@@ -331,231 +616,337 @@ func (g *Game) ClearProgressInfo() {
 	g.progressFailed = false
 }
 
-// TickProgressSpinner advances the progress spinner animation
+// TickProgressSpinner advances the progress spinner animation.
 func (g *Game) TickProgressSpinner() {
 	if g.progressSpinner != nil {
 		g.progressSpinner.Tick()
 	}
 }
 
-// cellType tracks what entity occupies each cell for coloring
-type cellType int
-
-const (
-	cellEmpty  cellType = iota
-	cellStar
-	cellEnemy
-	cellBullet
-	cellPlayer
-)
-
-// Render draws the game
+// Render draws the full game view including HUD, game area, and progress.
 func (g *Game) Render() string {
-	// Create game field with type info for coloring
-	field := make([][]rune, g.height)
-	fieldType := make([][]cellType, g.height)
-	for i := range field {
-		field[i] = make([]rune, g.width)
-		fieldType[i] = make([]cellType, g.width)
-		for j := range field[i] {
-			field[i][j] = ' '
-			fieldType[i][j] = cellEmpty
-		}
+	if !g.started {
+		return g.titleScreen()
+	}
+	if g.dead {
+		return g.deathScreen()
 	}
 
-	// Draw stars (background)
-	starPositions := []struct{ x, y int }{
-		{5, 3}, {15, 7}, {25, 2}, {35, 8}, {45, 4},
-		{10, 12}, {20, 15}, {30, 10}, {40, 13}, {50, 6},
+	type cell struct {
+		ch    rune
+		style lipgloss.Style
 	}
-	for _, pos := range starPositions {
-		if pos.x < g.width && pos.y < g.height {
-			field[pos.y][pos.x] = '·'
-			fieldType[pos.y][pos.x] = cellStar
-		}
+	blankStyle := lipgloss.NewStyle()
+	if g.flashTimer > 0 {
+		blankStyle = blankStyle.Background(lipgloss.Color("#660000"))
 	}
-
-	// Draw enemies
-	for _, e := range g.enemies {
-		if e.Alive && e.Y >= 0 && e.Y < g.height && e.X >= 0 {
-			for i, r := range e.Sprite {
-				if e.X+i >= 0 && e.X+i < g.width {
-					field[e.Y][e.X+i] = r
-					fieldType[e.Y][e.X+i] = cellEnemy
-				}
-			}
-		}
-	}
-
-	// Draw bullets
-	for _, b := range g.bullets {
-		if b.Alive && b.Y >= 0 && b.Y < g.height && b.X >= 0 && b.X < g.width {
-			field[b.Y][b.X] = '│'
-			fieldType[b.Y][b.X] = cellBullet
-		}
-	}
-
-	// Draw player
-	if g.player.Alive && g.player.Y >= 0 && g.player.Y < g.height {
-		if g.player.Y-1 >= 0 && g.player.X+1 < g.width {
-			field[g.player.Y-1][g.player.X+1] = '▲'
-			fieldType[g.player.Y-1][g.player.X+1] = cellPlayer
-		}
-		if g.player.X >= 0 && g.player.X < g.width {
-			field[g.player.Y][g.player.X] = '/'
-			fieldType[g.player.Y][g.player.X] = cellPlayer
-		}
-		if g.player.X+1 < g.width {
-			field[g.player.Y][g.player.X+1] = '█'
-			fieldType[g.player.Y][g.player.X+1] = cellPlayer
-		}
-		if g.player.X+2 < g.width {
-			field[g.player.Y][g.player.X+2] = '\\'
-			fieldType[g.player.Y][g.player.X+2] = cellPlayer
-		}
-	}
-
-	// Color styles
-	enemyStyle := lipgloss.NewStyle().Foreground(styles.Coral)
-	bulletStyle := lipgloss.NewStyle().Foreground(styles.GameYellow)
-	playerStyle := lipgloss.NewStyle().Foreground(styles.GameCyan)
-	starStyle := lipgloss.NewStyle().Foreground(styles.MidGray)
-
-	// Render per-character with colors
-	var lines []string
+	blank := cell{' ', blankStyle}
+	grid := make([][]cell, g.height)
 	for y := 0; y < g.height; y++ {
-		var lineBuilder strings.Builder
+		grid[y] = make([]cell, g.width)
 		for x := 0; x < g.width; x++ {
-			ch := string(field[y][x])
-			switch fieldType[y][x] {
-			case cellEnemy:
-				lineBuilder.WriteString(enemyStyle.Render(ch))
-			case cellBullet:
-				lineBuilder.WriteString(bulletStyle.Render(ch))
-			case cellPlayer:
-				lineBuilder.WriteString(playerStyle.Render(ch))
-			case cellStar:
-				lineBuilder.WriteString(starStyle.Render(ch))
-			default:
-				lineBuilder.WriteString(ch)
-			}
+			grid[y][x] = blank
 		}
-		lines = append(lines, lineBuilder.String())
 	}
 
-	gameArea := strings.Join(lines, "\n")
+	set := func(x, y int, ch rune, st lipgloss.Style) {
+		if x >= 0 && x < g.width && y >= 0 && y < g.height {
+			grid[y][x] = cell{ch, st}
+		}
+	}
 
-	// Header with score
-	scoreStr := fmt.Sprintf("%d", g.score)
-	livesStr := strings.Repeat("♥", g.lives)
-	levelStr := fmt.Sprintf("%d", g.level)
+	terrainChars := []rune{'░', '▒', '▓', '█'}
+	for sx := 0; sx < g.width; sx++ {
+		col := g.scroll + sx
+		if col >= len(g.ceil) {
+			continue
+		}
+		c := g.ceil[col]
+		f := g.floor[col]
+		for y := 0; y <= c; y++ {
+			distFromEdge := c - y
+			idx := distFromEdge
+			if idx >= len(terrainChars) {
+				idx = len(terrainChars) - 1
+			}
+			set(sx, y, terrainChars[idx], styleTerrain)
+		}
+		for y := f; y < g.height; y++ {
+			distFromEdge := y - f
+			idx := distFromEdge
+			if idx >= len(terrainChars) {
+				idx = len(terrainChars) - 1
+			}
+			set(sx, y, terrainChars[idx], styleTerrain)
+		}
+	}
 
-	header := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		styles.Accent.Render("SPACE SHOOTER"),
-		"  ",
-		styles.Body.Render("Score: "),
-		styles.Accent.Render(scoreStr),
-		"  ",
-		styles.Body.Render("Lives: "),
-		styles.Error.Render(livesStr),
-		"  ",
-		styles.Body.Render("Level: "),
-		styles.Accent.Render(levelStr),
-	)
+	for _, obs := range g.obstacles {
+		for ox := 0; ox < obs.width; ox++ {
+			screenX := obs.worldX - g.scroll + ox
+			if screenX < 0 || screenX >= g.width {
+				continue
+			}
+			for oy := 0; oy < obs.height; oy++ {
+				distX := ox
+				if obs.width-1-ox < distX {
+					distX = obs.width - 1 - ox
+				}
+				distY := oy
+				if obs.height-1-oy < distY {
+					distY = obs.height - 1 - oy
+				}
+				dist := distX
+				if distY < dist {
+					dist = distY
+				}
+				idx := dist
+				if idx >= len(terrainChars) {
+					idx = len(terrainChars) - 1
+				}
+				set(screenX, obs.y+oy, terrainChars[idx], styleTerrain)
+			}
+		}
+	}
 
-	// Progress indicator
+	for _, b := range g.bullets {
+		if b.alive {
+			set(b.pos.x, b.pos.y, '─', styleBullet)
+		}
+	}
+
+	for _, b := range g.enemyBullets {
+		if b.alive {
+			set(b.pos.x, b.pos.y, '•', styleEnemyBul)
+		}
+	}
+
+	for _, e := range g.enemies {
+		if !e.alive {
+			continue
+		}
+		if e.kind == 3 {
+			set(e.pos.x, e.pos.y, '█', styleEnemy)
+			set(e.pos.x-1, e.pos.y, '█', styleEnemy)
+			set(e.pos.x-2, e.pos.y, '◀', styleEnemy)
+			set(e.pos.x, e.pos.y-1, '▀', styleEnemy)
+			set(e.pos.x-1, e.pos.y-1, '▀', styleEnemy)
+			set(e.pos.x, e.pos.y+1, '▄', styleEnemy)
+			set(e.pos.x-1, e.pos.y+1, '▄', styleEnemy)
+		} else {
+			ch := '>'
+			switch e.kind {
+			case 1:
+				ch = '✦'
+			case 2:
+				ch = '◄'
+			}
+			set(e.pos.x, e.pos.y, ch, styleEnemy)
+			if e.kind == 1 {
+				set(e.pos.x-1, e.pos.y, '<', styleEnemy)
+			}
+		}
+	}
+
+	explFrames := []rune{'*', '+', '·', ' '}
+	for _, ex := range g.explosions {
+		if ex.frame < len(explFrames) {
+			ch := explFrames[ex.frame]
+			set(ex.pos.x, ex.pos.y, ch, styleExplo)
+			set(ex.pos.x-1, ex.pos.y, ch, styleExplo)
+			set(ex.pos.x+1, ex.pos.y, ch, styleExplo)
+			set(ex.pos.x, ex.pos.y-1, ch, styleExplo)
+			set(ex.pos.x, ex.pos.y+1, ch, styleExplo)
+		}
+	}
+
+	if !g.dead {
+		set(playerX-1, g.playerY-1, '/', lipgloss.NewStyle().Foreground(lipgloss.Color("39")))
+		set(playerX-1, g.playerY, 'S', styleShip)
+		set(playerX, g.playerY, '►', styleShip)
+		set(playerX-1, g.playerY+1, '\\', lipgloss.NewStyle().Foreground(lipgloss.Color("39")))
+	}
+
+	var sb strings.Builder
+	for y := 0; y < g.height; y++ {
+		for x := 0; x < g.width; x++ {
+			c := grid[y][x]
+			sb.WriteString(c.style.Render(string(c.ch)))
+		}
+		if y < g.height-1 {
+			sb.WriteByte('\n')
+		}
+	}
+
+	hp := strings.Repeat("♥ ", g.playerHP) + strings.Repeat("♡ ", 5-g.playerHP)
+	hud := styleHUD.Render(fmt.Sprintf(constants.GameHUDFormat, g.score, hp, g.scroll))
+
+	gameBox := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(styles.MidGray).
+		Render(sb.String())
+
+	footer := components.FooterHelp([]components.HelpItem{
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescMove},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+	})
+
 	var progressIndicator string
 	if g.showProgress {
 		if g.progressDone {
-			progressIndicator = styles.SuccessText.Render("✓ Analysis complete")
-		} else if g.progressFailed {
-			progressIndicator = styles.Error.Render("✗ Analysis failed")
-		} else if g.progressPhase != "" {
-			progressIndicator = g.progressSpinner.SpinnerWithText(g.progressPhase)
+			if g.progressFailed {
+				progressIndicator = styles.Error.Render(constants.StatusIconFailed + " " + constants.StatusFailed)
+			} else {
+				progressIndicator = styles.SuccessText.Render(constants.StatusIconCompleted + " " + constants.StatusCompleted)
+			}
 		} else {
-			progressIndicator = g.progressSpinner.SpinnerWithText("Analyzing...")
+			progressIndicator = g.progressSpinner.SpinnerWithText(constants.StatusInProgress)
 		}
 		progressIndicator = lipgloss.NewStyle().
 			Width(g.width).
 			Align(lipgloss.Center).
-			PaddingTop(0).
-			PaddingBottom(1).
 			Render(progressIndicator)
 	}
 
-	// Game box
-	gameBox := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.GameCyan).
-		Render(gameArea)
-
-	// Footer
-	footer := styles.Muted.Render("← → move • space shoot • p pause • esc exit")
-
-	// Overlay for pause/game over
-	var overlay string
-	if g.paused {
-		overlay = lipgloss.Place(
-			g.width,
-			g.height,
-			lipgloss.Center,
-			lipgloss.Center,
-			styles.Box.Render(styles.Accent.Render("PAUSED\n\nPress P to continue")),
-		)
-	} else if g.gameOver {
-		gameOverContent := lipgloss.JoinVertical(
-			lipgloss.Center,
-			styles.Error.Render("GAME OVER"),
-			"",
-			styles.Body.Render("Final Score: ")+styles.Accent.Render(scoreStr),
-			"",
-			styles.Muted.Render("Press R to restart • ESC to exit"),
-		)
-		overlay = lipgloss.Place(
-			g.width,
-			g.height,
-			lipgloss.Center,
-			lipgloss.Center,
-			styles.Box.Render(gameOverContent),
-		)
-	}
-
-	// Combine
-	var result string
+	parts := []string{hud, "", gameBox}
 	if progressIndicator != "" {
-		result = lipgloss.JoinVertical(
-			lipgloss.Center,
-			header,
-			"",
-			gameBox,
-			progressIndicator,
-			footer,
-		)
-	} else {
-		result = lipgloss.JoinVertical(
-			lipgloss.Center,
-			header,
-			"",
-			gameBox,
-			"",
-			footer,
-		)
+		parts = append(parts, "", progressIndicator)
 	}
+	parts = append(parts, "", footer)
 
-	if overlay != "" {
-		result = overlay
-	}
-
-	return result
+	return lipgloss.JoinVertical(lipgloss.Center, parts...)
 }
 
-// GameTickMsg is sent for game updates
+const cardWidth = 48
+
+func (g *Game) titleScreen() string {
+	timeTo := styles.Title.Render(constants.GameTitle)
+
+	killArt := styleDead.Render(` ██ ▄█▀ ██▓ ██▓     ██▓
+ ██▄█▒ ▓██▒▓██▒    ▓██▒
+▓███▄░ ▒██▒▒██░    ▒██░
+▓██ █▄ ░██░▒██░    ▒██░
+▒██▒ █▄░██░░██████▒░██████▒
+▒ ▒▒ ▓▒░▓  ░ ▒░▓  ░░ ▒░▓  ░
+░ ░▒ ▒░ ▒ ░░ ░ ▒  ░░ ░ ▒  ░
+░ ░░ ░  ▒ ░  ░ ░     ░ ░
+░  ░    ░      ░  ░    ░  ░`)
+
+	controls := styles.HelpKey.Render("↑") + " " + styles.HelpDesc.Render(constants.GameThrustUp) + "  " +
+		styles.HelpKey.Render("↓") + " " + styles.HelpDesc.Render(constants.GameThrustDown)
+
+	autoFire := styles.Muted.Render(constants.GameAutoFire)
+
+	innerContent := lipgloss.JoinVertical(
+		lipgloss.Center,
+		timeTo,
+		"",
+		killArt,
+		"",
+		"",
+		controls,
+		"",
+		autoFire,
+	)
+
+	box := styles.Box.
+		Width(cardWidth).
+		Align(lipgloss.Center).
+		Render(innerContent)
+
+	footer := components.FooterHelp([]components.HelpItem{
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStartGame},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+	})
+
+	parts := []string{box}
+	if g.showProgress {
+		parts = append(parts, "", g.renderProgressLine())
+	}
+	parts = append(parts, "", footer)
+
+	return lipgloss.JoinVertical(lipgloss.Center, parts...)
+}
+
+func (g *Game) deathScreen() string {
+	skull := styleDead.Render(
+		"    ███████████\n" +
+			"  ██           ██\n" +
+			"██   ██     ██   ██\n" +
+			"██               ██\n" +
+			"  ██  █ █ █ █  ██\n" +
+			"  ██  █ █ █ █  ██\n" +
+			"    ██       ██\n" +
+			"      ███████")
+
+	gameOverTitle := styleDead.Render(constants.GameOver)
+
+	statsContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		styles.Muted.Render(constants.GameStatScore)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
+		styles.Muted.Render(constants.GameStatDistance)+styles.Body.Render(fmt.Sprintf("%d meters", g.scroll)),
+		styles.Muted.Render(constants.GameStatDefeated)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
+	)
+
+	innerContent := lipgloss.JoinVertical(
+		lipgloss.Center,
+		skull,
+		"",
+		gameOverTitle,
+		"",
+		"",
+		statsContent,
+	)
+
+	box := styles.Box.
+		Width(cardWidth).
+		Align(lipgloss.Center).
+		Render(innerContent)
+
+	footer := components.FooterHelp([]components.HelpItem{
+		{Key: constants.HelpKeyR, Desc: constants.HelpDescPlayAgain},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+	})
+
+	parts := []string{box}
+	if g.showProgress {
+		parts = append(parts, "", g.renderProgressLine())
+	}
+	parts = append(parts, "", footer)
+
+	return lipgloss.JoinVertical(lipgloss.Center, parts...)
+}
+
+func (g *Game) renderProgressLine() string {
+	if !g.showProgress {
+		return ""
+	}
+	var pi string
+	if g.progressDone {
+		if g.progressFailed {
+			pi = styles.Error.Render(constants.StatusIconFailed + " " + constants.StatusFailed)
+		} else {
+			pi = styles.SuccessText.Render(constants.StatusIconCompleted + " " + constants.StatusCompleted)
+		}
+	} else {
+		pi = g.progressSpinner.SpinnerWithText(constants.StatusInProgress)
+	}
+	return pi
+}
+
+func iabs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// GameTickMsg is sent for game updates.
 type GameTickMsg time.Time
 
-// GameTickCmd returns a command for game ticks
+// GameTickCmd returns a command that schedules the next game tick.
 func GameTickCmd() tea.Cmd {
-	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
+	return tea.Tick(time.Millisecond*60, func(t time.Time) tea.Msg {
 		return GameTickMsg(t)
 	})
 }

@@ -1,16 +1,19 @@
 package constants
 
+import "fmt"
+
 // Version and repository information
 var (
-	Version    = "v0.3.0"
-	Repository = "github.com/SkeneTechnologies/skene-cli"
+	Version    = "dev"
+	Repository = "github.com/SkeneTechnologies/skene"
 )
 
 // URLs
 const (
-	SkeneAuthURL       = "https://skene-cli-demo.vercel.app/auth"
-	UVDownloadBaseURL  = "https://github.com/astral-sh/uv/releases/latest/download"
-	OllamaDefaultBase  = "http://localhost:11434/v1"
+	// TODO: add auth URL once Skene auth is implemented
+	SkeneAuthURL        = ""
+	UVDownloadBaseURL   = "https://github.com/astral-sh/uv/releases/latest/download"
+	OllamaDefaultBase   = "http://localhost:11434/v1"
 	LMStudioDefaultBase = "http://localhost:1234/v1"
 )
 
@@ -24,15 +27,21 @@ const (
 
 // Package and directory names
 const (
-	GrowthPackageName  = "skene-growth"
-	OutputDirName      = "skene-context"
-	DefaultOutputDir   = "./skene-context"
-	SkeneCacheDir      = ".skene"
-	SkeneCacheBinDir   = "bin"
-	ProjectConfigFile  = ".skene.config"
-	UserConfigDir      = ".config/skene"
-	UserConfigFile     = "config"
+	GrowthPackageName    = "skene"
+	GrowthPackageVersion = "0.3.0"
+	OutputDirName     = "skene-context"
+	DefaultOutputDir  = "./skene-context"
+	SkeneCacheDir     = ".skene"
+	SkeneCacheBinDir  = "bin"
+	ProjectConfigFile = ".skene.config"
+	UserConfigDir     = ".config/skene"
+	UserConfigFile    = "config"
 )
+
+// GrowthPackageSpec returns the versioned package specifier for uvx (e.g. "skene==0.3.0").
+func GrowthPackageSpec() string {
+	return fmt.Sprintf("%s==%s", GrowthPackageName, GrowthPackageVersion)
+}
 
 // Output file names
 const (
@@ -54,8 +63,8 @@ type PackageMeta struct {
 var SkenePackages = []PackageMeta{
 	{
 		ID:          "growth",
-		Name:        "Skene Growth",
+		Name:        "Skene",
 		Description: "Tech stack detection, growth features, revenue leakage, growth plans (via uvx)",
-		URL:         "github.com/SkeneTechnologies/skene-growth",
+		URL:         "github.com/SkeneTechnologies/skene",
 	},
 }

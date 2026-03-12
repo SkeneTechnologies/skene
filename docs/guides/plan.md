@@ -14,7 +14,7 @@ Before running `plan`, you need:
 Generate a growth plan using auto-detected context files:
 
 ```bash
-uvx skene-growth plan
+uvx skene plan
 ```
 
 The command looks for `growth-manifest.json` and `growth-template.json` in `./skene-context/` (default output from `analyze`), then falls back to the current directory. Neither file is required — the command runs with whatever context it finds.
@@ -22,19 +22,19 @@ The command looks for `growth-manifest.json` and `growth-template.json` in `./sk
 Specify context files explicitly:
 
 ```bash
-uvx skene-growth plan --manifest ./skene-context/growth-manifest.json --template ./skene-context/growth-template.json
+uvx skene plan --manifest ./skene-context/growth-manifest.json --template ./skene-context/growth-template.json
 ```
 
 Point to a directory containing both files:
 
 ```bash
-uvx skene-growth plan --context ./my-context
+uvx skene plan --context ./my-context
 ```
 
 Generate an activation-focused plan:
 
 ```bash
-uvx skene-growth plan --activation
+uvx skene plan --activation
 ```
 
 ## Flag reference
@@ -54,7 +54,7 @@ uvx skene-growth plan --activation
 | `--verbose` | `-v` | Enable verbose output |
 | `--activation` | | Generate activation-focused plan using Senior Activation Engineer perspective |
 | `--prompt TEXT` | | Additional user prompt to influence the plan generation |
-| `--debug` | | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ## How the plan process works
@@ -130,7 +130,7 @@ The manifest (`growth-manifest.json`) and template (`growth-template.json`) prov
 The `--activation` flag switches to a **Senior Activation Engineer** perspective focused on activation optimization:
 
 ```bash
-uvx skene-growth plan --activation
+uvx skene plan --activation
 ```
 
 Key concepts:
@@ -175,14 +175,14 @@ If no API key is configured and you are not using a local provider (`ollama`, `l
 
 1. `--api-key` flag
 2. `SKENE_API_KEY` environment variable
-3. `api_key` field in `.skene-growth.config` or `~/.config/skene-growth/config`
+3. `api_key` field in `.skene.config` or `~/.config/skene/config`
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene-growth/debug/`:
+The `--debug` flag logs all LLM input and output to `.skene/debug/`:
 
 ```bash
-uvx skene-growth plan --debug
+uvx skene plan --debug
 ```
 
 You can also enable debug mode permanently in your config file:

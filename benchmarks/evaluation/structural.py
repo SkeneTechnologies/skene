@@ -87,7 +87,7 @@ def _check_template_schema(output_dir: Path) -> StructuralCheck:
         )
     try:
         data = json.loads(template_path.read_text())
-        from skene_growth.templates.growth_template import _validate_template_structure
+        from skene.templates.growth_template import _validate_template_structure
 
         _validate_template_structure(data)
         return StructuralCheck(check_name="template_schema", passed=True)
@@ -110,7 +110,7 @@ def _check_manifest_schema(output_dir: Path) -> StructuralCheck:
         )
     try:
         data = json.loads(manifest_path.read_text())
-        from skene_growth.manifest import GrowthManifest
+        from skene.manifest import GrowthManifest
 
         GrowthManifest(**data)
         return StructuralCheck(check_name="manifest_schema", passed=True)

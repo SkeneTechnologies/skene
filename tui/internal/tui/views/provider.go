@@ -23,8 +23,15 @@ type ProviderView struct {
 
 // NewProviderView creates a new provider view
 func NewProviderView() *ProviderView {
+	all := config.GetProviders()
+	var visible []config.Provider
+	for _, p := range all {
+		if !p.Hidden {
+			visible = append(visible, p)
+		}
+	}
 	return &ProviderView{
-		providers:     config.GetProviders(),
+		providers:     visible,
 		selectedIndex: 0,
 		maxVisible:    7,
 		header:        components.NewWizardHeader(1, constants.StepNameAIProvider),

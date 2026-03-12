@@ -1,3 +1,3 @@
 """
-Tests for skene-growth.
+Tests for skene.
 """

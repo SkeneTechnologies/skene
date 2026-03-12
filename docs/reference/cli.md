@@ -1,6 +1,6 @@
 # CLI Reference
 
-Complete reference for every `skene-growth` command and flag.
+Complete reference for every `skene` command and flag.
 
 For in-depth usage of individual commands, see the [guides](../guides/analyze.md). This page is a lookup reference.
 
@@ -13,7 +13,7 @@ For in-depth usage of individual commands, see the [guides](../guides/analyze.md
 | `--version`, `-V` | Show version and exit |
 | `--help` | Show help message and exit |
 
-When invoked with no arguments, `skene-growth` prints help and exits. The shorthand `skene` (without `-growth`) defaults to the `chat` command instead.
+When invoked with no arguments, `skene` prints help and exits. The shorthand `skene` (without `-growth`) defaults to the `chat` command instead.
 
 ---
 
@@ -24,7 +24,7 @@ Analyze a codebase and generate `growth-manifest.json`.
 Scans your codebase to detect the technology stack, current growth features, and new growth opportunities. Requires an LLM provider (or falls back to a sample preview if no API key is set).
 
 ```
-skene-growth analyze [PATH] [OPTIONS]
+skene analyze [PATH] [OPTIONS]
 ```
 
 ### Arguments
@@ -46,7 +46,7 @@ skene-growth analyze [PATH] [OPTIONS]
 | `--product-docs` | | `false` | Also generate `product-docs.md` with user-facing feature documentation |
 | `--features` | | `false` | Only analyze growth features and update `feature-registry.json` (skips opportunities and revenue leakage) |
 | `--exclude TEXT` | `-e` | config value | Folder names to exclude from analysis. Repeatable: `--exclude tests --exclude vendor`. Merged with `exclude_folders` from config. |
-| `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ### Behavior notes
@@ -66,7 +66,7 @@ Generate a growth plan using the Council of Growth Engineers methodology.
 Reads the manifest and template produced by `analyze`, then uses an LLM to create a prioritized growth plan with implementation tasks.
 
 ```
-skene-growth plan [OPTIONS]
+skene plan [OPTIONS]
 ```
 
 ### Options
@@ -84,7 +84,7 @@ skene-growth plan [OPTIONS]
 | `--verbose` | `-v` | `false` | Enable verbose output |
 | `--activation` | | `false` | Generate an activation-focused plan using a Senior Activation Engineer perspective |
 | `--prompt TEXT` | | | Additional user prompt to influence the plan generation |
-| `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ### Auto-detection order
@@ -108,7 +108,7 @@ Build an AI-ready implementation prompt from your growth plan, then choose where
 Extracts the Technical Execution section from the growth plan, uses an LLM to generate a focused implementation prompt, and offers interactive delivery options (Cursor deep link, Claude CLI, or display).
 
 ```
-skene-growth build [OPTIONS]
+skene build [OPTIONS]
 ```
 
 ### Options
@@ -121,7 +121,7 @@ skene-growth build [OPTIONS]
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | provider default | LLM model name |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 | `--target TEXT` | `-t` | interactive | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
 | `--feature TEXT` | `-f` | | Bias toward this feature name when linking the growth loop to a feature in the registry |
@@ -155,7 +155,7 @@ Show implementation status of growth loop requirements.
 Loads all growth loop JSON definitions from `skene-context/growth-loops/` and uses AST parsing to verify that required files, functions, and patterns are implemented. Displays a report showing which requirements are met and which are missing.
 
 ```
-skene-growth status [PATH] [OPTIONS]
+skene status [PATH] [OPTIONS]
 ```
 
 ### Arguments
@@ -196,10 +196,10 @@ See the [status guide](../guides/status.md) for detailed usage.
 
 ## `chat`
 
-Interactive terminal chat with access to skene-growth analysis tools.
+Interactive terminal chat with access to skene analysis tools.
 
 ```
-skene-growth chat [PATH] [OPTIONS]
+skene chat [PATH] [OPTIONS]
 ```
 
 ### Arguments
@@ -218,11 +218,11 @@ skene-growth chat [PATH] [OPTIONS]
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
 | `--max-steps INT` | | `4` | Maximum number of tool calls the LLM can make per user request |
 | `--tool-output-limit INT` | | `4000` | Maximum characters of tool output kept in conversation context |
-| `--debug` | | `false` | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
 
 ### Behavior notes
 
-- When using the `skene` shorthand (not `skene-growth`), running without a subcommand defaults to `chat`.
+- When using the `skene` shorthand (not `skene`), running without a subcommand defaults to `chat`.
 - Requires an API key unless using a local provider.
 
 See the [chat guide](../guides/chat.md) for detailed usage.
@@ -234,7 +234,7 @@ See the [chat guide](../guides/chat.md) for detailed usage.
 Validate a `growth-manifest.json` file against the GrowthManifest schema.
 
 ```
-skene-growth validate MANIFEST
+skene validate MANIFEST
 ```
 
 ### Arguments
@@ -253,17 +253,17 @@ skene-growth validate MANIFEST
 
 ## `config`
 
-Manage skene-growth configuration files.
+Manage skene configuration files.
 
 ```
-skene-growth config [OPTIONS]
+skene config [OPTIONS]
 ```
 
 ### Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--init` | `false` | Create a sample `.skene-growth.config` file in the current directory |
+| `--init` | `false` | Create a sample `.skene.config` file in the current directory |
 | `--show` | `false` | Show current configuration values and exit (no interactive editing) |
 
 ### Default behavior (no flags)
@@ -278,8 +278,8 @@ When invoked without `--init` or `--show`:
 
 Configuration is resolved in this order (later sources override earlier ones):
 
-1. User config: `~/.config/skene-growth/config`
-2. Project config: `./.skene-growth.config`
+1. User config: `~/.config/skene/config`
+2. Project config: `./.skene.config`
 3. Environment variables: `SKENE_API_KEY`, `SKENE_PROVIDER`
 4. CLI flags
 
@@ -294,7 +294,7 @@ Build Supabase migrations from growth loop telemetry and push artifacts to upstr
 Creates idempotent trigger-based migrations that INSERT into `event_log` for each telemetry-defined table. Optionally pushes growth loops and telemetry SQL to Skene Cloud upstream.
 
 ```
-skene-growth push [PATH] [OPTIONS]
+skene push [PATH] [OPTIONS]
 ```
 
 ### Arguments
@@ -309,14 +309,14 @@ skene-growth push [PATH] [OPTIONS]
 |------|-------|---------|-------------|
 | `--context PATH` | `-c` | auto-detected | Path to `skene-context` directory. Auto-detected from `<PATH>/skene-context/` or `./skene-context/`. |
 | `--loop TEXT` | `-l` | | Push only this loop (by `loop_id`). If omitted, pushes all loops with Supabase telemetry. |
-| `--upstream TEXT` | `-u` | config | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene-growth.config` or this flag. |
+| `--upstream TEXT` | `-u` | config | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
 | `--push-only` | | `false` | Re-push current output without regenerating migrations |
 
 ### Behavior notes
 
 - Requires growth loops with Supabase telemetry (type `"supabase"`) in `skene-context/growth-loops/`.
-- Generates a migration file at `supabase/migrations/<timestamp>_skene_growth_telemetry.sql`.
-- When `--upstream` is provided (or resolved from `.skene-growth.config`), pushes the package (growth loops + telemetry SQL) to the upstream API.
+- Generates a migration file at `supabase/migrations/<timestamp>_skene_telemetry.sql`.
+- When `--upstream` is provided (or resolved from `.skene.config`), pushes the package (growth loops + telemetry SQL) to the upstream API.
 - Use `skene login` to authenticate before pushing to upstream.
 
 See the [push guide](../guides/push.md) for detailed usage.
@@ -328,7 +328,7 @@ See the [push guide](../guides/push.md) for detailed usage.
 Log in to Skene Cloud upstream for push.
 
 ```
-skene-growth login [OPTIONS]
+skene login [OPTIONS]
 ```
 
 ### Options
@@ -340,7 +340,7 @@ skene-growth login [OPTIONS]
 
 ### Behavior notes
 
-- Saves upstream URL, workspace, and API key to `.skene-growth.config` with restrictive permissions (`0600`).
+- Saves upstream URL, workspace, and API key to `.skene.config` with restrictive permissions (`0600`).
 - Use `--status` to check whether you are logged in for the current project.
 
 See the [login guide](../guides/login.md) for detailed usage.
@@ -352,22 +352,22 @@ See the [login guide](../guides/login.md) for detailed usage.
 Log out from upstream (remove saved token).
 
 ```
-skene-growth logout
+skene logout
 ```
 
 ### Behavior notes
 
-- Removes upstream credentials from `.skene-growth.config`.
+- Removes upstream credentials from `.skene.config`.
 - Does not invalidate the token server-side.
 
 ---
 
 ## `init`
 
-Create the skene_growth base schema migration for Supabase.
+Create the skene base schema migration for Supabase.
 
 ```
-skene-growth init [PATH]
+skene init [PATH]
 ```
 
 ### Arguments
@@ -378,7 +378,7 @@ skene-growth init [PATH]
 
 ### Behavior notes
 
-- Writes `supabase/migrations/20260201000000_skene_growth_schema.sql` containing the base schema: `event_log`, `failed_events`, `enrichment_map` tables and supporting functions.
+- Writes `supabase/migrations/20260201000000_skene_schema.sql` containing the base schema: `event_log`, `failed_events`, `enrichment_map` tables and supporting functions.
 - Safe to run repeatedly -- skips if the migration already exists.
 - Run `supabase db push` after to apply the migration.
 
@@ -393,7 +393,7 @@ Manage the growth feature registry.
 Export the feature registry for use in external tools.
 
 ```
-skene-growth features export [PATH] [OPTIONS]
+skene features export [PATH] [OPTIONS]
 ```
 
 ### Arguments
@@ -425,7 +425,7 @@ See the [features guide](../guides/features.md) for detailed usage.
 This command is deprecated and will be removed. Use `analyze --product-docs` instead.
 
 ```
-skene-growth generate [OPTIONS]
+skene generate [OPTIONS]
 ```
 
 | Flag | Short | Description |
@@ -462,55 +462,55 @@ The command prints a deprecation warning and exits with code 1.
 
 ```bash
 # Full workflow
-uvx skene-growth config --init
-uvx skene-growth config
-uvx skene-growth analyze .
-uvx skene-growth plan
-uvx skene-growth build
+uvx skene config --init
+uvx skene config
+uvx skene analyze .
+uvx skene plan
+uvx skene build
 
 # Analyze with explicit provider settings
-uvx skene-growth analyze ./my-app -p gemini -m gemini-3-flash-preview --api-key "YOUR_KEY"
+uvx skene analyze ./my-app -p gemini -m gemini-3-flash-preview --api-key "YOUR_KEY"
 
 # Analyze with a local LLM (no API key needed)
-uvx skene-growth analyze . -p ollama -m llama3
+uvx skene analyze . -p ollama -m llama3
 
 # Analyze with OpenAI-compatible endpoint
-uvx skene-growth analyze . -p generic --base-url http://localhost:8080/v1
+uvx skene analyze . -p generic --base-url http://localhost:8080/v1
 
 # Generate activation-focused plan
-uvx skene-growth plan --activation
+uvx skene plan --activation
 
 # Validate a manifest
-uvx skene-growth validate ./skene-context/growth-manifest.json
+uvx skene validate ./skene-context/growth-manifest.json
 
 # Interactive chat
-uvx skene-growth chat . -p openai -m gpt-4o
+uvx skene chat . -p openai -m gpt-4o
 
 # Check growth loop implementation status
-uvx skene-growth status
+uvx skene status
 
 # Check status with LLM-powered alternative matching
-uvx skene-growth status --find-alternatives --api-key "YOUR_KEY"
+uvx skene status --find-alternatives --api-key "YOUR_KEY"
 
 # Features-only analysis (updates feature registry without full analysis)
-uvx skene-growth analyze . --features
+uvx skene analyze . --features
 
 # Push growth loops to Supabase + upstream
-uvx skene-growth push
-uvx skene-growth push --upstream https://skene.ai/workspace/my-app
-uvx skene-growth push --loop my_loop_id
+uvx skene push
+uvx skene push --upstream https://skene.ai/workspace/my-app
+uvx skene push --loop my_loop_id
 
 # Login/logout from upstream
-uvx skene-growth login --upstream https://skene.ai/workspace/my-app
-uvx skene-growth login --status
-uvx skene-growth logout
+uvx skene login --upstream https://skene.ai/workspace/my-app
+uvx skene login --status
+uvx skene logout
 
 # Initialize Supabase base schema
-uvx skene-growth init
+uvx skene init
 
 # Export feature registry
-uvx skene-growth features export --format markdown -o features.md
+uvx skene features export --format markdown -o features.md
 
 # Quick preview (no API key, just run analyze without a key)
-uvx skene-growth analyze .
+uvx skene analyze .
 ```

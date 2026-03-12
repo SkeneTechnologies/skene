@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from skene_growth.feature_registry import (
+from skene.feature_registry import (
     FEATURE_REGISTRY_FILENAME,
     compute_loop_ids_by_feature,
     derive_feature_id,
@@ -211,7 +211,7 @@ class TestMergeRegistryAndEnrichManifest:
             "current_growth_features": [
                 {
                     "feature_name": "Push Engine",
-                    "file_path": "src/skene_growth/growth_loops/push.py",
+                    "file_path": "src/skene/growth_loops/push.py",
                     "detected_intent": "Pushes telemetry",
                     "confidence_score": 0.9,
                     "entry_point": "skene push",
@@ -224,7 +224,7 @@ class TestMergeRegistryAndEnrichManifest:
                 "loop_id": "guard_ci",
                 "name": "Guard CI",
                 "requirements": {
-                    "files": [{"path": "src/skene_growth/growth_loops/push.py", "purpose": "push"}],
+                    "files": [{"path": "src/skene/growth_loops/push.py", "purpose": "push"}],
                 },
             },
         ]

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from skene_growth.codebase import CodebaseExplorer
+from skene.codebase import CodebaseExplorer
 
 
 class TestCodebaseExplorerInit:

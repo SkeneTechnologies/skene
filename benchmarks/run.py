@@ -50,7 +50,7 @@ def main(
         help="Resume a previous run: re-run only missing benchmarks, skip existing ones",
     ),
 ) -> None:
-    """Run the skene-growth benchmark suite."""
+    """Run the skene benchmark suite."""
     from benchmarks.evaluation.llm_judge import evaluate_with_llm_judge
     from benchmarks.evaluation.report import generate_report
     from benchmarks.evaluation.structural import evaluate_structural

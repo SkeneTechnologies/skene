@@ -14,19 +14,19 @@ Before running `analyze`, you need one of the following:
 Analyze the current directory:
 
 ```bash
-uvx skene-growth analyze .
+uvx skene analyze .
 ```
 
 Analyze a specific project path:
 
 ```bash
-uvx skene-growth analyze ./my-project
+uvx skene analyze ./my-project
 ```
 
 Save the manifest to a custom location:
 
 ```bash
-uvx skene-growth analyze . -o ./output/manifest.json
+uvx skene analyze . -o ./output/manifest.json
 ```
 
 If no API key is configured and you are not using a local provider, the command displays a sample growth analysis preview instead of running a full LLM-powered analysis.
@@ -43,9 +43,9 @@ If no API key is configured and you are not using a local provider, the command 
 | `--base-url TEXT` | | Base URL for OpenAI-compatible endpoint (required for `generic` provider; also `SKENE_BASE_URL` env var) |
 | `--product-docs` | | Generate `product-docs.md` with user-facing feature documentation (creates v2.0 manifest) |
 | `--features` | | Only analyze growth features and update `feature-registry.json` (skips opportunities and revenue leakage) |
-| `--exclude TEXT` | `-e` | Folder names to exclude from analysis (repeatable). Also configurable in `.skene-growth.config` as `exclude_folders`. |
+| `--exclude TEXT` | `-e` | Folder names to exclude from analysis (repeatable). Also configurable in `.skene.config` as `exclude_folders`. |
 | `--verbose` | `-v` | Enable verbose output |
-| `--debug` | | Log all LLM input/output to `.skene-growth/debug/` |
+| `--debug` | | Log all LLM input/output to `.skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ## Output files
@@ -87,7 +87,7 @@ A Markdown file containing user-facing product documentation generated from your
 The `--product-docs` flag enables an extended analysis that generates user-facing documentation from your codebase:
 
 ```bash
-uvx skene-growth analyze . --product-docs
+uvx skene analyze . --product-docs
 ```
 
 When enabled, the command:
@@ -104,7 +104,7 @@ The v2.0 manifest is a superset of v1.0 -- all standard fields remain present.
 The `--features` flag runs a lightweight analysis that only updates the feature registry:
 
 ```bash
-uvx skene-growth analyze . --features
+uvx skene analyze . --features
 ```
 
 This mode:
@@ -123,10 +123,10 @@ Use `--exclude` (or `-e`) to skip folders during analysis. This is useful for la
 The flag can be used multiple times:
 
 ```bash
-uvx skene-growth analyze . --exclude node_modules --exclude dist --exclude .next
+uvx skene analyze . --exclude node_modules --exclude dist --exclude .next
 ```
 
-You can also set exclusions permanently in your config file. In `.skene-growth.config`:
+You can also set exclusions permanently in your config file. In `.skene.config`:
 
 ```toml
 exclude_folders = ["node_modules", "dist", ".next", "vendor", "__pycache__"]
@@ -136,10 +136,10 @@ CLI exclusions and config exclusions are merged (deduplicated). CLI flags do not
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene-growth/debug/`:
+The `--debug` flag logs all LLM input and output to `.skene/debug/`:
 
 ```bash
-uvx skene-growth analyze . --debug
+uvx skene analyze . --debug
 ```
 
 This is useful for:
@@ -165,26 +165,26 @@ export SKENE_DEBUG=true
 ### OpenAI
 
 ```bash
-uvx skene-growth analyze . --provider openai --api-key "sk-..." --model gpt-4o
+uvx skene analyze . --provider openai --api-key "sk-..." --model gpt-4o
 ```
 
 ### Google Gemini
 
 ```bash
-uvx skene-growth analyze . --provider gemini --api-key "AI..." --model gemini-3-flash-preview
+uvx skene analyze . --provider gemini --api-key "AI..." --model gemini-3-flash-preview
 ```
 
 ### Anthropic
 
 ```bash
-uvx skene-growth analyze . --provider anthropic --api-key "sk-ant-..." --model claude-sonnet-4-5
+uvx skene analyze . --provider anthropic --api-key "sk-ant-..." --model claude-sonnet-4-5
 ```
 
 ### Ollama (local)
 
 ```bash
 # Start Ollama first, then:
-uvx skene-growth analyze . --provider ollama --model llama3.3
+uvx skene analyze . --provider ollama --model llama3.3
 ```
 
 No API key required. The default model for Ollama is `llama3.3`.
@@ -193,7 +193,7 @@ No API key required. The default model for Ollama is `llama3.3`.
 
 ```bash
 # Start LM Studio server first, then:
-uvx skene-growth analyze . --provider lmstudio
+uvx skene analyze . --provider lmstudio
 ```
 
 No API key required.
@@ -203,7 +203,7 @@ No API key required.
 For any OpenAI-compatible API endpoint:
 
 ```bash
-uvx skene-growth analyze . \
+uvx skene analyze . \
   --provider generic \
   --base-url "http://localhost:8080/v1" \
   --model my-model
@@ -219,7 +219,7 @@ To run the full analysis, provide an API key via any of these methods:
 
 1. `--api-key` flag
 2. `SKENE_API_KEY` environment variable
-3. `api_key` field in `.skene-growth.config` or `~/.config/skene-growth/config`
+3. `api_key` field in `.skene.config` or `~/.config/skene/config`
 
 ## Next steps
 

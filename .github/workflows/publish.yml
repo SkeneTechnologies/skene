@@ -13,10 +13,11 @@ permissions:
 jobs:
   pypi-publish:
     name: Upload release to PyPI
+    if: startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/skene-growth
+      url: https://pypi.org/p/skene
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

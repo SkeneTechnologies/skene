@@ -1,19 +1,19 @@
 # Skene
 
-A terminal interface for [Skene Growth](https://github.com/SkeneTechnologies/skene-growth). Guides you through selecting a repository, choosing an AI provider, and running growth analysis — all from the terminal.
+A terminal interface for [Skene](https://github.com/SkeneTechnologies/skene). Guides you through selecting a repository, choosing an AI provider, and running growth analysis — all from the terminal.
 
 Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ## What It Does
 
-Skene terminal is the interactive front-end for **Skene Growth** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
+Skene terminal is the interactive front-end for **Skene** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
 
-The tool itself does **not** perform any analysis. It orchestrates `uvx skene-growth` in your selected repository directory and displays the results.
+The tool itself does **not** perform any analysis. It orchestrates `uvx skene` in your selected repository directory and displays the results.
 
 ## Features
 
 - Step-by-step wizard — provider, model, authentication, project selection
-- Multiple AI providers — Skene, OpenAI, Anthropic, Gemini, Ollama, LM Studio, or any OpenAI-compatible endpoint
+- Multiple AI providers — OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint
 - Authentication — Skene magic link, API key entry, local model auto-detection
 - Existing analysis detection — detects previous `skene-context/` output and offers to view or re-run
 - Live terminal output during analysis
@@ -33,7 +33,7 @@ None. The CLI automatically downloads the [uv](https://docs.astral.sh/uv/) runti
 ### Quick Install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 ```
 
 This downloads the latest release binary for your platform and installs it to `/usr/local/bin`.
@@ -41,14 +41,14 @@ This downloads the latest release binary for your platform and installs it to `/
 To install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | VERSION=v030 bash
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | VERSION=v030 bash
 ```
 
 ### Clone and Run
 
 ```bash
-git clone https://github.com/Px8-fi/skene-cli.git
-cd skene-cli
+git clone https://github.com/SkeneTechnologies/skene.git
+cd skene/tui
 make build
 make run
 ```
@@ -56,8 +56,8 @@ make run
 ### Build from Source (requires Go 1.22+)
 
 ```bash
-git clone https://github.com/Px8-fi/skene-cli.git
-cd skene-cli
+git clone https://github.com/SkeneTechnologies/skene.git
+cd skene/tui
 make install   # download dependencies
 make build
 make run
@@ -71,11 +71,11 @@ make install-bin   # copies build/skene to /usr/local/bin
 
 ## Usage
 
-Run `skene` and follow the prompts:
+Run `skene` and follow the steps:
 
 ```
 Welcome
-  → AI Provider (Skene, OpenAI, Anthropic, Gemini, Ollama, LM Studio, Generic)
+  → AI Provider (OpenAI, Anthropic, Gemini, Generic)
     → Model selection
       → Authentication (magic link / API key / local model)
         → Project directory
@@ -123,12 +123,9 @@ Example `.skene.config`:
 
 | Provider | ID | Auth |
 |----------|----|------|
-| Skene | `skene` | Magic link or API key |
 | OpenAI | `openai` | API key |
 | Anthropic | `anthropic` | API key |
 | Gemini | `gemini` | API key |
-| Ollama | `ollama` | None (local) |
-| LM Studio | `lmstudio` | None (local) |
 | Generic | `generic` | API key + base URL |
 
 ## Development
@@ -151,7 +148,7 @@ make release      # package releases
 
 ## Related
 
-- [skene-growth](https://github.com/SkeneTechnologies/skene-growth) — PLG analysis toolkit (CLI + MCP server)
+- [skene](https://github.com/SkeneTechnologies/skene) — PLG analysis toolkit (CLI + MCP server)
 
 ## License
 

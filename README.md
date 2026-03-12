@@ -1,29 +1,28 @@
 <p align="center">
-  <a href="https://www.skene.ai"><img src="https://img.shields.io/badge/Website-007ACC?style=flat&logo=google-chrome&logoColor=white" alt="Website"></a>
-  <a href="https://www.skene.ai/resources/docs/skene-growth"><img src="https://img.shields.io/badge/Docs-555?style=flat&logo=bookstack&logoColor=white" alt="Docs"></a>
-  <a href="https://www.skene.ai/resources/blog"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Blog"></a>
-  <a href="https://www.reddit.com/r/plgbuilders/"><img src="https://img.shields.io/badge/r%2Fplgbuilders-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
+  <img width="4000" height="800" alt="Skene_git" src="https://github.com/user-attachments/assets/2be11c04-6b98-4e26-8905-bf3250c4addb" />
+  <a href="https://www.skene.ai"><img width="120" height="42" alt="website" src="https://github.com/user-attachments/assets/8ae8c68f-eeb5-411f-832f-6b6818bd2c34"></a>
+  <a href="https://www.skene.ai/resources/docs/skene"><img width="120" height="42" alt="docs" src="https://github.com/user-attachments/assets/f847af52-0f6f-4570-9a48-1b7c8f4f0d7a"></a>
+  <a href="https://www.skene.ai/resources/blog"><img width="100" height="42" alt="blog" src="https://github.com/user-attachments/assets/8c62e3b8-39a8-43f6-bb0b-f00b118aff82"></a>
+  <a href="https://www.reddit.com/r/plgbuilders/"><img width="153" height="42" alt="reddit" src="https://github.com/user-attachments/assets/b420ea50-26e3-40fe-ab34-ac179f748357"></a>
 </p>
 
-# skene-growth
 
-[![PyPI version](https://img.shields.io/pypi/v/skene-growth)](https://pypi.org/project/skene-growth/)
-[![Downloads](https://static.pepy.tech/badge/skene-growth/month)](https://pepy.tech/projects/skene-growth)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/SkeneTechnologies/skene-growth)](https://github.com/SkeneTechnologies/skene-growth/commits)
-
-PLG (Product-Led Growth) codebase analysis toolkit. Scan your codebase, detect growth opportunities, and generate actionable implementation plans.
+Skene is a codebase analysis toolkit for product-led growth. It scan your codebase, detect growth opportunities, and generate actionable implementation plans.
 
 ## Quick Start
 
+Install and launch the interactive terminal UI:
+
 ```bash
-uvx skene-growth config --init   # Create config file
-uvx skene-growth config          # Set provider, model, API key
-uvx skene-growth analyze .       # Analyze your codebase
-uvx skene-growth plan            # Generate a growth plan
-uvx skene-growth build           # Build an implementation prompt
-uvx skene-growth status          # Check loop implementation status
-uvx skene-growth push            # Deploy telemetry to Supabase + upstream
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
+skene
 ```
+
+The wizard walks you through provider selection, authentication, and analysis — no configuration needed upfront.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
+<p>
 
 ## What It Does
 
@@ -39,56 +38,56 @@ uvx skene-growth push            # Deploy telemetry to Supabase + upstream
 
 Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible endpoint. Free local audit available with no API key required.
 
+<img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
+
 ## Installation
+
+### Terminal UI (recommended)
+
+The TUI is an interactive wizard that guides you through the entire workflow. No prerequisites — the installer handles everything.
+
+```bash
+# Install the TUI
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
+
+# Launch it
+skene
+```
+
+### Python CLI
+
+If you prefer the command line, you can run Skene directly with `uvx` (no install needed) or install it globally:
 
 ```bash
 # Install uv (if you don't have it)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Recommended (no install needed)
-uvx skene-growth
+# Run directly (no install needed)
+uvx skene
 
 # Or install globally
-pip install skene-growth
+pip install skene
 ```
 
-## Documentation
-
-Full documentation: [www.skene.ai/resources/docs/skene-growth](https://www.skene.ai/resources/docs/skene-growth)
-
-## MCP Server
-
-skene-growth includes an MCP server for integration with AI assistants. Add to your assistant config:
-
-```json
-{
-  "mcpServers": {
-    "skene-growth": {
-      "command": "uvx",
-      "args": ["--from", "skene-growth[mcp]", "skene-growth-mcp"],
-      "env": {
-        "SKENE_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
+For CLI usage details, see the [documentation](https://www.skene.ai/resources/docs/skene).
 
 ## Monorepo Structure
 
-This repository contains two independent packages:
+This repository contains two packages:
 
 | Directory | Description | Language | Distribution |
 |-----------|-------------|----------|-------------|
-| `src/skene_growth/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene-growth/) |
-| `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene-growth/releases) |
+| `src/skene/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene/) |
+| `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 
 The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
 
 ## Contributing
 
-Contributions are welcome. Please open an issue or submit a pull request on [GitHub](https://github.com/SkeneTechnologies/skene-growth).
+Contributions are welcome. Please [open an issue](https://github.com/SkeneTechnologies/skene/issues) or submit a [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## License
 
 [MIT](https://opensource.org/licenses/MIT)
+
+<img width="4000" height="800" alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" />

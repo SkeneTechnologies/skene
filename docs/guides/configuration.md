@@ -1,14 +1,14 @@
 # Configuration
 
-How to configure skene-growth using config files, environment variables, and CLI flags.
+How to configure skene using config files, environment variables, and CLI flags.
 
 ## Configuration priority
 
 Settings are loaded in this order (later overrides earlier):
 
 ```
-1. User config     ~/.config/skene-growth/config     (lowest priority)
-2. Project config  ./.skene-growth.config
+1. User config     ~/.config/skene/config     (lowest priority)
+2. Project config  ./.skene.config
 3. Env variables   SKENE_API_KEY, SKENE_PROVIDER, etc.
 4. CLI flags       --api-key, --provider, etc.        (highest priority)
 ```
@@ -17,16 +17,16 @@ Settings are loaded in this order (later overrides earlier):
 
 | Location | Purpose |
 |----------|---------|
-| `./.skene-growth.config` | Project-level config (per-project settings) |
-| `~/.config/skene-growth/config` | User-level config (personal defaults) |
+| `./.skene.config` | Project-level config (per-project settings) |
+| `~/.config/skene/config` | User-level config (personal defaults) |
 
 Both files use TOML format. The user-level path respects `XDG_CONFIG_HOME` if set.
 
 ## Creating a config file
 
 ```bash
-# Create .skene-growth.config in the current directory
-uvx skene-growth config --init
+# Create .skene.config in the current directory
+uvx skene config --init
 ```
 
 This creates a sample config file with restrictive permissions (`0600` on Unix).
@@ -36,7 +36,7 @@ This creates a sample config file with restrictive permissions (`0600` on Unix).
 Running `config` without flags opens interactive editing:
 
 ```bash
-uvx skene-growth config
+uvx skene config
 ```
 
 This prompts you for:
@@ -49,7 +49,7 @@ This prompts you for:
 ## Viewing current config
 
 ```bash
-uvx skene-growth config --show
+uvx skene config --show
 ```
 
 Displays all current configuration values and their sources.
@@ -81,7 +81,7 @@ Displays all current configuration values and their sources.
 ## Sample config file
 
 ```toml
-# .skene-growth.config
+# .skene.config
 
 # API key (can also use SKENE_API_KEY env var)
 # api_key = "your-api-key"
@@ -101,7 +101,7 @@ output_dir = "./skene-context"
 # Enable verbose output
 verbose = false
 
-# Enable debug logging (logs LLM I/O to .skene-growth/debug/)
+# Enable debug logging (logs LLM I/O to .skene/debug/)
 debug = false
 
 # Folders to exclude from analysis
@@ -123,7 +123,7 @@ exclude_folders = ["tests", "vendor"]
 
 ## Upstream credentials
 
-When using `skene push` to deploy to Skene Cloud, upstream URL, workspace slug, and API key are stored in `.skene-growth.config` (with `0600` permissions). These fields are managed by `skene login` and `skene logout`. See the [login guide](login.md) for details.
+When using `skene push` to deploy to Skene Cloud, upstream URL, workspace slug, and API key are stored in `.skene.config` (with `0600` permissions). These fields are managed by `skene login` and `skene logout`. See the [login guide](login.md) for details.
 
 ## Excluding folders
 
@@ -145,14 +145,14 @@ Exclusion matches in three ways:
 
 ```bash
 # CLI flags (merged with config file exclusions)
-uvx skene-growth analyze . --exclude tests --exclude vendor
+uvx skene analyze . --exclude tests --exclude vendor
 
 # Short form
-uvx skene-growth analyze . -e planner -e migrations -e docs
+uvx skene analyze . -e planner -e migrations -e docs
 ```
 
 ```toml
-# In .skene-growth.config
+# In .skene.config
 exclude_folders = ["tests", "vendor", "migrations", "docs"]
 ```
 

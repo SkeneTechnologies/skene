@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="Px8-fi/skene-cli"
+REPO="SkeneTechnologies/skene"
 BINARY="skene"
 INSTALL_DIR="/usr/local/bin"
 
@@ -94,7 +94,7 @@ install_binary() {
 
 verify() {
   if command -v "$BINARY" >/dev/null 2>&1; then
-    info "Installed successfully! Run \`${BINARY}\` to get started."
+    info "Installed successfully! Type \`${BINARY}\` and hit enter to get started."
   else
     info "Binary installed to ${INSTALL_DIR}/${BINARY}."
     info "Make sure ${INSTALL_DIR} is in your PATH."
@@ -106,7 +106,7 @@ verify() {
 # ---------------------------------------------------------------------------
 
 main() {
-  info "Skene CLI Installer"
+  info "Skene Installer"
   detect_platform
   resolve_version
   install_binary

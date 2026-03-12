@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from skene_growth.growth_loops.storage import (
+from skene.growth_loops.storage import (
     derive_loop_id,
     derive_loop_name,
     generate_loop_definition_with_llm,

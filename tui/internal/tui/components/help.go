@@ -106,7 +106,6 @@ func WizardResultsHelp() string {
 	return FooterHelp([]HelpItem{
 		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescTabs},
 		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
-		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocus},
 		{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})

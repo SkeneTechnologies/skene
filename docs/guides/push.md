@@ -14,19 +14,19 @@ Before running `push`, you need:
 Generate a Supabase migration from all growth loops with telemetry:
 
 ```bash
-uvx skene-growth push
+uvx skene push
 ```
 
 Push a specific loop by ID:
 
 ```bash
-uvx skene-growth push --loop my_activation_loop
+uvx skene push --loop my_activation_loop
 ```
 
 Push to upstream (Skene Cloud):
 
 ```bash
-uvx skene-growth push --upstream https://skene.ai/workspace/my-app
+uvx skene push --upstream https://skene.ai/workspace/my-app
 ```
 
 ## Flag reference
@@ -36,7 +36,7 @@ uvx skene-growth push --upstream https://skene.ai/workspace/my-app
 | `PATH` | | Project root directory (default: `.`) |
 | `--context PATH` | `-c` | Path to `skene-context` directory (auto-detected if omitted) |
 | `--loop TEXT` | `-l` | Push only this loop by `loop_id`. If omitted, pushes all loops with Supabase telemetry. |
-| `--upstream TEXT` | `-u` | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene-growth.config` or this flag. |
+| `--upstream TEXT` | `-u` | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
 | `--push-only` | | Re-push current output without regenerating migrations |
 
 ## How it works
@@ -50,30 +50,30 @@ The command loads all growth loop JSON files from `skene-context/growth-loops/` 
 For each loop with Supabase telemetry, the command generates SQL trigger functions that:
 
 - Create a trigger on the specified table for the specified operation (INSERT, UPDATE, or DELETE)
-- INSERT a row into `skene_growth.event_log` with the captured properties
+- INSERT a row into `skene.event_log` with the captured properties
 - Use idempotent DDL (DROP TRIGGER IF EXISTS before CREATE)
 
-The migration is written to `supabase/migrations/<timestamp>_skene_growth_telemetry.sql`.
+The migration is written to `supabase/migrations/<timestamp>_skene_telemetry.sql`.
 
 ### Step 3: Push to upstream (optional)
 
-When an upstream URL is configured (via `--upstream` or `.skene-growth.config`), the command packages the growth loops and telemetry SQL and sends them to the upstream API at `POST https://www.skene.ai/api/v1/deploys`.
+When an upstream URL is configured (via `--upstream` or `.skene.config`), the command packages the growth loops and telemetry SQL and sends them to the upstream API at `POST https://www.skene.ai/api/v1/deploys`.
 
 ## Base schema
 
-Right now init create the sql files required for deploying skene-growth schema to supabase without connecting Skene Cloud at all. The goal is to increase security.
+Right now init create the sql files required for deploying skene schema to supabase without connecting Skene Cloud at all. The goal is to increase security.
 
 Before pushing telemetry migrations, you need the base schema. Run `skene init` to create it:
 
 ```bash
-uvx skene-growth init
+uvx skene init
 ```
 
-This creates `supabase/migrations/20260201000000_skene_growth_schema.sql` with:
+This creates `supabase/migrations/20260201000000_skene_schema.sql` with:
 
-- `skene_growth.event_log` — universal sink for allowlisted triggers
-- `skene_growth.failed_events` — dead-letter queue for events exceeding retry limits
-- `skene_growth.enrichment_map` — rules table for metadata enrichment
+- `skene.event_log` — universal sink for allowlisted triggers
+- `skene.failed_events` — dead-letter queue for events exceeding retry limits
+- `skene.enrichment_map` — rules table for metadata enrichment
 
 ## Telemetry format
 
@@ -96,12 +96,12 @@ The `push` command converts these into SQL trigger functions automatically.
 To push to upstream, authenticate first:
 
 ```bash
-uvx skene-growth login --upstream https://skene.ai/workspace/my-app
+uvx skene login --upstream https://skene.ai/workspace/my-app
 ```
 
 The upstream URL can also be resolved from:
 
-1. `upstream` field in `.skene-growth.config` (saved by `skene login`)
+1. `upstream` field in `.skene.config` (saved by `skene login`)
 2. `--upstream` CLI flag (highest priority)
 
 ## Next steps

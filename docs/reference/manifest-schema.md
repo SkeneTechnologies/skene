@@ -1,10 +1,10 @@
 # Manifest Schema Reference
 
-Complete JSON schema reference for growth manifests produced by skene-growth analysis.
+Complete JSON schema reference for growth manifests produced by skene analysis.
 
 ## Overview
 
-skene-growth outputs a structured JSON file called `growth-manifest.json` that captures everything discovered during codebase analysis. There are two schema versions:
+skene outputs a structured JSON file called `growth-manifest.json` that captures everything discovered during codebase analysis. There are two schema versions:
 
 | Version | Schema | Description |
 |---------|--------|-------------|
@@ -13,7 +13,7 @@ skene-growth outputs a structured JSON file called `growth-manifest.json` that c
 
 The `analyze` command produces a v1.0 manifest by default. When run with the `--product-docs` flag (or via the `generate_manifest` MCP tool with `product_docs: true`), it produces a v2.0 manifest instead.
 
-Both versions are defined as Pydantic models in `src/skene_growth/manifest/schema.py`.
+Both versions are defined as Pydantic models in `src/skene/manifest/schema.py`.
 
 ## v1.0 Manifest Example (GrowthManifest)
 
@@ -252,7 +252,7 @@ Inherits all `GrowthManifest` fields above. The `version` field defaults to `"2.
 Use the `validate` command to check that a manifest file conforms to the schema:
 
 ```bash
-uvx skene-growth validate ./growth-manifest.json
+uvx skene validate ./growth-manifest.json
 # Or using the shorthand:
 uvx skene validate ./growth-manifest.json
 ```
@@ -271,21 +271,21 @@ The primary way to generate a manifest is through the `analyze` command:
 
 ```bash
 # Generate a v1.0 GrowthManifest
-uvx skene-growth analyze .
+uvx skene analyze .
 
 # Generate a v2.0 DocsManifest (includes product_overview and features)
-uvx skene-growth analyze . --product-docs
+uvx skene analyze . --product-docs
 ```
 
 By default, the manifest is written to `./skene-context/growth-manifest.json`. You can change the output path with the `--output` flag:
 
 ```bash
-uvx skene-growth analyze . --output ./my-manifest.json
+uvx skene analyze . --output ./my-manifest.json
 ```
 
 ### 2. The `generate_manifest` MCP tool
 
-When using skene-growth as an [MCP server](../integrations/mcp-server.md), the `generate_manifest` tool produces the same output programmatically. It accepts pre-computed analysis results for individual phases (tech stack, industry, features) or auto-analyzes any missing phases. Set the `product_docs` parameter to `true` to generate a v2.0 `DocsManifest`.
+When using skene as an [MCP server](../integrations/mcp-server.md), the `generate_manifest` tool produces the same output programmatically. It accepts pre-computed analysis results for individual phases (tech stack, industry, features) or auto-analyzes any missing phases. Set the `product_docs` parameter to `true` to generate a v2.0 `DocsManifest`.
 
 ## Notes on `generated_at`
 
