@@ -67,7 +67,7 @@ Rules:
 - "instruction" is a 1-3 sentence instruction for the LLM that will write that section \
 (focus, what to analyze, what frameworks to apply).
 - Preserve the user's ordering and intent.
-- Return between 2 and 8 steps.
+- Return between 1 and 4 steps.
 - Do NOT include Executive Summary or Technical Execution — those are added automatically.
 """
 
@@ -125,8 +125,8 @@ async def parse_plan_steps_with_llm(
             raise PlanStepsParseError(f"Step missing title or instruction: {item}")
         steps.append(PlanStepDefinition(title=title, instruction=instruction))
 
-    if not (2 <= len(steps) <= 8):
-        raise PlanStepsParseError(f"Expected 2-8 steps, got {len(steps)}")
+    if not (1 <= len(steps) <= 4):
+        raise PlanStepsParseError(f"Expected 1-4 steps, got {len(steps)}")
 
     return steps
 

@@ -71,13 +71,28 @@ class TestParsePlanStepsWithLlm:
             await parse_plan_steps_with_llm(llm, "content")
 
     @pytest.mark.asyncio
-    async def test_raises_on_too_few_steps(self):
+    async def test_raises_on_too_many_steps(self):
+        llm = AsyncMock()
+        llm.generate_content = AsyncMock(
+            return_value=json.dumps(
+                [
+                    {"title": f"Step {i}", "instruction": f"Do step {i}."}
+                    for i in range(5)
+                ]
+            )
+        )
+        with pytest.raises(PlanStepsParseError, match="Expected 1-4 steps"):
+            await parse_plan_steps_with_llm(llm, "content")
+
+    @pytest.mark.asyncio
+    async def test_accepts_single_step(self):
         llm = AsyncMock()
         llm.generate_content = AsyncMock(
             return_value=json.dumps([{"title": "Only One", "instruction": "Single step."}])
         )
-        with pytest.raises(PlanStepsParseError, match="Expected 2-8 steps"):
-            await parse_plan_steps_with_llm(llm, "content")
+        steps = await parse_plan_steps_with_llm(llm, "content")
+        assert len(steps) == 1
+        assert steps[0].title == "Only One"
 
     @pytest.mark.asyncio
     async def test_raises_on_missing_fields(self):
