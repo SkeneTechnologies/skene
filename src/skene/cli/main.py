@@ -1109,20 +1109,17 @@ def init(
     ),
 ):
     """
-    Create skene base schema migration if missing.
+    Create or update skene base schema migration.
 
     Writes supabase/migrations/20260201000000_skene_growth_schema.sql with
     event_log, failed_events, enrichment_map, enrich_event, notify_event_log.
-    Safe to run repeatedly; skips if migration already exists.
+    Overwrites if migration already exists.
     """
     from skene.growth_loops.push import ensure_base_schema_migration
 
     written = ensure_base_schema_migration(path.resolve())
-    if written:
-        console.print(f"[green]Created schema migration:[/green] {written}")
-        console.print("[dim]Run supabase db push to apply.[/dim]")
-    else:
-        console.print("[dim]Base schema migration already exists.[/dim]")
+    console.print(f"[green]Schema migration:[/green] {written}")
+    console.print("[dim]Run supabase db push to apply.[/dim]")
 
 
 @app.command()
@@ -1256,17 +1253,17 @@ def push(
     secret = proxy_secret or "YOUR_PROXY_SECRET"
 
     if local is not None and forward_url == DEFAULT_LOCAL_INGEST_BASE:
+        console.print("[dim]Building migration files with default Skene.ai ingest URL for reference only.[/dim]")
         console.print(
-            "[dim]Using default Skene Cloud ingest URL. "
-            "For self-hosted, pass a trigger URL: [bold]skene push --local https://your-ingest.example.com[/bold]. "
-            "To push to upstream, use [bold]skene login[/bold].[/dim]"
+            "[dim]For self-hosted trigger ingests, pass a trigger URL: [bold]skene push --local https://your-ingest.example.com/api/v1/ingest/db-trigger[/bold].[/dim] "
         )
+        console.print("[dim]To push to upstream managed by Skene.ai, use [bold]skene login[/bold].[/dim]")
 
     try:
+        schema_path = ensure_base_schema_migration(path)
+        console.print(f"[green]Schema:[/green] {schema_path}")
+
         if not push_only:
-            schema_path = ensure_base_schema_migration(path)
-            if schema_path:
-                console.print(f"[green]Schema:[/green] {schema_path}")
             migration_path = build_loops_to_supabase(
                 loops_with_telemetry,
                 path,

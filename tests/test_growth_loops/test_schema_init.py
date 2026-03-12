@@ -39,11 +39,12 @@ class TestEnsureBaseSchemaMigration:
         assert "event_log" in content
         assert "enrichment_map" in content
 
-    def test_skips_when_already_exists(self, tmp_path: Path) -> None:
+    def test_overwrites_when_already_exists(self, tmp_path: Path) -> None:
         first = ensure_base_schema_migration(tmp_path)
         assert first is not None
         second = ensure_base_schema_migration(tmp_path)
-        assert second is None
+        assert second is not None
+        assert second == first
         # Only one migration file
         migrations = list((tmp_path / "supabase" / "migrations").glob("*skene_growth_schema*.sql"))
         assert len(migrations) == 1

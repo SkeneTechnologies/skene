@@ -100,12 +100,18 @@ CREATE TRIGGER {trg_name}
 """
 
 
-def ensure_base_schema_migration(output_dir: Path) -> Path | None:
-    """Write base schema migration if it does not exist. Idempotent."""
+def ensure_base_schema_migration(output_dir: Path) -> Path:
+    """Check, build and update the skene_growth_schema migration. Overwrites if exists."""
     migrations_dir = output_dir / "supabase" / "migrations"
     migrations_dir.mkdir(parents=True, exist_ok=True)
-    if list(migrations_dir.glob(f"*{BASE_SCHEMA_MIGRATION_NAME}*.sql")):
-        return None
+    existing = list(migrations_dir.glob(f"*{BASE_SCHEMA_MIGRATION_NAME}*.sql"))
+    if existing:
+        path = next(
+            (p for p in existing if p.name == f"{BASE_SCHEMA_MIGRATION_PREFIX}_{BASE_SCHEMA_MIGRATION_NAME}.sql"),
+            existing[0],
+        )
+        path.write_text(BASE_SCHEMA_SQL, encoding="utf-8")
+        return path
     path = migrations_dir / f"{BASE_SCHEMA_MIGRATION_PREFIX}_{BASE_SCHEMA_MIGRATION_NAME}.sql"
     path.write_text(BASE_SCHEMA_SQL, encoding="utf-8")
     return path
@@ -248,11 +254,10 @@ def build_loops_to_supabase(
     """
     Build migration for the given growth loops.
 
-    Ensures base schema migration exists (event_log, failed_events, enrichment_map)
-    before writing trigger migration. When forward_url is provided (e.g. from --local URL),
+    Assumes base schema migration exists (call ensure_base_schema_migration first).
+    When forward_url is provided (e.g. from --local URL),
     appends notify_event_log override with that ingest URL. Returns migration_path.
     """
-    ensure_base_schema_migration(output_dir)
     migration_sql = build_migration_sql(
         loops,
         supabase_url_placeholder=supabase_url_placeholder,
