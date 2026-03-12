@@ -149,7 +149,7 @@ func (v *LocalModelView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardSelectHelp())
+		Render(components.WizardSelectHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -211,7 +211,7 @@ func (v *LocalModelView) renderModelList(width int) string {
 	list := lipgloss.JoinVertical(lipgloss.Left, items...)
 
 	statusLine := lipgloss.NewStyle().
-		Foreground(styles.Success).Width(width-8).
+		Foreground(styles.SuccessColor).Width(width-8).
 		Render(fmt.Sprintf("✓ %d model(s) available at %s", len(v.models), v.baseURL))
 
 	content := lipgloss.JoinVertical(
@@ -248,13 +248,13 @@ func (v *LocalModelView) renderNotFound(width int) string {
 	errDetail := ""
 	if v.errorMsg != "" {
 		errDetail = lipgloss.NewStyle().
-			Foreground(styles.MidGray).Width(width-8).
+			Foreground(styles.MutedColor).Width(width-8).
 			Render(v.errorMsg) + "\n"
 	}
 
 	guideHeader := styles.SectionHeader.Render("Setup Guide")
 	guide := lipgloss.NewStyle().
-		Foreground(styles.White).Width(width-8).
+		Foreground(styles.TextColor).Width(width-8).
 		Render(installGuide)
 
 	retryHint := styles.Accent.Render(constants.LocalModelRetryHint)

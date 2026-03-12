@@ -201,7 +201,7 @@ const (
 	GameThrustUp     = "thrust up"
 	GameThrustDown   = "thrust down"
 	GameStatScore    = "Score    "
-	GameStatDistance  = "Distance "
+	GameStatDistance = "Distance "
 	GameStatDefeated = "Defeated "
 	GameHUDFormat    = " SCORE: %d  HP: %s  DIST: %d "
 )
@@ -288,8 +288,8 @@ const (
 	HelpDescToggleHelp       = "toggle help"
 	HelpDescHelp             = "help"
 	HelpDescNextSteps        = "next steps"
-	HelpDescPlayMiniGame     = "play mini game"
-	HelpDescPlayGame         = "play game"
+	HelpDescPlayMiniGame     = "Kill some time"
+	HelpDescPlayGame         = "Kill some time"
 	HelpDescRetry            = "retry"
 	HelpDescRetryDetection   = "retry detection"
 	HelpDescManualEntry      = "manual entry"
@@ -301,6 +301,6 @@ const (
 	HelpDescTabs             = "tabs"
 	HelpDescCopyUpdateCmd    = "copy update cmd"
 	HelpDescMove             = "move"
-	HelpDescPlayAgain        = "play again"
+	HelpDescPlayAgain        = "Kill some more time"
 	HelpDescStartGame        = "start"
 )

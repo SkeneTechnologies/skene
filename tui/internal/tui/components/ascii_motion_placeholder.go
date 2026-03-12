@@ -6,19 +6,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"skene/internal/tui/styles"
 )
-
-// Color themes - edit these values to customize for each background type
-// COLORS_DARK is used when HasDarkBackground=true (default)
-// COLORS_LIGHT is used when HasDarkBackground=false
-var COLORS_DARK = map[string]lipgloss.Color{
-	"c0": lipgloss.Color("#edc29d"),
-}
-
-var COLORS_LIGHT = map[string]lipgloss.Color{
-	"c0": lipgloss.Color("#473a2f"),
-}
 
 // ASCIIMotionModel is the interface for the welcome animation
 type ASCIIMotionModel interface {
@@ -36,39 +25,31 @@ type Frame struct {
 
 // Model is the Bubbletea model for the animation
 type Model struct {
-	frames            []Frame
-	frameIndex        int
-	isPlaying         bool
-	loop              bool
-	width             int
-	height            int
-	hasDarkBackground bool
+	frames     []Frame
+	frameIndex int
+	isPlaying  bool
+	loop       bool
+	width      int
+	height     int
 }
 
 type tickMsg time.Time
 
 // New creates a new animation model
-// Set hasDarkBackground to true for dark terminals, false for light terminals
-func New(hasDarkBackground bool) Model {
+func New() Model {
 	return Model{
-		frames:            frames,
-		frameIndex:        0,
-		isPlaying:         false,
-		loop:              true,
-		width:             80,
-		height:            24,
-		hasDarkBackground: hasDarkBackground,
+		frames:     frames,
+		frameIndex: 0,
+		isPlaying:  false,
+		loop:       true,
+		width:      80,
+		height:     24,
 	}
 }
 
-// NewWithDefaults creates a new animation model with dark background (default)
-func NewWithDefaults() Model {
-	return New(true)
-}
-
 // NewASCIIMotion creates an ASCIIMotionModel for the welcome view
-func NewASCIIMotion(hasDarkBackground bool) ASCIIMotionModel {
-	m := New(hasDarkBackground)
+func NewASCIIMotion() ASCIIMotionModel {
+	m := New()
 	return &m
 }
 
@@ -123,35 +104,37 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// getColor returns the appropriate color for the current background mode
-func (m Model) getColor(colorKey string) lipgloss.TerminalColor {
-	if m.hasDarkBackground {
-		return COLORS_DARK[colorKey]
-	}
-	return COLORS_LIGHT[colorKey]
-}
-
 // View renders the animation
 func (m Model) View() string {
 	if len(m.frames) == 0 {
 		return ""
 	}
 	frame := m.frames[m.frameIndex]
+	accent := styles.AccentStyle()
 	var sb strings.Builder
 
 	for y, row := range frame.Content {
-		// Convert to runes to get character indices (not byte offsets)
 		chars := []rune(row)
 		for x, ch := range chars {
 			key := fmt.Sprintf("%d,%d", x, y)
-			style := lipgloss.NewStyle()
-			if fgKey, ok := frame.FgColors[key]; ok {
-				style = style.Foreground(m.getColor(fgKey))
+			hasFg := false
+			hasBg := false
+			if _, ok := frame.FgColors[key]; ok {
+				hasFg = true
 			}
-			if bgKey, ok := frame.BgColors[key]; ok {
-				style = style.Background(m.getColor(bgKey))
+			if _, ok := frame.BgColors[key]; ok {
+				hasBg = true
 			}
-			sb.WriteString(style.Render(string(ch)))
+
+			if hasFg || hasBg {
+				style := accent
+				if hasBg {
+					style = style.Background(styles.BoldTextColor)
+				}
+				sb.WriteString(style.Render(string(ch)))
+			} else {
+				sb.WriteRune(ch)
+			}
 		}
 		if y < len(frame.Content)-1 {
 			sb.WriteString("\n")

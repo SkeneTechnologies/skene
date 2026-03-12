@@ -148,7 +148,7 @@ func (v *ResultsView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardResultsHelp())
+		Render(components.WizardResultsHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -189,7 +189,7 @@ func (v *ResultsView) renderTabs() string {
 func (v *ResultsView) renderContentBox() string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.Cream).
+		BorderForeground(styles.BoldTextColor).
 		Padding(1, 2).
 		Width(v.viewport.Width + 6)
 

@@ -209,8 +209,7 @@ func (b *DirBrowser) Render(width int) string {
 	}
 
 	// Path header
-	pathStyle := lipgloss.NewStyle().
-		Foreground(styles.Cream).
+	pathStyle := styles.AccentStyle().
 		Bold(true)
 
 	displayPath := b.currentPath
@@ -293,7 +292,7 @@ func (b *DirBrowser) Render(width int) string {
 }
 
 func formatScrollPos(start, end, total int) string {
-	return lipgloss.NewStyle().Foreground(styles.MidGray).Render(
+	return lipgloss.NewStyle().Foreground(styles.MutedColor).Render(
 		"[" + itoa(start) + "-" + itoa(end) + " of " + itoa(total) + "]",
 	)
 }

@@ -150,7 +150,7 @@ func (v *AuthView) Render() string {
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyM, Desc: constants.HelpDescManualEntry},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
-		}))
+		}, v.width))
 
 	// Combine
 	fullContent := lipgloss.JoinVertical(
@@ -176,7 +176,7 @@ func (v *AuthView) Render() string {
 
 func (v *AuthView) renderCountdown(width int) string {
 	message := styles.Body.Render(constants.AuthOpeningBrowser)
-	url := lipgloss.NewStyle().Foreground(styles.Amber).Width(width-8).Render(v.getDisplayURL())
+	url := styles.AccentStyle().Width(width-8).Render(v.getDisplayURL())
 
 	countdownText := fmt.Sprintf(constants.AuthRedirectingIn, v.countdown)
 	countdownStyled := styles.Muted.Render(countdownText)
@@ -214,7 +214,7 @@ func (v *AuthView) renderCountdown(width int) string {
 func (v *AuthView) renderWaiting(width int) string {
 	message := v.spinner.SpinnerWithText(constants.AuthWaiting)
 	subMessage := styles.Muted.Render(constants.AuthWaitingSub)
-	url := lipgloss.NewStyle().Foreground(styles.Amber).Width(width-8).Render(v.getDisplayURL())
+	url := styles.AccentStyle().Width(width-8).Render(v.getDisplayURL())
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -276,9 +276,9 @@ func (v *AuthView) renderFallback() string {
 
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
-	message := lipgloss.NewStyle().Foreground(styles.White).Width(sectionWidth-8).Render(constants.AuthFallbackMessage)
-	subMessage := lipgloss.NewStyle().Foreground(styles.MidGray).Width(sectionWidth-8).Render(constants.AuthFallbackSub)
-	hint := lipgloss.NewStyle().Foreground(styles.Amber).Width(sectionWidth-8).Render(constants.AuthFallbackHint)
+	message := lipgloss.NewStyle().Foreground(styles.TextColor).Width(sectionWidth-8).Render(constants.AuthFallbackMessage)
+	subMessage := lipgloss.NewStyle().Foreground(styles.MutedColor).Width(sectionWidth-8).Render(constants.AuthFallbackSub)
+	hint := styles.AccentStyle().Width(sectionWidth-8).Render(constants.AuthFallbackHint)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -300,7 +300,7 @@ func (v *AuthView) renderFallback() string {
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
-		}))
+		}, v.width))
 
 	fullContent := lipgloss.JoinVertical(
 		lipgloss.Left,

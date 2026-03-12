@@ -71,20 +71,20 @@ func (v *ErrorView) Render() string {
 	}
 
 	var severityIcon, severityLabel string
-	var titleColor lipgloss.Color
+	var titleColor lipgloss.TerminalColor
 	switch v.error.Severity {
 	case SeverityWarning:
 		severityIcon = "!"
 		severityLabel = "WARNING"
-		titleColor = styles.Warning
+		titleColor = styles.WarningColor
 	case SeverityError:
 		severityIcon = "X"
 		severityLabel = "ERROR"
-		titleColor = styles.Coral
+		titleColor = styles.ErrorColor
 	case SeverityCritical:
 		severityIcon = "!!"
 		severityLabel = "CRITICAL"
-		titleColor = styles.Coral
+		titleColor = styles.ErrorColor
 	}
 
 	severityStyle := lipgloss.NewStyle().Foreground(titleColor).Bold(true)
@@ -94,12 +94,12 @@ func (v *ErrorView) Render() string {
 
 	title := lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(v.error.Title)
 
-	messageStyle := lipgloss.NewStyle().Foreground(styles.White).Width(sectionWidth - 8)
+	messageStyle := lipgloss.NewStyle().Foreground(styles.TextColor).Width(sectionWidth - 8)
 	message := messageStyle.Render(v.error.Message)
 
 	suggestionHeader := styles.SectionHeader.Render("Suggested Fix")
 	suggestion := lipgloss.NewStyle().
-		Foreground(styles.Success).
+		Foreground(styles.SuccessColor).
 		Width(sectionWidth - 12).
 		Render("> " + v.error.Suggestion)
 
@@ -141,7 +141,7 @@ func (v *ErrorView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.FooterHelp(helpItems))
+		Render(components.FooterHelp(helpItems, v.width))
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,

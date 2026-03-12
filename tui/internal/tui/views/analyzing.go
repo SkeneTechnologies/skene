@@ -280,7 +280,7 @@ func (v *AnalyzingView) Render() string {
 		statusLine = styles.Error.Render(constants.StatusIconFailed + " " + constants.StatusFailed)
 		if v.failMessage != "" {
 			statusLine += "\n" + lipgloss.NewStyle().
-				Foreground(styles.MidGray).
+				Foreground(styles.MutedColor).
 				Width(sectionWidth).
 				Render("  "+v.failMessage)
 		}
@@ -319,7 +319,7 @@ func (v *AnalyzingView) Render() string {
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		})
+		}, v.width)
 	} else if v.failed {
 		footerContent = components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},
@@ -327,21 +327,21 @@ func (v *AnalyzingView) Render() string {
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		})
+		}, v.width)
 	} else if v.done {
 		footerContent = components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		})
+		}, v.width)
 	} else {
 		footerContent = components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
 			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		})
+		}, v.width)
 	}
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -397,7 +397,7 @@ func (v *AnalyzingView) renderPrompt(width int) string {
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MidGray).
+		BorderForeground(styles.MutedColor).
 		Padding(0, 1).
 		Width(width - 2).
 		Render(inner)

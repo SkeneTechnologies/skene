@@ -27,7 +27,7 @@ type WelcomeView struct {
 // NewWelcomeView creates a new welcome view
 func NewWelcomeView() *WelcomeView {
 	return &WelcomeView{
-		anim: components.NewASCIIMotion(styles.IsDarkBackground),
+		anim: components.NewASCIIMotion(),
 	}
 }
 
@@ -79,7 +79,7 @@ func (v *WelcomeView) SetCopied() {
 
 // ResetAnimation recreates the animation so it plays from the start
 func (v *WelcomeView) ResetAnimation() tea.Cmd {
-	v.anim = components.NewASCIIMotion(styles.IsDarkBackground)
+	v.anim = components.NewASCIIMotion()
 	v.anim.SetSize(v.width, v.height)
 	return v.anim.Init()
 }
@@ -134,7 +134,7 @@ func (v *WelcomeView) Render() string {
 	if v.newVersion != "" {
 		helpItems = append(helpItems, components.HelpItem{Key: constants.HelpKeyC, Desc: constants.HelpDescCopyUpdateCmd})
 	}
-	footer := components.FooterHelp(helpItems)
+	footer := components.FooterHelp(helpItems, v.width)
 
 	// Combine elements
 	elements := []string{

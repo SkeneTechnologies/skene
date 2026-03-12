@@ -101,7 +101,7 @@ func (v *ProviderView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardSelectHelp())
+		Render(components.WizardSelectHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -146,20 +146,20 @@ func (v *ProviderView) renderProviderList(width int) string {
 		var item string
 		if isSelected {
 			name := styles.ListItemSelected.Render(p.Name)
-			desc := lipgloss.NewStyle().Foreground(styles.Sand).PaddingLeft(2).Width(descWidth).Render(p.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(p.Description)
 			item = name + "\n" + desc
 		} else {
 			name := styles.ListItem.Render(p.Name)
-			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(p.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(p.Description)
 			item = name + "\n" + desc
 		}
 
 		// Add badges
 		if p.IsLocal {
-			item += "\n" + lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Render("[local]")
+			item += "\n" + lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Render("[local]")
 		}
 		if p.IsGeneric {
-			item += "\n" + lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Render("[custom endpoint]")
+			item += "\n" + lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Render("[custom endpoint]")
 		}
 
 		items = append(items, item)

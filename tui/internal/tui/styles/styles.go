@@ -11,72 +11,99 @@ import (
 // Set by Init(); defaults to true if Init() is not called.
 var IsDarkBackground = true
 
-// Init detects the terminal background color and applies the appropriate
-// color theme. Call this once at startup, before creating any views.
+// HasCustomTheme indicates whether the terminal appears to have a
+// non-standard foreground color (e.g. green, amber). When true the
+// lipgloss renderer is forced to ANSI (16-color) so that
+// CompleteAdaptiveColor picks the ANSI tier, which uses the user's
+// theme palette instead of brand hex values.
+var HasCustomTheme = false
+
+// Init detects the terminal background color and whether the user has
+// a custom ANSI theme. Call this once at startup, before creating any
+// views.
 func Init() {
 	output := termenv.NewOutput(os.Stdout)
 	IsDarkBackground = output.HasDarkBackground()
 
-	if !IsDarkBackground {
-		applyLightColors()
+	if detectCustomTheme(output) {
+		HasCustomTheme = true
+		lipgloss.SetColorProfile(termenv.ANSI)
 	}
+
 	rebuildStyles()
+}
+
+// detectCustomTheme queries the terminal's foreground color and returns
+// true when it appears to be a non-standard (saturated) color. Standard
+// terminals use white, gray, or black foregrounds which all have very
+// low saturation. A green, amber, or other tinted foreground indicates
+// a custom theme.
+func detectCustomTheme(output *termenv.Output) bool {
+	fg := output.ForegroundColor()
+	if fg == nil {
+		return false
+	}
+
+	c := termenv.ConvertToRGB(fg)
+	_, s, _ := c.Hsl()
+
+	const saturationThreshold = 0.20
+	return s > saturationThreshold
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // COLOR PALETTE
+//
+// Two tiers:
+//   TrueColor  – Skene brand hex values (used on standard modern terminals)
+//   ANSI       – 16-color indices that adapt to the user's theme
+//
+// When a custom theme is detected, the renderer is forced to ANSI so
+// CompleteAdaptiveColor always picks the ANSI tier.
 // ═══════════════════════════════════════════════════════════════════
 
-// Color palette - warm, retro terminal aesthetic (dark-background defaults)
 var (
-	// Primary colors
-	Cream     = lipgloss.Color("#FEC089")
-	Sand      = lipgloss.Color("#FEC089")
-	Charcoal  = lipgloss.Color("#1A1A1A")
-	DarkGray  = lipgloss.Color("#2D2D2D")
-	MidGray   = lipgloss.Color("#4A4A4A")
-	LightGray = lipgloss.Color("#6A6A6A")
-	White     = lipgloss.Color("#FFFFFF")
+	TextColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#FFFFFF", ANSI: "15"},
+		Light: lipgloss.CompleteColor{TrueColor: "#1A1410", ANSI: "0"},
+	}
 
-	// Accent colors
-	Amber   = lipgloss.Color("#FEC089")
-	Rust    = lipgloss.Color("#FEC089")
-	Coral   = lipgloss.Color("#F25246")
-	Success = lipgloss.Color("#D7F4AB")
-	Warning = lipgloss.Color("#E6B450")
+	// BoldTextColor is the raw accent color value. Use AccentStyle() for
+	// foreground text — it handles custom ANSI themes correctly. Use this
+	// directly only for borders, backgrounds, or other non-foreground uses.
+	BoldTextColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#FEC089", ANSI: "15"},
+		Light: lipgloss.CompleteColor{TrueColor: "#CE6100", ANSI: "0"},
+	}
 
-	// Game colors
-	GameCyan    = lipgloss.Color("#4CC9F0")
-	GameMagenta = lipgloss.Color("#F72585")
-	GameYellow  = lipgloss.Color("#FFD93D")
+	// InvertedTextColor is dark-on-light / light-on-dark — for text on
+	// accent-colored backgrounds.
+	InvertedTextColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#1A1410", ANSI: "0"},
+		Light: lipgloss.CompleteColor{TrueColor: "#FFFFFF", ANSI: "15"},
+	}
+
+	MutedColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#4A4A4A", ANSI: "8"},
+		Light: lipgloss.CompleteColor{TrueColor: "#E1D8D1", ANSI: "15"},
+	}
+
+	ErrorColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#F25246", ANSI: "9"},
+		Light: lipgloss.CompleteColor{TrueColor: "#F33E31", ANSI: "1"},
+	}
+
+	SuccessColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#D7F4AB", ANSI: "10"},
+		Light: lipgloss.CompleteColor{TrueColor: "#578908", ANSI: "2"},
+	}
+
+	WarningColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#E6B450", ANSI: "11"},
+		Light: lipgloss.CompleteColor{TrueColor: "#8A6500", ANSI: "3"},
+	}
 )
 
-// applyLightColors overrides the color palette with values that provide
-// strong contrast on light terminal backgrounds while keeping the warm,
-// retro aesthetic. Every color here must read clearly on a white (#FFF)
-// or near-white background.
-func applyLightColors() {
-	// Primary colors — dark, high-contrast tones
-	Cream = lipgloss.Color("#FF800F")     // Brand color (headings, titles)
-	Sand = lipgloss.Color("#FF800F")      // Brand color (subtitles)
-	Charcoal = lipgloss.Color("#F5F0EB")  // Off-white (button fill bg)
-	DarkGray = lipgloss.Color("#EDE6DD")  // Warm light gray (box bg)
-	MidGray = lipgloss.Color("#6B6058")   // Medium-dark warm gray (muted text)
-	LightGray = lipgloss.Color("#554A42") // Dark gray (secondary text)
-	White = lipgloss.Color("#1A1410")     // Near-black warm brown (body text)
-
-	// Accent colors — bold, saturated tones for visibility
-	Amber = lipgloss.Color("#FF800F")   // Brand color (primary accent)
-	Rust = lipgloss.Color("#FF800F")    // Brand color
-	Coral = lipgloss.Color("#F25246")   // Strong red
-	Success = lipgloss.Color("#7EC017") // Brand green
-	Warning = lipgloss.Color("#8A6500") // Dark gold
-
-	// Game colors — vivid and saturated for light backgrounds
-	GameCyan = lipgloss.Color("#075E7B")
-	GameMagenta = lipgloss.Color("#A01050")
-	GameYellow = lipgloss.Color("#7A5D00")
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // STYLES (rebuilt from current color values)
@@ -138,8 +165,8 @@ var (
 
 // Progress bar colors
 var (
-	ProgressFilled lipgloss.Color
-	ProgressEmpty  lipgloss.Color
+	ProgressFilled lipgloss.TerminalColor
+	ProgressEmpty  lipgloss.TerminalColor
 )
 
 // Help styles
@@ -177,137 +204,143 @@ var Spinner lipgloss.Style
 // UpdateNotice style — framed box for update + hint
 var UpdateNotice lipgloss.Style
 
-// UpdateNoticeText style — main update message (white)
+// UpdateNoticeText style — main update message
 var UpdateNoticeText lipgloss.Style
+
+// AccentStyle returns a style with the accent color applied. On standard
+// terminals this is the brand foreground; on custom ANSI themes it uses
+// Bold so the terminal's own theme color shows through. Use this (or the
+// pre-built Accent variable) for all accent-colored text. Chain
+// .Bold(true) yourself if you also want bold weight.
+func AccentStyle() lipgloss.Style {
+	if HasCustomTheme {
+		return lipgloss.NewStyle().Bold(true)
+	}
+	return lipgloss.NewStyle().Foreground(BoldTextColor)
+}
 
 // rebuildStyles constructs all lipgloss styles from the current color
 // variables. Called by Init() after colors have been set.
 func rebuildStyles() {
+	accent := AccentStyle()
+
 	// Text styles
-	Title = lipgloss.NewStyle().Foreground(Cream).Bold(true)
-	Subtitle = lipgloss.NewStyle().Foreground(Sand)
-	Body = lipgloss.NewStyle().Foreground(White)
-	Muted = lipgloss.NewStyle().Foreground(MidGray)
-	Accent = lipgloss.NewStyle().Foreground(Amber)
-	Error = lipgloss.NewStyle().Foreground(Coral)
-	SuccessText = lipgloss.NewStyle().Foreground(Success)
-	Label = lipgloss.NewStyle().Foreground(Cream).Bold(false)
-	Value = lipgloss.NewStyle().Foreground(White)
+	Title = accent.Bold(true)
+	Subtitle = accent
+	Body = lipgloss.NewStyle().Foreground(TextColor)
+	Muted = lipgloss.NewStyle().Foreground(MutedColor)
+	Accent = accent
+	Error = lipgloss.NewStyle().Foreground(ErrorColor)
+	SuccessText = lipgloss.NewStyle().Foreground(SuccessColor)
+	Label = accent
+	Value = lipgloss.NewStyle().Foreground(TextColor)
 
 	// Layout styles
 	Box = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(MidGray).
+		BorderForeground(MutedColor).
 		Padding(1, 2)
 	BoxActive = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(Cream).
+		BorderForeground(BoldTextColor).
 		Padding(1, 2)
 	RoundedBox = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(MidGray).
+		BorderForeground(MutedColor).
 		Padding(1, 2)
-	SectionHeader = lipgloss.NewStyle().
-		Foreground(Cream).
-		Bold(false).
-		MarginBottom(1)
+	SectionHeader = accent.MarginBottom(1)
 
 	// Button styles
 	Button = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(MidGray).
-		Foreground(White).
+		BorderForeground(MutedColor).
+		Foreground(TextColor).
 		Padding(0, 3)
 	ButtonActive = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(Charcoal).
-		BorderBackground(Cream).
-		Foreground(Charcoal).
-		Background(Cream).
-		Padding(0, 3)
+		Reverse(true).
+		Padding(1, 4)
 	ButtonMuted = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(MidGray).
-		Foreground(MidGray).
+		BorderForeground(MutedColor).
+		Foreground(MutedColor).
 		Padding(0, 3)
 
 	// Tab styles
 	TabInactive = lipgloss.NewStyle().
 		Border(TabBorder, true).
-		BorderForeground(MidGray).
-		Foreground(MidGray).
+		BorderForeground(MutedColor).
+		Foreground(MutedColor).
 		Padding(0, 2)
 	TabActive = lipgloss.NewStyle().
 		Border(TabBorder, true).
-		BorderForeground(Cream).
-		Foreground(White).
+		BorderForeground(BoldTextColor).
+		Foreground(TextColor).
 		Padding(0, 2)
 
 	// List styles
 	ListItem = lipgloss.NewStyle().
-		Foreground(White).
+		Foreground(TextColor).
 		PaddingLeft(2)
-	ListItemSelected = lipgloss.NewStyle().
+	ListItemSelected = accent.
 		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(Amber).
-		Foreground(Amber).
+		BorderForeground(BoldTextColor).
 		PaddingLeft(1)
 	ListItemDimmed = lipgloss.NewStyle().
-		Foreground(MidGray).
+		Foreground(MutedColor).
 		PaddingLeft(2)
 	ListDescription = lipgloss.NewStyle().
-		Foreground(MidGray).
+		Foreground(MutedColor).
 		PaddingLeft(2)
 	ListDescriptionSelected = lipgloss.NewStyle().
-		Foreground(Sand).
+		Foreground(MutedColor).
 		PaddingLeft(2)
 
 	// Progress bar colors
-	ProgressFilled = Amber
-	ProgressEmpty = MidGray
+	ProgressFilled = BoldTextColor
+	ProgressEmpty = MutedColor
 
 	// Help styles
-	HelpKey = lipgloss.NewStyle().Foreground(Cream).Bold(true)
-	HelpDesc = lipgloss.NewStyle().Foreground(MidGray)
-	HelpSeparator = lipgloss.NewStyle().Foreground(MidGray).SetString(" • ")
+	HelpKey = accent.Bold(true)
+	HelpDesc = lipgloss.NewStyle().Foreground(MutedColor)
+	HelpSeparator = lipgloss.NewStyle().Foreground(MutedColor).SetString(" • ")
 
 	// ASCII art style
-	ASCII = lipgloss.NewStyle().Foreground(Cream)
-	ASCIIAnimated = lipgloss.NewStyle().Foreground(Amber)
+	ASCII = accent
+	ASCIIAnimated = accent
 
 	// Table styles
-	TableHeader = lipgloss.NewStyle().Foreground(MidGray).Bold(false)
-	TableRow = lipgloss.NewStyle().Foreground(White)
-	TableSeparator = lipgloss.NewStyle().Foreground(MidGray)
+	TableHeader = lipgloss.NewStyle().Foreground(MutedColor).Bold(false)
+	TableRow = lipgloss.NewStyle().Foreground(TextColor)
+	TableSeparator = lipgloss.NewStyle().Foreground(MutedColor)
 
 	// Modal styles
 	Modal = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(MidGray).
+		BorderForeground(MutedColor).
 		Padding(1, 2).
 		Align(lipgloss.Center)
 	ModalTitle = lipgloss.NewStyle().
-		Foreground(White).
+		Foreground(TextColor).
 		Bold(false).
 		MarginBottom(1)
 
 	// Footer help bar
-	FooterHelp = lipgloss.NewStyle().Foreground(MidGray).MarginTop(1)
+	FooterHelp = lipgloss.NewStyle().Foreground(MutedColor).MarginTop(1)
 
 	// Spinner style
-	Spinner = lipgloss.NewStyle().Foreground(Amber)
+	Spinner = accent
 
 	// UpdateNotice — bordered box for update + hint (no bg; centered text)
 	UpdateNotice = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(MidGray).
+		BorderForeground(MutedColor).
 		Padding(1, 1).
 		Align(lipgloss.Center).
 		MarginTop(1)
-	UpdateNoticeText = lipgloss.NewStyle().Foreground(White)
+	UpdateNoticeText = lipgloss.NewStyle().Foreground(TextColor)
 }
 
-// init sets up the default dark-theme styles at package load time.
+// init sets up the default styles at package load time.
 // This ensures styles are usable even if Init() is not called.
 func init() {
 	rebuildStyles()
@@ -328,7 +361,7 @@ func PlaceCenter(width, height int, content string) string {
 // Divider creates a horizontal line
 func Divider(width int) string {
 	return lipgloss.NewStyle().
-		Foreground(MidGray).
+		Foreground(MutedColor).
 		Render(repeatString("─", width))
 }
 
@@ -342,8 +375,7 @@ func repeatString(s string, n int) string {
 
 // PageTitle creates a centered page title
 func PageTitle(title string, width int) string {
-	return lipgloss.NewStyle().
-		Foreground(Cream).
+	return AccentStyle().Bold(true).
 		Width(width).
 		Align(lipgloss.Center).
 		Render(title)

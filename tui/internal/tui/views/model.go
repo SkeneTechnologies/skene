@@ -90,7 +90,7 @@ func (v *ModelView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardSelectHelp())
+		Render(components.WizardSelectHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -128,11 +128,11 @@ func (v *ModelView) renderModelList(width int) string {
 		var item string
 		if isSelected {
 			name := styles.ListItemSelected.Render(m.Name)
-			desc := lipgloss.NewStyle().Foreground(styles.Sand).PaddingLeft(2).Width(descWidth).Render(m.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(m.Description)
 			item = name + "\n" + desc
 		} else {
 			name := styles.ListItem.Render(m.Name)
-			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(m.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(m.Description)
 			item = name + "\n" + desc
 		}
 		items = append(items, item)

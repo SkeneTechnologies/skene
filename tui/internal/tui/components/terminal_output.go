@@ -240,16 +240,16 @@ func (t *TerminalOutput) Render(width int) string {
 	var displayLines []string
 
 	defaultStyle := lipgloss.NewStyle().
-		Foreground(styles.Cream).
+		Foreground(styles.TextColor).
 		Width(contentWidth)
 	errorStyle := lipgloss.NewStyle().
-		Foreground(styles.Coral).
+		Foreground(styles.ErrorColor).
 		Width(contentWidth)
 	successStyle := lipgloss.NewStyle().
-		Foreground(styles.Success).
+		Foreground(styles.SuccessColor).
 		Width(contentWidth)
 	warningStyle := lipgloss.NewStyle().
-		Foreground(styles.Warning).
+		Foreground(styles.WarningColor).
 		Width(contentWidth)
 
 	for i := startIdx; i < endIdx && i < totalWrapped; i++ {
@@ -279,14 +279,13 @@ func (t *TerminalOutput) Render(width int) string {
 
 	var scrollIndicator string
 	if t.scrollOff > 0 {
-		scrollIndicator = lipgloss.NewStyle().
-			Foreground(styles.Amber).
+		scrollIndicator = styles.AccentStyle().
 			Render(fmt.Sprintf("  ↑↓ scroll • %d more below", t.scrollOff))
 	}
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MidGray).
+		BorderForeground(styles.MutedColor).
 		Padding(0, 1).
 		Width(width - 2)
 

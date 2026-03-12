@@ -196,7 +196,7 @@ func (v *APIKeyView) Render() string {
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardInputHelp())
+		Render(components.WizardInputHelp(v.width))
 
 	// Combine
 	content := lipgloss.JoinVertical(
@@ -266,7 +266,7 @@ func (v *APIKeyView) renderContent(width int) string {
 
 	if urlHint != "" {
 		elements = append(elements, lipgloss.NewStyle().
-			Foreground(styles.MidGray).Width(width-8).Render(urlHint), "")
+			Foreground(styles.MutedColor).Width(width-8).Render(urlHint), "")
 	}
 
 	elements = append(elements, apiKeyLabel, inputField)
@@ -288,7 +288,7 @@ func (v *APIKeyView) renderContent(width int) string {
 	if v.error != "" {
 		elements = append(elements, "")
 		elements = append(elements, lipgloss.NewStyle().
-			Foreground(styles.Coral).Width(width-8).Render("✗ "+v.error))
+			Foreground(styles.ErrorColor).Width(width-8).Render("✗ "+v.error))
 		if v.retryCount > 0 {
 			elements = append(elements, styles.Muted.Render(fmt.Sprintf("  Attempt %d", v.retryCount+1)))
 		}

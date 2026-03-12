@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"skene/internal/game"
 	"skene/internal/tui"
 	"skene/internal/tui/styles"
 
@@ -14,6 +15,7 @@ func main() {
 	// Detect terminal background (light vs dark) and apply the
 	// appropriate color theme. Must run before bubbletea takes over.
 	styles.Init()
+	game.RebuildGameStyles()
 
 	// Create the application
 	app := tui.NewApp()
