@@ -5,7 +5,8 @@ DEFAULT_INGEST_URL = "https://YOUR_INGEST_URL"
 DEFAULT_PROXY_SECRET = "YOUR_PROXY_SECRET"
 
 # Base schema: tables + enrich_event + notify_event_log (with placeholders)
-BASE_SCHEMA_SQL = """
+BASE_SCHEMA_SQL = (
+    """
 -- Skene Growth: event_log, failed_events, enrichment_map
 -- 1. Schema tables
 -- 2. enrich_event (BEFORE INSERT)
@@ -91,8 +92,12 @@ SET search_path = public, skene_growth, net
 AS $$
 DECLARE
   payload jsonb;
-  ingest_url text := '""" + DEFAULT_INGEST_URL + """/api/v1/cloud/ingest/db-trigger';
-  proxy_secret text := '""" + DEFAULT_PROXY_SECRET + """';
+  ingest_url text := '"""
+    + DEFAULT_INGEST_URL
+    + """/api/v1/cloud/ingest/db-trigger';
+  proxy_secret text := '"""
+    + DEFAULT_PROXY_SECRET
+    + """';
 BEGIN
   payload := jsonb_build_object(
     'type', 'INSERT',
@@ -120,6 +125,7 @@ CREATE TRIGGER skene_growth_webhook_event_log
   FOR EACH ROW
   EXECUTE FUNCTION skene_growth.notify_event_log();
 """.strip()
+)
 
 
 def notify_event_log_sql(ingest_url: str, proxy_secret: str) -> str:

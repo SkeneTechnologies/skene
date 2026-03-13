@@ -1280,7 +1280,8 @@ def push(
     if local is not None and forward_url == DEFAULT_LOCAL_INGEST_BASE:
         console.print("[dim]Building migration files with default Skene.ai ingest URL for reference only.[/dim]")
         console.print(
-            "[dim]For self-hosted trigger ingests, pass a trigger URL: [bold]skene push --local https://your-ingest.example.com/api/v1/ingest/db-trigger[/bold].[/dim] "
+            "[dim]For self-hosted trigger ingests, pass a trigger URL: "
+            "[bold]skene push --local https://your-ingest.example.com/api/v1/ingest/db-trigger[/bold].[/dim]"
         )
         console.print("[dim]To push to upstream managed by Skene.ai, use [bold]skene login[/bold].[/dim]")
 
