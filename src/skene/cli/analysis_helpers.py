@@ -504,7 +504,7 @@ async def run_generate_plan(
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
             growth_plan = None
-            tokens_used: list[int] = []
+            tokens_used: list[dict[str, int]] = []
             if activation:
                 # Activation memo: single LLM call with progress spinner
                 stop_event = asyncio.Event()

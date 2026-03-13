@@ -128,39 +128,8 @@ class GoogleGeminiClient(LLMClient):
         self,
         prompt: str,
     ) -> str:
-        """
-        Generate text from Gemini.
-
-        Automatically retries with fallback model on rate limit errors.
-
-        Args:
-            prompt: The prompt to send to the model
-
-        Returns:
-            Generated text as a string
-
-        Raises:
-            RuntimeError: If generation fails on both primary and fallback models
-        """
-        try:
-            response = await self._call_api(self.model_name, prompt)
-            return response.text.strip()
-        except Exception as e:
-            if self._is_rate_limit_error(e):
-                if self.no_fallback:
-                    return await self._retry_with_backoff(prompt, stream=False)
-                logger.warning(
-                    f"Rate limit (429) hit on model {self.model_name}, falling back to {self.fallback_model}"
-                )
-                try:
-                    response = await self._call_api(self.fallback_model, prompt)
-                    logger.info(f"Successfully generated content using fallback model {self.fallback_model}")
-                    return response.text.strip()
-                except Exception as fallback_error:
-                    raise RuntimeError(
-                        f"Error calling Google Gemini (fallback model {self.fallback_model}): {fallback_error}"
-                    )
-            raise RuntimeError(f"Error calling Google Gemini: {e}")
+        content, _ = await self.generate_content_with_usage(prompt)
+        return content
 
     async def generate_content_with_usage(
         self,

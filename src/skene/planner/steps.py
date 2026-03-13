@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from skene.llm import LLMClient
+from skene.planner._json import strip_json_fences
 
 
 @dataclass
@@ -101,12 +101,7 @@ async def parse_plan_steps_with_llm(
     except Exception as exc:
         raise PlanStepsParseError(f"LLM call failed: {exc}") from exc
 
-    text = response.strip()
-    fence_pattern = re.compile(r"^```(?:json)?\s*\n(.*?)\n```\s*$", re.DOTALL)
-    match = fence_pattern.match(text)
-    if match:
-        text = match.group(1).strip()
-
+    text = strip_json_fences(response)
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:

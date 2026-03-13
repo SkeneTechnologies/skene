@@ -5,12 +5,12 @@ Creates detailed implementation plans for growth strategies.
 """
 
 import json
-import re
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
 from skene.llm import LLMClient
+from skene.planner._json import parse_json_fragment
 from skene.planner.schema import (
     GrowthPlan,
     PlanSection,
@@ -100,7 +100,7 @@ class Planner:
         accumulated: list[str] = []
 
         # Step 1: Executive Summary
-        exec_summary, exec_tokens = await self._generate_executive_summary(llm, shared_context, accumulated)
+        exec_summary, exec_tokens = await self._generate_executive_summary(llm, shared_context)
         exec_md = f"## Executive Summary\n\n{exec_summary}\n"
         accumulated.append(exec_md)
         if on_step:
@@ -118,11 +118,13 @@ class Planner:
                 on_step(i, step.title, section_md, section_tokens)
 
         # Final step: Technical Execution
-        te_step_number = len(steps) + 2
+        # section_index: 1-based position among numbered plan sections (exec summary is unnumbered)
+        # callback_step: 1-based position across all LLM calls (1=exec summary, 2..N+1=sections, N+2=TE)
+        section_index = len(raw_sections) + 1
+        llm_call_count = len(steps) + 2
         tech_exec, te_tokens = await self._generate_technical_execution(llm, shared_context, accumulated)
-        te_number = len(raw_sections) + 1
         te_md = (
-            f"### {te_number}. Technical Execution\n\n"
+            f"### {section_index}. Technical Execution\n\n"
             f"**What is the next activation loop to build?**\n{tech_exec.next_build}\n\n"
             f"**Confidence:** {tech_exec.confidence}\n\n"
             f"**Exact Logic:**\n{tech_exec.exact_logic}\n\n"
@@ -132,7 +134,7 @@ class Planner:
         )
         accumulated.append(te_md)
         if on_step:
-            on_step(te_step_number, "Technical Execution", te_md, te_tokens)
+            on_step(llm_call_count, "Technical Execution", te_md, te_tokens)
 
         # Harmonization pass
         if on_harmonize:
@@ -156,8 +158,7 @@ class Planner:
         self,
         llm: LLMClient,
         shared_context: str,
-        accumulated: list[str],
-    ) -> str:
+    ) -> tuple[str, dict[str, int] | None]:
         prompt = (
             f"{_COUNCIL_ROLE}\n\n"
             f"## Project Context\n\n{shared_context}\n\n"
@@ -171,7 +172,7 @@ class Planner:
             "No markdown fences, no explanation."
         )
         response, tokens = await llm.generate_content_with_usage(prompt)
-        data = _parse_json_fragment(response)
+        data = parse_json_fragment(response)
         return (str(data.get("executive_summary", response.strip())), tokens)
 
     async def _generate_section(
@@ -180,7 +181,7 @@ class Planner:
         shared_context: str,
         step: PlanStepDefinition,
         accumulated: list[str],
-    ) -> str:
+    ) -> tuple[str, dict[str, int] | None]:
         prior = "\n".join(accumulated) if accumulated else ""
         prior_block = f"## Prior sections (for coherence)\n\n{prior}\n\n---\n\n" if prior else ""
         prompt = (
@@ -194,7 +195,7 @@ class Planner:
             "No markdown fences, no explanation."
         )
         response, tokens = await llm.generate_content_with_usage(prompt)
-        data = _parse_json_fragment(response)
+        data = parse_json_fragment(response)
         return (str(data.get("content", response.strip())), tokens)
 
     async def _generate_technical_execution(
@@ -202,7 +203,7 @@ class Planner:
         llm: LLMClient,
         shared_context: str,
         accumulated: list[str],
-    ) -> TechnicalExecution:
+    ) -> tuple[TechnicalExecution, dict[str, int] | None]:
         prior = "\n".join(accumulated)
         prompt = (
             f"{_COUNCIL_ROLE}\n\n"
@@ -221,7 +222,7 @@ class Planner:
             "No markdown fences, no explanation."
         )
         response, tokens = await llm.generate_content_with_usage(prompt)
-        data = _parse_json_fragment(response)
+        data = parse_json_fragment(response)
         te = TechnicalExecution(
             next_build=str(data.get("next_build", "")),
             confidence=str(data.get("confidence", "")),
@@ -270,7 +271,7 @@ class Planner:
         )
         response = await llm.generate_content(prompt)
         try:
-            data = _parse_json_fragment(response)
+            data = parse_json_fragment(response)
             return GrowthPlan.model_validate(data)
         except Exception:
             # Harmonization failed — return the assembled plan as-is
@@ -581,16 +582,3 @@ product functionality producing real output.
                         lines.append(f"  - {metric.get('name', 'Unknown')}: {benchmark}")
 
         return "\n".join(lines)
-
-
-def _parse_json_fragment(response: str) -> dict[str, Any]:
-    """Parse a JSON object from an LLM response, stripping code fences if present."""
-    text = response.strip()
-    fence_pattern = re.compile(r"^```(?:json)?\s*\n(.*?)\n```\s*$", re.DOTALL)
-    match = fence_pattern.match(text)
-    if match:
-        text = match.group(1).strip()
-    data = json.loads(text)
-    if not isinstance(data, dict):
-        raise ValueError(f"Expected JSON object, got {type(data)}")
-    return data

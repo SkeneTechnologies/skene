@@ -64,49 +64,8 @@ class AnthropicClient(LLMClient):
         self,
         prompt: str,
     ) -> str:
-        """
-        Generate text from Anthropic.
-
-        Automatically retries with fallback model on rate limit errors.
-
-        Args:
-            prompt: The prompt to send to the model
-
-        Returns:
-            Generated text as a string
-
-        Raises:
-            RuntimeError: If generation fails on both primary and fallback models
-        """
-        try:
-            from anthropic import RateLimitError
-        except ImportError:
-            RateLimitError = Exception  # Fallback if import fails
-
-        try:
-            response = await self.client.messages.create(
-                model=self.model_name,
-                max_tokens=8192,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text.strip()
-        except RateLimitError as e:
-            logger.warning(f"RateLimitError on {self.model_name}: {e}")
-            if self.no_fallback:
-                return await self._retry_with_backoff(prompt)
-            logger.warning(f"Falling back to {self.fallback_model}")
-            try:
-                response = await self.client.messages.create(
-                    model=self.fallback_model,
-                    max_tokens=8192,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                logger.info(f"Successfully generated content using fallback model {self.fallback_model}")
-                return response.content[0].text.strip()
-            except Exception as fallback_error:
-                raise RuntimeError(f"Error calling Anthropic (fallback model {self.fallback_model}): {fallback_error}")
-        except Exception as e:
-            raise RuntimeError(f"Error calling Anthropic: {e}")
+        content, _ = await self.generate_content_with_usage(prompt)
+        return content
 
     async def generate_content_with_usage(
         self,

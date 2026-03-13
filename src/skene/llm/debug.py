@@ -43,38 +43,10 @@ class DebugLLMClient(LLMClient):
             f.write(text + "\n")
 
     async def generate_content(self, prompt: str) -> str:
-        self._call_count += 1
-        call_id = self._call_count
-        ts = datetime.now().isoformat()
+        content, _ = await self.generate_content_with_usage(prompt)
+        return content
 
-        self._write(
-            f"\n--- Call #{call_id} | {ts} ---\n"
-            f"Provider: {self._client.get_provider_name()}\n"
-            f"Model: {self._client.get_model_name()}\n"
-            f"\n[PROMPT]\n{prompt}\n"
-        )
-        logger.debug(
-            "LLM call #{} | provider={} model={} prompt_len={}",
-            call_id,
-            self._client.get_provider_name(),
-            self._client.get_model_name(),
-            len(prompt),
-        )
-
-        start = time.monotonic()
-        response = await self._client.generate_content(prompt)
-        duration = time.monotonic() - start
-
-        self._write(f"\n[RESPONSE] ({duration:.2f}s)\n{response}\n\n--- End call #{call_id} ---\n")
-        logger.debug(
-            "LLM call #{} completed | {:.2f}s | response_len={}",
-            call_id,
-            duration,
-            len(response),
-        )
-        return response
-
-    async def generate_content_with_usage(self, prompt: str) -> tuple[str, int | None]:
+    async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
         self._call_count += 1
         call_id = self._call_count
         ts = datetime.now().isoformat()
