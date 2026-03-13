@@ -65,7 +65,7 @@ def _find_telemetry_migration(migrations_dir: Path) -> Path | None:
     """Find the latest telemetry migration (skene_telemetry), not the schema."""
     if not migrations_dir.exists():
         return None
-    matches = [p for p in migrations_dir.glob("*.sql") if "skene_growth_telemetry" in p.name.lower()]
+    matches = [p for p in migrations_dir.glob("*.sql") if "skene_telemetry" in p.name.lower()]
     return max(matches, key=lambda p: p.name) if matches else None
 
 

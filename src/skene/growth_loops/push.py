@@ -194,7 +194,7 @@ def write_migration(
     migration_sql: str,
     output_dir: Path,
     *,
-    migration_name: str = "skene_growth_telemetry",
+    migration_name: str = "skene_telemetry",
 ) -> Path:
     """Write migration SQL to supabase/migrations/ with timestamp filename."""
     migrations_dir = output_dir / "supabase" / "migrations"

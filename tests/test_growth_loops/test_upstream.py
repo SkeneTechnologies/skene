@@ -34,7 +34,7 @@ class TestBuildPackage:
         (tmp_path / "skene-context" / "growth-loops").mkdir(parents=True)
         (tmp_path / "skene-context" / "growth-loops" / "loop1.json").write_text('{"loop_id": "loop1"}')
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql"
         telemetry_sql.write_text("CREATE TRIGGER")
 
         package = build_package(tmp_path)
@@ -46,7 +46,7 @@ class TestBuildPackage:
     def test_package_excludes_schema_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
         (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")
-        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql"
+        telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql"
         telemetry_sql.write_text("CREATE TRIGGER")
 
         package = build_package(tmp_path)
@@ -55,8 +55,8 @@ class TestBuildPackage:
 
     def test_package_uses_latest_telemetry_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "20260218164139_skene_growth_telemetry.sql").write_text("-- older")
-        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_growth_telemetry.sql").write_text("-- latest")
+        (tmp_path / "supabase" / "migrations" / "20260218164139_skene_telemetry.sql").write_text("-- older")
+        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql").write_text("-- latest")
 
         package = build_package(tmp_path)
         assert package["telemetry_sql"] == "-- latest"

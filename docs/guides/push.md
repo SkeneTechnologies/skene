@@ -81,7 +81,7 @@ When not using `--push-only`, the command:
 - Loads growth loop JSON files from `skene-context/growth-loops/`
 - Filters for loops with Supabase telemetry (`type: "supabase"`)
 - Generates SQL trigger functions that INSERT into `skene_growth.event_log`
-- Writes `supabase/migrations/<timestamp>_skene_growth_telemetry.sql`
+- Writes `supabase/migrations/<timestamp>_skene_telemetry.sql`
 
 Each trigger uses idempotent DDL (DROP TRIGGER IF EXISTS before CREATE).
 

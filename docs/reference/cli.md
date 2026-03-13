@@ -318,7 +318,7 @@ skene push [PATH] [OPTIONS]
 
 - On every run, checks and updates `supabase/migrations/20260201000000_skene_growth_schema.sql`. Creates it if missing; overwrites if exists (no duplicate migrations).
 - Unless `--push-only` is used: requires growth loops with Supabase telemetry (type `"supabase"`) in `skene-context/growth-loops/`.
-- Unless `--push-only` is used: generates trigger migrations at `supabase/migrations/<timestamp>_skene_growth_telemetry.sql`.
+- Unless `--push-only` is used: generates trigger migrations at `supabase/migrations/<timestamp>_skene_telemetry.sql`.
 - When `--upstream` is provided (or resolved from `.skene.config`), pushes the package (growth loops + telemetry SQL) to the upstream API.
 - Use `skene login` to authenticate before pushing to upstream.
 - `--local` skips the upstream push entirely. Without a URL, uses Skene Cloud ingest by default. With `--local https://...`, the ingest URL is hardcoded into `notify_event_log()` in the telemetry migration.

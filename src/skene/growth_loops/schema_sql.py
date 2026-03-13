@@ -128,13 +128,25 @@ CREATE TRIGGER skene_growth_webhook_event_log
 )
 
 
+DB_TRIGGER_PATH = "/api/v1/cloud/ingest/db-trigger"
+
+
+def _normalize_ingest_url(url: str) -> str:
+    """Return full webhook URL, appending db-trigger path only if not already present."""
+    base = url.rstrip("/")
+    if base.endswith(DB_TRIGGER_PATH):
+        return base
+    return f"{base}{DB_TRIGGER_PATH}"
+
+
 def notify_event_log_sql(ingest_url: str, proxy_secret: str) -> str:
     """
     Generate CREATE OR REPLACE for notify_event_log with given ingest URL and proxy secret.
     Use when --local URL is provided to override the default placeholders.
     """
     # Escape single quotes for SQL string literals
-    url_escaped = ingest_url.rstrip("/").replace("'", "''")
+    full_url = _normalize_ingest_url(ingest_url)
+    url_escaped = full_url.replace("'", "''")
     secret_escaped = proxy_secret.replace("'", "''")
     return f"""
 -- Webhook override: ingest URL and proxy secret from --local
@@ -144,7 +156,7 @@ SET search_path = public, skene_growth, net
 AS $$
 DECLARE
   payload jsonb;
-  ingest_url text := '{url_escaped}/api/v1/cloud/ingest/db-trigger';
+  ingest_url text := '{url_escaped}';
   proxy_secret text := '{secret_escaped}';
 BEGIN
   payload := jsonb_build_object(

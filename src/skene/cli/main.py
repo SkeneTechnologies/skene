@@ -1199,7 +1199,7 @@ def push(
 
     Creates:
     - supabase/migrations/20260201000000_skene_growth_schema.sql: event_log, failed_events, enrichment_map, webhook
-    - supabase/migrations/<timestamp>_skene_growth_telemetry.sql: idempotent triggers
+    - supabase/migrations/<timestamp>_skene_telemetry.sql: idempotent triggers
       on telemetry-defined tables that INSERT into event_log
 
     With --local: build schema + telemetry migrations only (no upstream push), using default Skene Cloud ingest URL.
@@ -1310,7 +1310,7 @@ def push(
                 migrations_dir = path / "supabase" / "migrations"
                 if migrations_dir.exists():
                     telemetry = next(
-                        (p for p in sorted(migrations_dir.glob("*.sql")) if "skene_growth_telemetry" in p.name.lower()),
+                        (p for p in sorted(migrations_dir.glob("*.sql")) if "skene_telemetry" in p.name.lower()),
                         None,
                     )
                     if telemetry:
