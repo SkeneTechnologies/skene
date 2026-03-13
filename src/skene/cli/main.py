@@ -113,6 +113,12 @@ def _ensure_local_has_default_url() -> None:
         argv.insert(next_idx, DEFAULT_LOCAL_INGEST_BASE)
 
 
+def _run_cli(app_fn) -> None:
+    """Run CLI app after applying push --local default URL injection."""
+    _ensure_local_has_default_url()
+    app_fn()
+
+
 def version_callback(value: bool):
     """Show version and exit."""
     if value:
@@ -2035,15 +2041,12 @@ def skene_entry_point():
                 tool_output_limit_arg,
             )
 
-    # Run the app - typer will handle sys.argv automatically
-    _ensure_local_has_default_url()
-    skene_app()
+    _run_cli(skene_app)
 
 
 def skene_growth_entry():
     """Entry point for 'skene-growth' command (development). Use 'skene' for production."""
-    _ensure_local_has_default_url()
-    app()
+    _run_cli(app)
 
 
 def skene_growth_mcp_entry():
@@ -2054,5 +2057,4 @@ def skene_growth_mcp_entry():
 
 
 if __name__ == "__main__":
-    _ensure_local_has_default_url()
-    app()
+    _run_cli(app)

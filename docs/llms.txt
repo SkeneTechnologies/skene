@@ -29,7 +29,7 @@ skene status [PATH]
 skene push [PATH]
   Build Supabase migrations from growth loop telemetry and push to upstream.
   On every run: checks and updates skene_growth_schema (creates or overwrites).
-  Flags: -c/--context, -l/--loop, -u/--upstream, --push-only, --local [URL]
+  Flags: -c/--context, -l/--loop, -u/--upstream, --push-only, --local [URL], --init (schema only, no telemetry)
 
 skene login
   Log in to Skene Cloud upstream for push.
@@ -37,9 +37,6 @@ skene login
 
 skene logout
   Log out from upstream (remove saved token).
-
-skene push --init [PATH]
-  Create or update skene base schema migration (event_log, failed_events, enrichment_map).
 
 skene features export [PATH]
   Export feature registry in json, csv, or markdown format.
