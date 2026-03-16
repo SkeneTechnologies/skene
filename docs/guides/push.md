@@ -37,10 +37,10 @@ Build migrations locally without pushing (no upstream required):
 uvx skene push --local
 ```
 
-Build migrations locally and bake an upstream ingest URL into the webhook (for self-hosted or custom ingest):
+Build migrations locally and bake a custom upstream ingest URL into the webhook (for self-hosted or custom ingest):
 
 ```bash
-uvx skene push --local https://skene.ai --proxy-secret my-secret
+uvx skene push --local --ingest-url https://skene.ai --proxy-secret my-secret
 ```
 
 ## Flag reference
@@ -52,8 +52,9 @@ uvx skene push --local https://skene.ai --proxy-secret my-secret
 | `--loop TEXT` | `-l` | Push only this loop by `loop_id`. If omitted, pushes all loops with Supabase telemetry. |
 | `--upstream TEXT` | `-u` | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
 | `--push-only` | | Re-push current output without regenerating migrations |
-| `--local [URL]` | | Build schema + telemetry migrations locally without pushing. Optionally provide upstream ingest URL (default: `https://www.skene.ai/api/v1/cloud/ingest/db-trigger`). |
-| `--proxy-secret TEXT` | | Proxy secret for ingest endpoint (use with `--local URL`). Default: `YOUR_PROXY_SECRET` placeholder. |
+| `--local` | | Build schema + telemetry migrations locally without pushing (uses default Skene Cloud ingest URL). Mutually exclusive with `--upstream` and `--push-only`. |
+| `--ingest-url TEXT` | | Custom upstream ingest URL to bake into `notify_event_log()`. Use with `--local`. Default: `https://www.skene.ai/api/v1/cloud/ingest/db-trigger`. |
+| `--proxy-secret TEXT` | | Proxy secret for the `x-skene-secret` header in `notify_event_log()`. Use with `--local`. Default: `YOUR_PROXY_SECRET` placeholder. |
 
 ## How it works
 
@@ -85,7 +86,7 @@ When not using `--push-only`, the command:
 
 Each trigger uses idempotent DDL (DROP TRIGGER IF EXISTS before CREATE).
 
-With `--local https://...`, the webhook URL and proxy secret are baked into the telemetry migration.
+With `--local --ingest-url https://...`, the custom webhook URL and proxy secret are baked into the telemetry migration.
 
 ### Step 3: Push to upstream (optional)
 

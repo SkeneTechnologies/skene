@@ -17,7 +17,6 @@ Configuration files (optional):
 import asyncio
 import json
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -58,6 +57,7 @@ from skene.cli.prompt_builder import (
 )
 from skene.cli.sample_report import show_sample_report
 from skene.config import default_model_for_provider, load_config, resolve_upstream_token
+from skene.growth_loops.schema_sql import DB_TRIGGER_PATH
 from skene.planner import find_plan_steps_path
 
 # Command order and groups for --help
@@ -95,27 +95,12 @@ app = typer.Typer(
 
 console = Console()
 
-# Default upstream ingest URL when --local is used without a URL
+# Default upstream ingest URL when --local is used without --ingest-url
 DEFAULT_LOCAL_INGEST_BASE = "https://www.skene.ai"
 
 
-def _ensure_local_has_default_url() -> None:
-    """When push --local is used without URL, inject default upstream ingest base URL."""
-    argv = sys.argv
-    if "push" not in argv or "--local" not in argv:
-        return
-    try:
-        idx = argv.index("--local")
-    except ValueError:
-        return
-    next_idx = idx + 1
-    if next_idx >= len(argv) or argv[next_idx].startswith("-"):
-        argv.insert(next_idx, DEFAULT_LOCAL_INGEST_BASE)
-
-
 def _run_cli(app_fn) -> None:
-    """Run CLI app after applying push --local default URL injection."""
-    _ensure_local_has_default_url()
+    """Run CLI app."""
     app_fn()
 
 
@@ -1160,18 +1145,20 @@ def push(
         "--push-only",
         help="Re-push current output without regenerating",
     ),
-    local: Optional[str] = typer.Option(
-        None,
+    local: bool = typer.Option(
+        False,
         "--local",
-        help=(
-            "Build migrations locally without pushing upstream. "
-            "Optionally provide upstream ingest URL (default: https://www.skene.ai/api/v1/cloud/ingest/db-trigger)."
-        ),
+        help="Build migrations locally without pushing upstream (uses default Skene Cloud ingest URL).",
+    ),
+    ingest_url: Optional[str] = typer.Option(
+        None,
+        "--ingest-url",
+        help=f"Custom upstream ingest URL (use with --local). Default: {DEFAULT_LOCAL_INGEST_BASE}{DB_TRIGGER_PATH}",
     ),
     proxy_secret: Optional[str] = typer.Option(
         None,
         "--proxy-secret",
-        help="Proxy secret for upstream ingest endpoint (use with --local URL). Default: YOUR_PROXY_SECRET.",
+        help="Proxy secret for upstream ingest endpoint (use with --local). Default: YOUR_PROXY_SECRET.",
     ),
     init: bool = typer.Option(
         False,
@@ -1189,7 +1176,7 @@ def push(
 
     With --init: write base schema migration only (no telemetry, no push).
     With --local: build schema + telemetry migrations only (no push), using default Skene Cloud upstream ingest.
-    With --local https://...: same, and bake custom upstream ingest URL into notify_event_log webhook.
+    With --local --ingest-url https://...: same, and bake custom upstream ingest URL into notify_event_log webhook.
     With --upstream: pushes artifacts to remote for backup/versioning.
     Use `skene login` to authenticate.
 
@@ -1198,7 +1185,7 @@ def push(
         skene push
         skene push --init
         skene push --local
-        skene push --local https://skene.ai --proxy-secret my-secret
+        skene push --local --ingest-url https://skene.ai --proxy-secret my-secret
         skene push --upstream https://skene.ai/workspace/my-app
         skene push --loop skene_guard_activation_safety
         skene push --context ./skene-context
@@ -1217,15 +1204,18 @@ def push(
         console.print("[dim]Run supabase db push to apply.[/dim]")
         return
 
-    if local is not None and upstream:
+    if ingest_url and not local:
+        console.print("[red]--ingest-url can only be used with --local.[/red]")
+        raise typer.Exit(1)
+    if local and upstream:
         console.print("[red]--local and --upstream cannot be used together.[/red]")
         raise typer.Exit(1)
-    if local is not None and push_only:
+    if local and push_only:
         console.print("[red]--local and --push-only cannot be used together.[/red]")
         raise typer.Exit(1)
 
     config = load_config()
-    resolved_upstream = None if local is not None else (upstream or config.upstream)
+    resolved_upstream = None if local else (upstream or config.upstream)
     resolved_token = resolve_upstream_token(config) if resolved_upstream else None
 
     # Resolve context directory
@@ -1238,13 +1228,13 @@ def push(
             if (candidate / "growth-loops").is_dir():
                 context = candidate
                 break
-        if context is None and not push_only and local is None:
+        if context is None and not push_only and not local:
             console.print(
                 "[red]Could not find skene-context/growth-loops/ directory.[/red]\n"
                 "Use --context to specify the path explicitly."
             )
             raise typer.Exit(1)
-    if (push_only or local is not None) and context is None:
+    if (push_only or local) and context is None:
         context = path / "skene-context"
         if not (context / "growth-loops").is_dir():
             context = Path.cwd() / "skene-context"
@@ -1260,21 +1250,27 @@ def push(
                 if not loops_with_telemetry:
                     console.print(f"[red]No loop with loop_id '{loop_id}' has Supabase telemetry.[/red]")
                     raise typer.Exit(1)
-        if not loops_with_telemetry and local is None:
+        if not loops_with_telemetry and not local:
             console.print(
                 "[yellow]No growth loops with Supabase telemetry found.[/yellow]\n"
                 "Add telemetry with type 'supabase' (table, operation, properties) via skene build."
             )
             raise typer.Exit(1)
 
-    forward_url = local.strip() if (local and local.strip()) else None
+    if local:
+        from skene.growth_loops.schema_sql import _normalize_ingest_url
+
+        default_ingest = DEFAULT_LOCAL_INGEST_BASE + DB_TRIGGER_PATH
+        forward_url = _normalize_ingest_url(ingest_url.strip()) if ingest_url and ingest_url.strip() else default_ingest
+    else:
+        forward_url = None
     secret = proxy_secret or "YOUR_PROXY_SECRET"
 
-    if local is not None and forward_url == DEFAULT_LOCAL_INGEST_BASE:
+    if local and not (ingest_url and ingest_url.strip()):
         console.print("[dim]Building migration files with default Skene.ai upstream ingest for reference.[/dim]")
         console.print(
-            "[dim]For self-hosted trigger ingests, pass an upstream ingest URL: "
-            "[bold]skene push --local https://your-ingest.example.com/api/v1/ingest/db-trigger[/bold].[/dim]"
+            "[dim]For self-hosted trigger ingests, use: "
+            "[bold]skene push --local --ingest-url https://your-ingest.example.com[/bold].[/dim]"
         )
         console.print("[dim]To push to upstream managed by Skene.ai, use [bold]skene login[/bold].[/dim]")
 

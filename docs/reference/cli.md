@@ -311,8 +311,9 @@ skene push [PATH] [OPTIONS]
 | `--loop TEXT` | `-l` | | Push only this loop (by `loop_id`). If omitted, pushes all loops with Supabase telemetry. |
 | `--upstream TEXT` | `-u` | config | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
 | `--push-only` | | `false` | Re-push current output without regenerating migrations. |
-| `--local [URL]` | | | Build schema + telemetry migrations locally without pushing to upstream. Optionally provide an upstream ingest URL (default: `https://www.skene.ai/api/v1/cloud/ingest/db-trigger`). Mutually exclusive with `--upstream` and `--push-only`. |
-| `--proxy-secret TEXT` | | `YOUR_PROXY_SECRET` | Proxy secret for the `x-skene-secret` header in `notify_event_log()`. Use with `--local URL`. |
+| `--local` | | `false` | Build schema + telemetry migrations locally without pushing (uses default Skene Cloud ingest URL). Mutually exclusive with `--upstream` and `--push-only`. |
+| `--ingest-url TEXT` | | | Custom upstream ingest URL to bake into `notify_event_log()`. Use with `--local`. Default: `https://www.skene.ai/api/v1/cloud/ingest/db-trigger`. |
+| `--proxy-secret TEXT` | | `YOUR_PROXY_SECRET` | Proxy secret for the `x-skene-secret` header in `notify_event_log()`. Use with `--local`. |
 | `--init` | | `false` | Create or update the base schema migration only, without building telemetry or pushing. |
 
 ### Behavior notes
@@ -322,7 +323,7 @@ skene push [PATH] [OPTIONS]
 - Unless `--push-only` is used: generates trigger migrations at `supabase/migrations/<timestamp>_skene_telemetry.sql`.
 - When `--upstream` is provided (or resolved from `.skene.config`), pushes the package (growth loops + telemetry SQL) to the upstream API.
 - Use `skene login` to authenticate before pushing to upstream.
-- `--local` skips the upstream push entirely. Without a URL, uses Skene Cloud upstream ingest by default. With `--local https://...`, the upstream ingest URL is hardcoded into `notify_event_log()` in the telemetry migration.
+- `--local` skips the upstream push entirely and uses Skene Cloud upstream ingest by default. Use `--ingest-url https://...` to bake a custom upstream ingest URL into `notify_event_log()` in the telemetry migration.
 - `--init` writes only the base schema migration and exits. Equivalent to the former `skene init` command.
 
 See the [push guide](../guides/push.md) for detailed usage.
@@ -483,7 +484,7 @@ uvx skene analyze . --features
 # Push growth loops to Supabase + upstream
 uvx skene push
 uvx skene push --local
-uvx skene push --local https://skene.ai --proxy-secret my-secret
+uvx skene push --local --ingest-url https://skene.ai --proxy-secret my-secret
 uvx skene push --upstream https://skene.ai/workspace/my-app
 uvx skene push --loop my_loop_id
 

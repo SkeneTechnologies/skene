@@ -1,12 +1,12 @@
 """Skene Growth event_log schema and webhook. All DDL is idempotent."""
 
+DB_TRIGGER_PATH = "/api/v1/cloud/ingest/db-trigger"
+
 # Placeholders for notify_event_log when not overridden by --local
 DEFAULT_UPSTREAM_INGEST_URL = "https://YOUR_UPSTREAM_INGEST_URL"
 DEFAULT_PROXY_SECRET = "YOUR_PROXY_SECRET"
 
-# Base schema: tables + enrich_event + notify_event_log (with placeholders)
-BASE_SCHEMA_SQL = (
-    """
+_TABLES_SQL = """\
 -- Skene Growth: event_log, failed_events, enrichment_map
 -- 1. Schema tables
 -- 2. enrich_event (BEFORE INSERT)
@@ -35,45 +35,48 @@ CREATE TABLE IF NOT EXISTS skene_growth.failed_events (
   moved_at timestamptz DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS skene_growth.enrichment_map (
-  metadata_key text PRIMARY KEY,
-  enrich_sql text NOT NULL
-);
+DROP TABLE IF EXISTS skene_growth.enrichment_map;
+CREATE TABLE skene_growth.enrichment_map (
+  trigger_event text NOT NULL,
+  metadata_key  text NOT NULL,
+  enrich_sql    text,
+  strip_after   boolean DEFAULT false,
+  PRIMARY KEY (trigger_event, metadata_key)
+);"""
 
+_ENRICH_EVENT_SQL = """\
 CREATE OR REPLACE FUNCTION skene_growth.enrich_event()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, skene_growth
 AS $$
 DECLARE
-  rule RECORD;
-  _result jsonb;
-  _lookup_value text;
-  _map_exists boolean;
+  rule        RECORD;
+  _result     jsonb;
+  _strip_keys text[] := ARRAY[]::text[];
 BEGIN
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'skene_growth' AND table_name = 'enrichment_map'
-  ) INTO _map_exists;
-  IF NOT _map_exists THEN
-    RETURN NEW;
-  END IF;
   FOR rule IN
-    SELECT metadata_key, enrich_sql FROM skene_growth.enrichment_map
-    WHERE NEW.metadata ? metadata_key
+    SELECT metadata_key, enrich_sql, strip_after
+    FROM skene_growth.enrichment_map
+    WHERE trigger_event = NEW.event_type
+      AND NEW.metadata ? metadata_key
   LOOP
     BEGIN
-      _lookup_value := NEW.metadata->>rule.metadata_key;
-      IF _lookup_value IS NULL OR _lookup_value = '' THEN
-        CONTINUE;
+      IF rule.enrich_sql IS NOT NULL THEN
+        EXECUTE rule.enrich_sql INTO _result USING (NEW.metadata->>rule.metadata_key);
+        IF _result IS NOT NULL THEN
+          NEW.metadata = NEW.metadata || _result;
+        END IF;
       END IF;
-      EXECUTE rule.enrich_sql INTO _result USING _lookup_value;
-      IF _result IS NOT NULL THEN
-        NEW.metadata = NEW.metadata || _result;
+      IF rule.strip_after THEN
+        _strip_keys := _strip_keys || rule.metadata_key;
       END IF;
     EXCEPTION WHEN OTHERS THEN
       NULL;
     END;
   END LOOP;
+  IF array_length(_strip_keys, 1) > 0 THEN
+    NEW.metadata = NEW.metadata - _strip_keys;
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -82,22 +85,27 @@ DROP TRIGGER IF EXISTS skene_growth_enrich_event ON skene_growth.event_log;
 CREATE TRIGGER skene_growth_enrich_event
   BEFORE INSERT ON skene_growth.event_log
   FOR EACH ROW
-  EXECUTE FUNCTION skene_growth.enrich_event();
+  EXECUTE FUNCTION skene_growth.enrich_event();"""
 
-CREATE EXTENSION IF NOT EXISTS pg_net;
+_WEBHOOK_TRIGGER_SQL = """\
+DROP TRIGGER IF EXISTS skene_growth_webhook_event_log ON skene_growth.event_log;
+CREATE TRIGGER skene_growth_webhook_event_log
+  AFTER INSERT ON skene_growth.event_log
+  FOR EACH ROW
+  EXECUTE FUNCTION skene_growth.notify_event_log();"""
 
+
+def _notify_event_log_function_sql(ingest_url: str, proxy_secret: str) -> str:
+    """Return CREATE OR REPLACE for notify_event_log with the given URL and secret baked in."""
+    return f"""\
 CREATE OR REPLACE FUNCTION skene_growth.notify_event_log()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, skene_growth, net
 AS $$
 DECLARE
   payload jsonb;
-  ingest_url text := '"""
-    + DEFAULT_UPSTREAM_INGEST_URL
-    + """/api/v1/cloud/ingest/db-trigger';
-  proxy_secret text := '"""
-    + DEFAULT_PROXY_SECRET
-    + """';
+  ingest_url text := '{ingest_url}';
+  proxy_secret text := '{proxy_secret}';
 BEGIN
   payload := jsonb_build_object(
     'type', 'INSERT',
@@ -117,18 +125,21 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$;
+$$;"""
 
-DROP TRIGGER IF EXISTS skene_growth_webhook_event_log ON skene_growth.event_log;
-CREATE TRIGGER skene_growth_webhook_event_log
-  AFTER INSERT ON skene_growth.event_log
-  FOR EACH ROW
-  EXECUTE FUNCTION skene_growth.notify_event_log();
-""".strip()
+
+BASE_SCHEMA_SQL = "\n\n".join(
+    [
+        _TABLES_SQL,
+        _ENRICH_EVENT_SQL,
+        "CREATE EXTENSION IF NOT EXISTS pg_net;",
+        _notify_event_log_function_sql(
+            DEFAULT_UPSTREAM_INGEST_URL + DB_TRIGGER_PATH,
+            DEFAULT_PROXY_SECRET,
+        ),
+        _WEBHOOK_TRIGGER_SQL,
+    ]
 )
-
-
-DB_TRIGGER_PATH = "/api/v1/cloud/ingest/db-trigger"
 
 
 def _normalize_ingest_url(url: str) -> str:
@@ -144,38 +155,9 @@ def notify_event_log_sql(upstream_ingest_url: str, proxy_secret: str) -> str:
     Generate CREATE OR REPLACE for notify_event_log with given upstream ingest URL and proxy secret.
     Use when --local URL is provided to override the default placeholders.
     """
-    # Escape single quotes for SQL string literals
     full_url = _normalize_ingest_url(upstream_ingest_url)
-    url_escaped = full_url.replace("'", "''")
-    secret_escaped = proxy_secret.replace("'", "''")
-    return f"""
--- Webhook override: upstream ingest URL and proxy secret from --local
-CREATE OR REPLACE FUNCTION skene_growth.notify_event_log()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, skene_growth, net
-AS $$
-DECLARE
-  payload jsonb;
-  ingest_url text := '{url_escaped}';
-  proxy_secret text := '{secret_escaped}';
-BEGIN
-  payload := jsonb_build_object(
-    'type', 'INSERT',
-    'table', 'event_log',
-    'schema', 'skene_growth',
-    'record', to_jsonb(NEW),
-    'old_record', null
-  );
-  PERFORM net.http_post(
-    url := ingest_url,
-    body := payload,
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-skene-secret', proxy_secret
-    ),
-    timeout_milliseconds := 5000
-  );
-  RETURN NEW;
-END;
-$$;
-""".strip()
+    sql = _notify_event_log_function_sql(
+        full_url.replace("'", "''"),
+        proxy_secret.replace("'", "''"),
+    )
+    return "-- Webhook override: upstream ingest URL and proxy secret from --local\n" + sql

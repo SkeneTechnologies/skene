@@ -104,15 +104,13 @@ def ensure_base_schema_migration(output_dir: Path) -> Path:
     """Check, build and update the skene_growth_schema migration. Overwrites if exists."""
     migrations_dir = output_dir / "supabase" / "migrations"
     migrations_dir.mkdir(parents=True, exist_ok=True)
+    canonical_name = f"{BASE_SCHEMA_MIGRATION_PREFIX}_{BASE_SCHEMA_MIGRATION_NAME}.sql"
     existing = list(migrations_dir.glob(f"*{BASE_SCHEMA_MIGRATION_NAME}*.sql"))
-    if existing:
-        path = next(
-            (p for p in existing if p.name == f"{BASE_SCHEMA_MIGRATION_PREFIX}_{BASE_SCHEMA_MIGRATION_NAME}.sql"),
-            existing[0],
-        )
-        path.write_text(BASE_SCHEMA_SQL, encoding="utf-8")
-        return path
-    path = migrations_dir / f"{BASE_SCHEMA_MIGRATION_PREFIX}_{BASE_SCHEMA_MIGRATION_NAME}.sql"
+    path = (
+        next((p for p in existing if p.name == canonical_name), existing[0])
+        if existing
+        else migrations_dir / canonical_name
+    )
     path.write_text(BASE_SCHEMA_SQL, encoding="utf-8")
     return path
 
@@ -136,11 +134,13 @@ def build_migration_sql(
     Build a complete Supabase migration SQL from growth loop definitions.
 
     Creates:
-    - skene schema and event_seq sequence
-    - skene.actions table for storing created actions
-    - pg_net extension (if available)
     - One trigger function + trigger per telemetry item (table, operation)
-    - Idempotent: DROP TRIGGER IF EXISTS before CREATE
+      that INSERT into skene_growth.event_log (Shadow Mirror)
+    - Optionally notify_event_log override when forward_url is provided
+
+    Depends on base schema (event_log, failed_events, enrichment_map, pg_net)
+    from skene init / ensure_base_schema_migration. Idempotent: DROP TRIGGER
+    IF EXISTS before CREATE.
     """
     seen: set[tuple[str, str, str]] = set()
     fn_parts: list[str] = []
