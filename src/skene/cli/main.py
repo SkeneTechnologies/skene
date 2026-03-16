@@ -24,18 +24,12 @@ from typing import Any, Optional
 import click
 import typer
 from pydantic import SecretStr
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from typer.core import TyperGroup
 
 from skene import __version__
-from skene.output import console
-from skene.output import error as output_error
-from skene.output import status as output_status
-from skene.output import success as output_success
-from skene.output import warning as output_warning
 from skene.cli.analysis_helpers import (
     run_analysis,
     run_features_analysis,
@@ -62,6 +56,11 @@ from skene.cli.prompt_builder import (
 )
 from skene.cli.sample_report import show_sample_report
 from skene.config import default_model_for_provider, load_config, resolve_upstream_token
+from skene.output import console
+from skene.output import error as output_error
+from skene.output import status as output_status
+from skene.output import success as output_success
+from skene.output import warning as output_warning
 from skene.planner import find_plan_steps_path
 
 # Command order and groups for --help
@@ -857,10 +856,7 @@ def chat(
         if is_local_provider:
             resolved_api_key = resolved_provider
         else:
-            output_warning(
-                "No API key provided. "
-                "Set --api-key, SKENE_API_KEY env var, or add to .skene.config"
-            )
+            output_warning("No API key provided. Set --api-key, SKENE_API_KEY env var, or add to .skene.config")
             raise typer.Exit(1)
 
     from skene.cli.chat import run_chat
@@ -1009,8 +1005,7 @@ def status(
                 break
         if context is None:
             output_error(
-                "Could not find skene-context/growth-loops/ directory.\n"
-                "Use --context to specify the path explicitly."
+                "Could not find skene-context/growth-loops/ directory.\nUse --context to specify the path explicitly."
             )
             raise typer.Exit(1)
 
@@ -1032,8 +1027,7 @@ def status(
 
         if not resolved_api_key:
             output_warning(
-                "--find-alternatives requires an API key.\n"
-                "Provide --api-key or set SKENE_API_KEY environment variable."
+                "--find-alternatives requires an API key.\nProvide --api-key or set SKENE_API_KEY environment variable."
             )
             raise typer.Exit(1)
 
@@ -1236,8 +1230,7 @@ def push(
                 break
         if context is None and not push_only:
             output_error(
-                "Could not find skene-context/growth-loops/ directory.\n"
-                "Use --context to specify the path explicitly."
+                "Could not find skene-context/growth-loops/ directory.\nUse --context to specify the path explicitly."
             )
             raise typer.Exit(1)
     if push_only and context is None:
@@ -1436,7 +1429,9 @@ def build(
         raise typer.Exit(1)
 
     # Run async logic
-    asyncio.run(_build_async(plan, context, api_key, provider, model, debug, target, base_url, no_fallback, feature, quiet))
+    asyncio.run(
+        _build_async(plan, context, api_key, provider, model, debug, target, base_url, no_fallback, feature, quiet)
+    )
 
 
 async def _build_async(

@@ -26,7 +26,6 @@ from loguru import logger
 
 from skene.growth_loops.storage import load_existing_growth_loops
 
-
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------

@@ -10,7 +10,10 @@ from skene.feature_registry import (
     export_registry_to_format,
     load_feature_registry,
 )
-from skene.output import console, error as output_error, success as output_success, warning as output_warning
+from skene.output import console
+from skene.output import error as output_error
+from skene.output import success as output_success
+from skene.output import warning as output_warning
 
 features_app = typer.Typer(help="Manage growth feature registry.")
 
@@ -58,8 +61,7 @@ def cmd_export(
 
     if not registry or not registry.get("features"):
         output_warning(
-            f"No feature registry found or registry is empty.\n"
-            f"Run `skene analyze` first to populate {registry_path}"
+            f"No feature registry found or registry is empty.\nRun `skene analyze` first to populate {registry_path}"
         )
         raise typer.Exit(1)
 

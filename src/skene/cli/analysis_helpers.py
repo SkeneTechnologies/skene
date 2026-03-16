@@ -9,8 +9,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from skene.llm import LLMClient
-from skene.output import console, status as output_status
+from skene.output import console
 from skene.output import error as output_error
+from skene.output import status as output_status
 from skene.output import success as output_success
 from skene.output import warning as output_warning
 

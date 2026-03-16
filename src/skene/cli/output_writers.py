@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from skene.output import success as output_success, warning as output_warning
+from skene.output import success as output_success
+from skene.output import warning as output_warning
 
 
 def write_product_docs(manifest_data: dict, manifest_path: Path) -> None:

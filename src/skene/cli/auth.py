@@ -19,8 +19,11 @@ from skene.config import (
     save_upstream_to_config,
 )
 from skene.growth_loops.upstream import _api_base_from_upstream, _workspace_slug_from_url, validate_token
-
-from skene.output import console, error as output_error, warning as output_warning, success as output_success, status as output_status
+from skene.output import console
+from skene.output import error as output_error
+from skene.output import status as output_status
+from skene.output import success as output_success
+from skene.output import warning as output_warning
 
 
 def cmd_login(upstream_url: str | None = None) -> None:

@@ -5,7 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from skene.output import console, error as output_error, warning
+from skene.output import error as output_error
+from skene.output import warning
 
 
 def decline_plan(context: Optional[Path], output: Path) -> Path | None:

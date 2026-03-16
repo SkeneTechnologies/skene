@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from skene.feature_registry import derive_feature_id
 from skene.llm.base import LLMClient
-from skene.output import console, status
+from skene.output import console
 
 
 async def _show_progress_indicator(stop_event: asyncio.Event) -> None:

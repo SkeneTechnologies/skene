@@ -4,7 +4,6 @@ Debug wrapper for LLM clients that logs all input/output to files.
 
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import AsyncGenerator
 
 from loguru import logger
