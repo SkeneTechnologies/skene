@@ -11,6 +11,8 @@ from rich.table import Table
 from skene.llm import LLMClient
 from skene.output import console, status as output_status
 from skene.output import error as output_error
+from skene.output import success as output_success
+from skene.output import warning as output_warning
 
 
 async def _show_progress_indicator(stop_event: asyncio.Event) -> None:
@@ -476,19 +478,19 @@ async def run_generate_plan(
 
                 plan_steps_path = find_plan_steps_path(base_dir)
                 if plan_steps_path:
-                    console.print(f"[green]Plan steps:[/green] {plan_steps_path}")
+                    output_success(f"Plan steps: {plan_steps_path}")
                     try:
                         plan_steps = await load_plan_steps(context_dir=base_dir, llm=llm)
-                        console.print(f"[green]Inferred {len(plan_steps)} custom section(s):[/green]")
+                        output_success(f"Inferred {len(plan_steps)} custom section(s):")
                         for i, step in enumerate(plan_steps, 1):
-                            console.print(f"  {i}. {step.title}")
+                            output_status(f"  {i}. {step.title}")
                     except PlanStepsParseError as exc:
-                        console.print(f"[yellow]Could not parse plan-steps.md: {exc}[/yellow]")
-                        console.print("[yellow]Falling back to default sections[/yellow]")
+                        output_warning(f"Could not parse plan-steps.md: {exc}")
+                        output_warning("Falling back to default sections")
                         plan_steps = DEFAULT_PLAN_STEPS
                 else:
                     plan_steps = DEFAULT_PLAN_STEPS
-                    console.print(f"[dim]No plan-steps.md found, using {len(plan_steps)} default section(s)[/dim]")
+                    output_status(f"No plan-steps.md found, using {len(plan_steps)} default section(s)")
 
                 accumulated_chunks: list[str] = []
 
@@ -505,7 +507,7 @@ async def run_generate_plan(
                         inp = usage.get("input_tokens", 0)
                         out = usage.get("output_tokens", 0)
                         suffix = f" ({out:,} out / {inp:,} in)"
-                    console.print(f"[green]Generated section:[/green] {title}{suffix}")
+                    output_success(f"Generated section: {title}{suffix}")
                     accumulated_chunks.append(markdown_chunk)
                     output_path.write_text("\n".join(accumulated_chunks) + "\n")
 
@@ -561,11 +563,11 @@ async def run_generate_plan(
             todo_count = sum(
                 1 for line in (todo_markdown or "").splitlines() if line.strip().startswith(("-", "*"))
             ) or (1 if todo_markdown else 0)
-            console.print(f"\n[green]Summary:[/green] {section_count} sections, {todo_count} todo items")
+            output_success(f"Summary: {section_count} sections, {todo_count} todo items")
             total_in = sum(u.get("input_tokens", 0) for u in tokens_used)
             total_out = sum(u.get("output_tokens", 0) for u in tokens_used)
             if total_in > 0 or total_out > 0:
-                console.print(f"[dim]Total tokens:[/dim] {total_in:,} in / {total_out:,} out")
+                output_status(f"Total tokens: {total_in:,} in / {total_out:,} out")
 
             return memo_content, (executive_summary, todo_summary, todo_markdown)
 
