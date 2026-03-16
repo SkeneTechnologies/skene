@@ -8,7 +8,6 @@ Supports loading config from:
 Priority: CLI args > environment variables > project config > user config
 """
 
-import logging
 import os
 import sys
 from pathlib import Path
@@ -18,8 +17,6 @@ try:
     import tomllib  # Python 3.11+
 except ImportError:
     import tomli as tomllib  # type: ignore
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_BY_PROVIDER = {
     "openai": "gpt-4o",
