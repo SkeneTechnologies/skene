@@ -27,7 +27,7 @@ from rich.table import Table
 from rich.text import Text
 
 from skene.growth_loops.storage import load_existing_growth_loops
-from skene.output import debug, warning
+from skene.output import console, debug, warning
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -887,8 +887,6 @@ def print_validation_report(results: list[LoopValidationResult]) -> None:
 
     Uses the shared console from output.py for all rendering.
     """
-    from skene.output import console
-
     if not results:
         warning("No growth loops found to validate.")
         return
