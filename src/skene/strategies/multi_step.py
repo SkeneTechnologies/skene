@@ -4,7 +4,7 @@ Multi-step analysis strategy.
 
 from skene.codebase import CodebaseExplorer
 from skene.llm import LLMClient
-from skene.output import debug, error, status
+from skene.output import debug, error, status, warning
 from skene.strategies.base import (
     AnalysisResult,
     AnalysisStrategy,
@@ -101,9 +101,7 @@ class MultiStepStrategy(AnalysisStrategy):
         total_steps = len(self.steps)
 
         if total_steps == 0:
-            from loguru import logger
-
-            logger.warning("MultiStepStrategy has no steps defined")
+            warning("MultiStepStrategy has no steps defined")
             return AnalysisResult.error_result(
                 error="No steps defined in strategy",
                 metadata=context.metadata,
