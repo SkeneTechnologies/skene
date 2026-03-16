@@ -122,7 +122,6 @@ config.api_key       # str | None
 config.provider      # str (default: "openai")
 config.model         # str (auto-determined if not set)
 config.output_dir    # str (default: "./skene-context")
-config.verbose       # bool (default: False)
 config.debug         # bool (default: False)
 config.exclude_folders  # list[str] (default: [])
 config.base_url      # str | None
@@ -154,7 +153,7 @@ client: LLMClient = create_llm_client(
     api_key=SecretStr("key"),
     model="gpt-4o",
     base_url=None,              # Required for generic provider
-    debug=False,                # Log LLM I/O to .skene/debug/
+    debug=False,                # Log LLM I/O to ~/.local/state/skene/debug/
 )
 ```
 

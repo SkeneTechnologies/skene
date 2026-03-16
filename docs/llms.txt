@@ -12,15 +12,15 @@
 
 skene analyze [PATH]
   Analyze a codebase. Generates growth-manifest.json and growth-template.json.
-  Flags: -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --product-docs, -e/--exclude, --debug, --no-fallback
+  Flags: -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --product-docs, -e/--exclude, --debug, --no-fallback
 
 skene plan
   Generate a growth plan from manifest and template using Council of Growth Engineers.
-  Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -v/--verbose, --activation, --prompt, --debug, --no-fallback
+  Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --activation, --prompt, --debug, --no-fallback
 
 skene build
   Generate implementation prompt from growth plan. Send to Cursor, Claude, or display in terminal.
-  Flags: --plan, -c/--context, --api-key, -p/--provider, -m/--model, --base-url, --debug, --no-fallback, -t/--target (cursor|claude|show|file — skips interactive menu)
+  Flags: --plan, -c/--context, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --debug, --no-fallback, -t/--target (cursor|claude|show|file — skips interactive menu)
 
 skene status [PATH]
   Check implementation status of growth loop requirements. Uses AST parsing to verify files, functions, and patterns.
@@ -44,7 +44,7 @@ skene features export [PATH]
 
 skene chat [PATH]
   Interactive terminal chat with function calling. LLM invokes skene tools.
-  Flags: --api-key, -p/--provider, -m/--model, --base-url, --max-steps, --tool-output-limit, --debug
+  Flags: --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --max-steps, --tool-output-limit, --debug
 
 skene config
   Manage configuration. --init creates config file, --show displays current values, no flags for interactive editing.
@@ -70,7 +70,7 @@ File: .skene.config (TOML, project-level)
 File: ~/.config/skene/config (TOML, user-level)
 Priority: user config < project config < env vars < CLI flags
 
-Options: api_key, provider, model, base_url, output_dir, verbose, debug, exclude_folders, upstream
+Options: api_key, provider, model, base_url, output_dir, debug, exclude_folders, upstream
 
 Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_DEBUG, SKENE_UPSTREAM_API_KEY, LMSTUDIO_BASE_URL, OLLAMA_BASE_URL
 

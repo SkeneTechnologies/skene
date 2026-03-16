@@ -44,8 +44,8 @@ If no API key is configured and you are not using a local provider, the command 
 | `--product-docs` | | Generate `product-docs.md` with user-facing feature documentation (creates v2.0 manifest) |
 | `--features` | | Only analyze growth features and update `feature-registry.json` (skips opportunities and revenue leakage) |
 | `--exclude TEXT` | `-e` | Folder names to exclude from analysis (repeatable). Also configurable in `.skene.config` as `exclude_folders`. |
-| `--verbose` | `-v` | Enable verbose output |
-| `--debug` | | Log all LLM input/output to `.skene/debug/` |
+| `--quiet` | `-q` | Suppress output, show errors only |
+| `--debug` | | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ## Output files
@@ -136,7 +136,7 @@ CLI exclusions and config exclusions are merged (deduplicated). CLI flags do not
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene/debug/`:
+The `--debug` flag shows diagnostic messages on screen and logs all LLM input and output to `~/.local/state/skene/debug/`:
 
 ```bash
 uvx skene analyze . --debug

@@ -63,8 +63,7 @@ Displays all current configuration values and their sources.
 | `model` | string | Per provider | LLM model name |
 | `base_url` | string | — | Base URL for OpenAI-compatible endpoints |
 | `output_dir` | string | `"./skene-context"` | Default output directory |
-| `verbose` | boolean | `false` | Enable verbose output |
-| `debug` | boolean | `false` | Enable debug logging |
+| `debug` | boolean | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `exclude_folders` | list | `[]` | Folder names to exclude from analysis |
 | `upstream` | string | — | Upstream workspace URL for `push` command |
 
@@ -98,10 +97,7 @@ provider = "openai"
 # Default output directory
 output_dir = "./skene-context"
 
-# Enable verbose output
-verbose = false
-
-# Enable debug logging (logs LLM I/O to .skene/debug/)
+# Enable debug mode (shows diagnostic messages and logs LLM I/O to ~/.local/state/skene/debug/)
 debug = false
 
 # Folders to exclude from analysis

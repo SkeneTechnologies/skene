@@ -32,7 +32,8 @@ Running `skene` without a subcommand defaults to the `chat` command, providing a
 | `--base-url` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. | `SKENE_BASE_URL` env var |
 | `--max-steps` | | Maximum tool calls per user request | `4` |
 | `--tool-output-limit` | | Max tool output characters kept in context | `4000` |
-| `--debug` | | Log all LLM input/output to `.skene/debug/` | Off |
+| `--quiet` | `-q` | Suppress output, show errors only | Off |
+| `--debug` | | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` | Off |
 
 ## How it works
 

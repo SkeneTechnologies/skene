@@ -51,10 +51,10 @@ uvx skene plan --activation
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | Model name (e.g., `gemini-3-flash-preview`, `claude-sonnet-4-5`) |
 | `--base-url TEXT` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. Also set via `SKENE_BASE_URL` env var or config. |
-| `--verbose` | `-v` | Enable verbose output |
+| `--quiet` | `-q` | Suppress output, show errors only |
 | `--activation` | | Generate activation-focused plan using Senior Activation Engineer perspective |
 | `--prompt TEXT` | | Additional user prompt to influence the plan generation |
-| `--debug` | | Log all LLM input/output to `.skene/debug/` |
+| `--debug` | | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ## How the plan process works
@@ -178,7 +178,7 @@ If no API key is configured and you are not using a local provider (`ollama`, `l
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene/debug/`:
+The `--debug` flag shows diagnostic messages on screen and logs all LLM input and output to `~/.local/state/skene/debug/`:
 
 ```bash
 uvx skene plan --debug

@@ -42,11 +42,11 @@ skene analyze [PATH] [OPTIONS]
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic` (or `claude`), `lmstudio`, `ollama`, `generic` (aliases: `openai-compatible`, `openai_compatible`) |
 | `--model TEXT` | `-m` | provider default | LLM model name (e.g. `gpt-4o`, `gemini-3-flash-preview`) |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--verbose` | `-v` | `false` | Enable verbose output |
+| `--quiet` | `-q` | `false` | Suppress output, show errors only |
 | `--product-docs` | | `false` | Also generate `product-docs.md` with user-facing feature documentation |
 | `--features` | | `false` | Only analyze growth features and update `feature-registry.json` (skips opportunities and revenue leakage) |
 | `--exclude TEXT` | `-e` | config value | Folder names to exclude from analysis. Repeatable: `--exclude tests --exclude vendor`. Merged with `exclude_folders` from config. |
-| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
+| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ### Behavior notes
@@ -81,10 +81,10 @@ skene plan [OPTIONS]
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | provider default | LLM model name |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--verbose` | `-v` | `false` | Enable verbose output |
+| `--quiet` | `-q` | `false` | Suppress output, show errors only |
 | `--activation` | | `false` | Generate an activation-focused plan using a Senior Activation Engineer perspective |
 | `--prompt TEXT` | | | Additional user prompt to influence the plan generation |
-| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
+| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 
 ### Auto-detection order
@@ -121,7 +121,8 @@ skene build [OPTIONS]
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | provider default | LLM model name |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
+| `--quiet` | `-q` | `false` | Suppress output, show errors only |
+| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 | `--target TEXT` | `-t` | interactive | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
 | `--feature TEXT` | `-f` | | Bias toward this feature name when linking the growth loop to a feature in the registry |
@@ -218,7 +219,8 @@ skene chat [PATH] [OPTIONS]
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
 | `--max-steps INT` | | `4` | Maximum number of tool calls the LLM can make per user request |
 | `--tool-output-limit INT` | | `4000` | Maximum characters of tool output kept in conversation context |
-| `--debug` | | `false` | Log all LLM input/output to `.skene/debug/` |
+| `--quiet` | `-q` | `false` | Suppress output, show errors only |
+| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 
 ### Behavior notes
 

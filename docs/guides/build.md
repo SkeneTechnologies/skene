@@ -47,7 +47,8 @@ uvx skene build --context ./my-context
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | Model name (uses provider default if not provided) |
 | `--base-url TEXT` | | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. Also set via `SKENE_BASE_URL` env var or config. |
-| `--debug` | | Log all LLM input/output to `.skene/debug/` |
+| `--quiet` | `-q` | Suppress output, show errors only |
+| `--debug` | | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | Disable model fallback on rate limits. Retries the same model with exponential backoff instead of switching to a cheaper model. |
 | `--target TEXT` | `-t` | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
 | `--feature TEXT` | `-f` | Bias toward this feature name when linking the growth loop to a feature in the registry |
@@ -243,7 +244,7 @@ If the LLM fails during prompt generation, the command falls back to a static te
 
 ## Debug mode
 
-The `--debug` flag logs all LLM input and output to `.skene/debug/`:
+The `--debug` flag shows diagnostic messages on screen and logs all LLM input and output to `~/.local/state/skene/debug/`:
 
 ```bash
 uvx skene build --debug

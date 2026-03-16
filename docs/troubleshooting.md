@@ -191,7 +191,7 @@ uvx skene login --upstream https://skene.ai/workspace/my-app
 
 ## Debug mode
 
-Use `--debug` on any command to log all LLM input and output to `.skene/debug/`:
+Use `--debug` on any command to show diagnostic messages on screen and log all LLM input and output to `~/.local/state/skene/debug/`:
 
 ```bash
 uvx skene analyze . --debug
@@ -211,6 +211,8 @@ debug = true
 ```
 
 The debug logs show the full prompts sent to the LLM and the complete responses, which is useful for diagnosing unexpected output or provider-specific issues.
+
+The general log file is located at `~/.local/state/skene/skene.log`.
 
 ## Getting help
 
