@@ -13,7 +13,7 @@ var (
 
 // URLs
 const (
-	SkeneAuthURL        = "https://skene.ai/auth"
+	SkeneAuthURL        = "https://www.skene.ai/auth"
 	SkeneTestAuthURL    = "http://localhost:3000/auth"
 	UVDownloadBaseURL   = "https://github.com/astral-sh/uv/releases/latest/download"
 	OllamaDefaultBase   = "http://localhost:11434/v1"

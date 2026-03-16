@@ -1687,7 +1687,7 @@ func skeneBaseURL() string {
 	if isSkeneTestMode() {
 		return "http://localhost:3000/api/v1"
 	}
-	return "https://skene.ai/api/v1"
+	return "https://www.skene.ai/api/v1"
 }
 
 // resolveSkeneAPIKey picks the API key for the skene provider.
