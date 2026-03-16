@@ -1801,6 +1801,8 @@ def config(
     """
     from skene.config import find_project_config, find_user_config, load_config
 
+    # NOTE: config command uses console.print throughout (not output functions)
+    # because it's an interactive TUI — formatted display, prompts, and wizard output.
     if init:
         config_path = Path(".skene.config")
         if config_path.exists():
