@@ -57,7 +57,7 @@ from skene.cli.prompt_builder import (
 from skene.cli.sample_report import show_sample_report
 from skene.config import default_model_for_provider, load_config, resolve_upstream_token
 from skene.growth_loops.schema_sql import DB_TRIGGER_PATH
-from skene.output import console, error, success, warning
+from skene.output import apply_verbosity, console, error, success, warning
 from skene.output import status as output_status
 from skene.planner import find_plan_steps_path
 
@@ -257,15 +257,7 @@ def analyze(
     """
     # Load config with fallbacks
     config = load_config()
-
-    # Set verbosity
-    from skene.output import set_debug, set_quiet
-
-    resolved_debug = debug or config.debug
-    if quiet:
-        set_quiet()
-    elif resolved_debug:
-        set_debug()
+    resolved_debug = apply_verbosity(quiet, debug, config.debug)
 
     # Apply config defaults
     resolved_api_key = api_key or config.api_key
@@ -544,15 +536,7 @@ def plan(
     """
     # Load config with fallbacks
     config = load_config()
-
-    # Set verbosity
-    from skene.output import set_debug, set_quiet
-
-    resolved_debug = debug or config.debug
-    if quiet:
-        set_quiet()
-    elif resolved_debug:
-        set_debug()
+    resolved_debug = apply_verbosity(quiet, debug, config.debug)
 
     # Apply config defaults
     resolved_api_key = api_key or config.api_key
@@ -728,9 +712,6 @@ def plan(
 
     console.print(Panel.fit("\n".join(panel_lines), title="skene"))
 
-    # Resolve debug flag (CLI overrides config)
-    resolved_debug = debug or config.debug
-
     # Run async cycle generation - execute and handle output
     async def execute_cycle():
         memo_content, _todo_data = await run_generate_plan(
@@ -822,15 +803,7 @@ def chat(
         uvx skene chat ./my-project --provider gemini --model gemini-3-flash-preview
     """
     config = load_config()
-
-    # Set verbosity
-    from skene.output import set_debug, set_quiet
-
-    resolved_debug = debug or config.debug
-    if quiet:
-        set_quiet()
-    elif resolved_debug:
-        set_debug()
+    apply_verbosity(quiet, debug, config.debug)
 
     resolved_api_key = api_key or config.api_key
     resolved_provider = provider or config.provider
@@ -999,7 +972,6 @@ def status(
         skene status ./my-project --context ./my-project/skene-context
         skene status --find-alternatives --api-key "your-key"
     """
-    from skene.output import set_debug, set_quiet
     from skene.validators.loop_validator import (
         ValidationEvent,
         clear_event_listeners,
@@ -1008,10 +980,7 @@ def status(
         validate_all_loops,
     )
 
-    if quiet:
-        set_quiet()
-    elif debug:
-        set_debug()
+    apply_verbosity(quiet, debug)
 
     # Resolve the context directory
     if context is None:
@@ -1245,12 +1214,8 @@ def push(
         push_to_upstream,
     )
     from skene.growth_loops.storage import load_existing_growth_loops
-    from skene.output import set_debug, set_quiet
 
-    if quiet:
-        set_quiet()
-    elif debug:
-        set_debug()
+    apply_verbosity(quiet, debug)
 
     if init:
         written = ensure_base_schema_migration(path.resolve())
@@ -1527,15 +1492,7 @@ async def _build_async(
     """Async implementation of build command."""
     # Load config to get LLM settings
     config = load_config()
-
-    # Set verbosity
-    from skene.output import set_debug, set_quiet
-
-    resolved_debug = debug or config.debug
-    if quiet:
-        set_quiet()
-    elif resolved_debug:
-        set_debug()
+    resolved_debug = apply_verbosity(quiet, debug, config.debug)
     api_key = api_key or config.api_key
     provider = provider or config.provider
     base_url = base_url or config.base_url
@@ -1619,7 +1576,6 @@ async def _build_async(
 
         from skene.llm import create_llm_client
 
-        resolved_debug = debug or config.debug
         llm = create_llm_client(
             provider, SecretStr(api_key), model, base_url=base_url, debug=resolved_debug, no_fallback=no_fallback
         )

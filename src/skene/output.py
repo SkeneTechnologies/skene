@@ -47,6 +47,21 @@ def set_debug() -> None:
     _verbosity = 2
 
 
+def apply_verbosity(quiet: bool, debug: bool, config_debug: bool = False) -> bool:
+    """Set verbosity from CLI flags and return resolved debug flag.
+
+    Call once at the start of each command. Returns True when debug
+    mode is active (CLI ``--debug`` or ``config.debug``), which
+    callers can forward to ``create_llm_client(debug=...)``.
+    """
+    resolved_debug = debug or config_debug
+    if quiet:
+        set_quiet()
+    elif resolved_debug:
+        set_debug()
+    return resolved_debug
+
+
 # --- Output functions ---
 
 
