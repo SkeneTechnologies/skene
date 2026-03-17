@@ -113,6 +113,8 @@ def _is_local_provider(provider: str) -> bool:
 def _requires_base_url(provider: str) -> bool:
     """Return True when provider requires --base-url."""
     return provider.lower() in _OPENAI_COMPAT_PROVIDERS
+
+
 # Default upstream ingest URL when --local is used without --ingest-url
 DEFAULT_LOCAL_INGEST_BASE = "https://www.skene.ai"
 
