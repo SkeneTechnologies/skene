@@ -45,7 +45,7 @@ class TestBuildPackage:
 
     def test_package_excludes_schema_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
-        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_schema.sql").write_text("CREATE SCHEMA")
+        (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")
         telemetry_sql = tmp_path / "supabase" / "migrations" / "20260304151537_skene_telemetry.sql"
         telemetry_sql.write_text("CREATE TRIGGER")
 

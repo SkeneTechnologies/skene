@@ -52,27 +52,28 @@ class OpenAIClient(OpenAICompatibleClient):
         self.fallback_model = fallback_model or DEFAULT_FALLBACK_MODEL
         self.no_fallback = no_fallback
 
+    def _usage_from_response(self, response) -> dict[str, int] | None:
+        usage = getattr(response, "usage", None)
+        if usage and hasattr(usage, "prompt_tokens") and hasattr(usage, "completion_tokens"):
+            return {"output_tokens": usage.completion_tokens, "input_tokens": usage.prompt_tokens}
+        return None
+
     async def generate_content_with_usage(
         self,
         prompt: str,
     ) -> tuple[str, dict[str, int] | None]:
+        """Generate text and return (content, usage). Honors fallback/retry on rate limit."""
         try:
             from openai import RateLimitError
         except ImportError:
             RateLimitError = Exception
-
-        def _extract_usage(response) -> dict[str, int] | None:
-            usage = getattr(response, "usage", None)
-            if usage and hasattr(usage, "prompt_tokens") and hasattr(usage, "completion_tokens"):
-                return {"output_tokens": usage.completion_tokens, "input_tokens": usage.prompt_tokens}
-            return None
-
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return (response.choices[0].message.content.strip(), _extract_usage(response))
+            content = response.choices[0].message.content.strip()
+            return (content, self._usage_from_response(response))
         except RateLimitError as e:
             logger.warning(f"RateLimitError on {self.model_name}: {e}")
             if self.no_fallback:
@@ -85,7 +86,8 @@ class OpenAIClient(OpenAICompatibleClient):
                     messages=[{"role": "user", "content": prompt}],
                 )
                 logger.info(f"Successfully generated content using fallback model {self.fallback_model}")
-                return (response.choices[0].message.content.strip(), _extract_usage(response))
+                content = response.choices[0].message.content.strip()
+                return (content, self._usage_from_response(response))
             except Exception as fallback_error:
                 raise RuntimeError(f"Error calling OpenAI (fallback model {self.fallback_model}): {fallback_error}")
         except Exception as e:

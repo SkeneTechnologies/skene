@@ -74,16 +74,14 @@ Checks that required files, functions, and patterns exist in your codebase. Each
 
 ### Push to Supabase and upstream
 
-If your project uses Supabase, initialize the base schema and push growth loop telemetry:
+If your project uses Supabase, push growth loop telemetry. The `push` command checks and updates the base schema on every run:
 
 ```bash
-# One-time: create the base schema migration - to use in deploying the Skene Growth schema yourself.
-uvx skene init
-
-# Generate telemetry triggers and push
 uvx skene login --upstream https://skene.ai/workspace/<my-workspace-name>
 uvx skene push
 ```
+
+To create or update the base schema without building telemetry, run `skene push --init` first.
 
 ## What you get
 

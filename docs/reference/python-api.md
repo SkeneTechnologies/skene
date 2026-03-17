@@ -233,7 +233,7 @@ from skene.growth_loops.storage import (
 )
 
 from skene.growth_loops.push import (
-    ensure_base_schema_migration,       # Create base schema migration
+    ensure_base_schema_migration,       # Check, build, update base schema (creates or overwrites)
     build_loops_to_supabase,            # Build Supabase migrations from loops
     build_migration_sql,                # Generate migration SQL
     write_migration,                    # Write migration file

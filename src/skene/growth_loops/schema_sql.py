@@ -1,14 +1,20 @@
-"""Shadow Mirror base schema for skene. All DDL is idempotent."""
+"""Skene Growth event_log schema and webhook. All DDL is idempotent."""
 
-BASE_SCHEMA_SQL = """
--- Skene Growth: Shadow Mirror base schema (event_log, failed_events, enrichment_map)
--- 1. Schema tables (run first, idempotent)
--- 2. Webhook (run after tables, idempotent): pg_net + notify_event_log
+DB_TRIGGER_PATH = "/api/v1/cloud/ingest/db-trigger"
 
-CREATE SCHEMA IF NOT EXISTS skene;
+# Placeholders for notify_event_log when not overridden by --local
+DEFAULT_UPSTREAM_INGEST_URL = "https://YOUR_UPSTREAM_INGEST_URL"
+DEFAULT_PROXY_SECRET = "YOUR_PROXY_SECRET"
 
--- Universal sink for allowlisted triggers. Events land here before processing.
-CREATE TABLE IF NOT EXISTS skene.event_log (
+_TABLES_SQL = """\
+-- Skene Growth: event_log, failed_events, enrichment_map
+-- 1. Schema tables
+-- 2. enrich_event (BEFORE INSERT)
+-- 3. pg_net + notify_event_log (AFTER INSERT)
+
+CREATE SCHEMA IF NOT EXISTS skene_growth;
+
+CREATE TABLE IF NOT EXISTS skene_growth.event_log (
   id bigserial PRIMARY KEY,
   org_id uuid,
   entity_id uuid,
@@ -20,8 +26,7 @@ CREATE TABLE IF NOT EXISTS skene.event_log (
   last_error text
 );
 
--- Dead-letter table for events that exceed retry limit.
-CREATE TABLE IF NOT EXISTS skene.failed_events (
+CREATE TABLE IF NOT EXISTS skene_growth.failed_events (
   id bigserial PRIMARY KEY,
   event_log_id bigint NOT NULL,
   event_type text NOT NULL,
@@ -30,92 +35,129 @@ CREATE TABLE IF NOT EXISTS skene.failed_events (
   moved_at timestamptz DEFAULT now() NOT NULL
 );
 
--- Enrichment rules: metadata_key -> enrich_sql (SQL returning jsonb to merge into metadata).
--- metadata_key matches event_type or '*' for all. enrich_sql uses $1=entity_id, $2=metadata.
-CREATE TABLE IF NOT EXISTS skene.enrichment_map (
-  metadata_key text PRIMARY KEY,
-  enrich_sql text NOT NULL
-);
+DROP TABLE IF EXISTS skene_growth.enrichment_map;
+CREATE TABLE skene_growth.enrichment_map (
+  trigger_event text NOT NULL,
+  metadata_key  text NOT NULL,
+  enrich_sql    text,
+  strip_after   boolean DEFAULT false,
+  PRIMARY KEY (trigger_event, metadata_key)
+);"""
 
--- BEFORE INSERT trigger on event_log: apply enrichment rules from enrichment_map.
-CREATE OR REPLACE FUNCTION skene.enrich_event()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, skene
+_ENRICH_EVENT_SQL = """\
+CREATE OR REPLACE FUNCTION skene_growth.enrich_event()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, skene_growth
 AS $$
 DECLARE
-  r RECORD;
-  enriched jsonb;
+  rule        RECORD;
+  _result     jsonb;
+  _strip_keys text[] := ARRAY[]::text[];
 BEGIN
-  FOR r IN
-    SELECT metadata_key, enrich_sql FROM skene.enrichment_map
-    WHERE metadata_key = NEW.event_type OR metadata_key = '*'
+  FOR rule IN
+    SELECT metadata_key, enrich_sql, strip_after
+    FROM skene_growth.enrichment_map
+    WHERE trigger_event = NEW.event_type
+      AND NEW.metadata ? metadata_key
   LOOP
     BEGIN
-      EXECUTE r.enrich_sql INTO enriched USING NEW.entity_id, NEW.metadata;
-      IF enriched IS NOT NULL THEN
-        NEW.metadata := COALESCE(NEW.metadata, '{}'::jsonb) || enriched;
+      IF rule.enrich_sql IS NOT NULL THEN
+        EXECUTE rule.enrich_sql INTO _result USING (NEW.metadata->>rule.metadata_key);
+        IF _result IS NOT NULL THEN
+          NEW.metadata = NEW.metadata || _result;
+        END IF;
+      END IF;
+      IF rule.strip_after THEN
+        _strip_keys := _strip_keys || rule.metadata_key;
       END IF;
     EXCEPTION WHEN OTHERS THEN
       NULL;
     END;
   END LOOP;
+  IF array_length(_strip_keys, 1) > 0 THEN
+    NEW.metadata = NEW.metadata - _strip_keys;
+  END IF;
   RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS skene_trg_enrich_event ON skene.event_log;
-CREATE TRIGGER skene_trg_enrich_event
-  BEFORE INSERT ON skene.event_log
+DROP TRIGGER IF EXISTS skene_growth_enrich_event ON skene_growth.event_log;
+CREATE TRIGGER skene_growth_enrich_event
+  BEFORE INSERT ON skene_growth.event_log
   FOR EACH ROW
-  EXECUTE FUNCTION skene.enrich_event();
+  EXECUTE FUNCTION skene_growth.enrich_event();"""
 
--- 2. Webhook: pg_net + notify_event_log
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_extension e
-                JOIN pg_namespace n ON e.extnamespace = n.oid
-                WHERE e.extname = 'pg_net' AND n.nspname = 'extensions') THEN
-    CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
-  END IF;
-EXCEPTION WHEN OTHERS THEN
-  RAISE NOTICE 'pg_net not available: %. Enable it in Supabase dashboard.', SQLERRM;
-END $$;
+_WEBHOOK_TRIGGER_SQL = """\
+DROP TRIGGER IF EXISTS skene_growth_webhook_event_log ON skene_growth.event_log;
+CREATE TRIGGER skene_growth_webhook_event_log
+  AFTER INSERT ON skene_growth.event_log
+  FOR EACH ROW
+  EXECUTE FUNCTION skene_growth.notify_event_log();"""
 
--- AFTER INSERT trigger on event_log: POST to ingest_url via pg_net.
--- Set app.settings.ingest_url for the webhook endpoint.
-CREATE OR REPLACE FUNCTION skene.notify_event_log()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, skene
+
+def _notify_event_log_function_sql(ingest_url: str, proxy_secret: str) -> str:
+    """Return CREATE OR REPLACE for notify_event_log with the given URL and secret baked in."""
+    return f"""\
+CREATE OR REPLACE FUNCTION skene_growth.notify_event_log()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, skene_growth, net
 AS $$
 DECLARE
-  ingest_url text;
+  payload jsonb;
+  ingest_url text := '{ingest_url}';
+  proxy_secret text := '{proxy_secret}';
 BEGIN
-  ingest_url := nullif(trim(current_setting('app.settings.ingest_url', true)), '');
-  IF ingest_url IS NOT NULL THEN
-    PERFORM net.http_post(
-      url := ingest_url,
-      headers := '{"Content-Type": "application/json"}'::jsonb,
-      body := jsonb_build_object(
-        'id', NEW.id,
-        'org_id', NEW.org_id,
-        'entity_id', NEW.entity_id,
-        'event_type', NEW.event_type,
-        'metadata', NEW.metadata,
-        'occurred_at', NEW.occurred_at
-      )
-    );
-  END IF;
+  payload := jsonb_build_object(
+    'type', 'INSERT',
+    'table', 'event_log',
+    'schema', 'skene_growth',
+    'record', to_jsonb(NEW),
+    'old_record', null
+  );
+  PERFORM net.http_post(
+    url := ingest_url,
+    body := payload,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-skene-secret', proxy_secret
+    ),
+    timeout_milliseconds := 5000
+  );
   RETURN NEW;
 END;
-$$;
+$$;"""
 
-DROP TRIGGER IF EXISTS skene_trg_notify_event_log ON skene.event_log;
-CREATE TRIGGER skene_trg_notify_event_log
-  AFTER INSERT ON skene.event_log
-  FOR EACH ROW
-  EXECUTE FUNCTION skene.notify_event_log();
-""".strip()
+
+BASE_SCHEMA_SQL = "\n\n".join(
+    [
+        _TABLES_SQL,
+        _ENRICH_EVENT_SQL,
+        "CREATE EXTENSION IF NOT EXISTS pg_net;",
+        _notify_event_log_function_sql(
+            DEFAULT_UPSTREAM_INGEST_URL + DB_TRIGGER_PATH,
+            DEFAULT_PROXY_SECRET,
+        ),
+        _WEBHOOK_TRIGGER_SQL,
+    ]
+)
+
+
+def _normalize_ingest_url(url: str) -> str:
+    """Return full webhook URL, appending db-trigger path only if not already present."""
+    base = url.rstrip("/")
+    if base.endswith(DB_TRIGGER_PATH):
+        return base
+    return f"{base}{DB_TRIGGER_PATH}"
+
+
+def notify_event_log_sql(upstream_ingest_url: str, proxy_secret: str) -> str:
+    """
+    Generate CREATE OR REPLACE for notify_event_log with given upstream ingest URL and proxy secret.
+    Use when --local URL is provided to override the default placeholders.
+    """
+    full_url = _normalize_ingest_url(upstream_ingest_url)
+    sql = _notify_event_log_function_sql(
+        full_url.replace("'", "''"),
+        proxy_secret.replace("'", "''"),
+    )
+    return "-- Webhook override: upstream ingest URL and proxy secret from --local\n" + sql
