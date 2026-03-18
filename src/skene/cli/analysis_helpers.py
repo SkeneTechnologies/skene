@@ -51,7 +51,7 @@ async def run_analysis(
     from skene.codebase import CodebaseExplorer
 
     with Progress(
-        SpinnerColumn(),
+        SpinnerColumn("line"),
         TextColumn("[progress.description]{task.description}"),
         console=console,
         transient=True,
@@ -148,7 +148,7 @@ async def run_features_analysis(
     from skene.growth_loops.storage import load_existing_growth_loops
 
     with Progress(
-        SpinnerColumn(),
+        SpinnerColumn("line"),
         TextColumn("[progress.description]{task.description}"),
         console=console,
         transient=True,
@@ -374,7 +374,7 @@ async def run_generate_plan(
     memo_content = None
 
     with Progress(
-        SpinnerColumn(),
+        SpinnerColumn("line"),
         TextColumn("[progress.description]{task.description}"),
         console=console,
         transient=True,

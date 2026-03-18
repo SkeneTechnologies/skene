@@ -13,9 +13,14 @@ import (
 )
 
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+var brailleSpinnerRe = regexp.MustCompile(`[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*`)
 
 func stripANSI(s string) string {
 	return ansiRe.ReplaceAllString(s, "")
+}
+
+func stripBrailleSpinner(s string) string {
+	return brailleSpinnerRe.ReplaceAllString(s, "")
 }
 
 // TerminalOutput displays scrollable terminal/process output in a box
@@ -59,6 +64,7 @@ func (t *TerminalOutput) AddLine(line string) {
 	for _, l := range newLines {
 		l = strings.TrimRight(l, "\r")
 		l = stripANSI(l)
+		l = stripBrailleSpinner(l)
 		t.lines = append(t.lines, l)
 	}
 

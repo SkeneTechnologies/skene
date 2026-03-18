@@ -126,7 +126,7 @@ func generateTerrain(offset int, count int, h int) (ceil []int, floor []int) {
 			terrainAmplitude*0.5*math.Sin(float64(col)*terrainFreq*2.3+1.2)
 		mid := float64(h) / 2.0
 		ceilRow := int(math.Round(mid - float64(h)/2.0 + terrainBorder + wave))
-		floorRow := int(math.Round(mid + float64(h)/2.0 - terrainBorder - wave*0.7))
+		floorRow := int(math.Round(mid + float64(h)/2.0 - (terrainBorder + 1) - wave*0.7))
 
 		if ceilRow < 1 {
 			ceilRow = 1
@@ -402,11 +402,11 @@ func (g *Game) gameTick() {
 			if gap > 10 {
 				h := 3 + g.rng.Intn(3)
 				w := 3 + g.rng.Intn(4)
-				spawnRange := gap - h - 6
+				spawnRange := gap - h - 1
 				if spawnRange < 1 {
 					spawnRange = 1
 				}
-				oy := ceilY + 3 + g.rng.Intn(spawnRange)
+				oy := ceilY + 2 + g.rng.Intn(spawnRange)
 				g.obstacles = append(g.obstacles, obstacle{
 					worldX: spawnCol,
 					y:      oy,
@@ -792,7 +792,7 @@ func (g *Game) Render() string {
 	}
 
 	hp := strings.Repeat("♥ ", g.playerHP) + strings.Repeat("♡ ", 5-g.playerHP)
-	hud := styleHUD.Render(fmt.Sprintf(constants.GameHUDFormat, g.score, hp, g.scroll))
+	hud := styleHUD.Render(fmt.Sprintf(constants.GameHUDFormat, g.score*g.scroll, hp, g.scroll))
 
 	gameBox := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
@@ -894,11 +894,12 @@ func (g *Game) deathScreen() string {
 
 	gameOverTitle := styleDead.Render(constants.GameOver)
 
+	finalScore := g.score * g.scroll
 	statsContent := lipgloss.JoinVertical(
 		lipgloss.Left,
-		styles.Muted.Render(constants.GameStatScore)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
-		styles.Muted.Render(constants.GameStatDistance)+styles.Body.Render(fmt.Sprintf("%d meters", g.scroll)),
 		styles.Muted.Render(constants.GameStatDefeated)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
+		styles.Muted.Render(constants.GameStatDistance)+styles.Body.Render(fmt.Sprintf("%d meters", g.scroll)),
+		styles.Muted.Render(constants.GameStatFinalScore)+styles.Body.Render(fmt.Sprintf("%d", finalScore)),
 	)
 
 	innerContent := lipgloss.JoinVertical(

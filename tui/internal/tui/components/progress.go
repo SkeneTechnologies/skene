@@ -13,7 +13,7 @@ type Spinner struct {
 // NewSpinner creates a new spinner
 func NewSpinner() *Spinner {
 	return &Spinner{
-		frames: []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+		frames: []string{"-", "\\", "|", "/"},
 		index:  0,
 	}
 }
