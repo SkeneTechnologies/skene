@@ -55,11 +55,11 @@ def render_plan_to_markdown(plan: GrowthPlan, generated_at: str, project_name: s
     lines.append("---")
     lines.append("")
 
-    # Executive Summary
-    lines.append("## Executive Summary")
-    lines.append("")
-    lines.append(plan.executive_summary)
-    lines.append("")
+    # Executive Summary (disabled)
+    # lines.append("## Executive Summary")
+    # lines.append("")
+    # lines.append(plan.executive_summary)
+    # lines.append("")
 
     # Dynamic sections (exclude Technical Execution — it is rendered separately)
     sections = [s for s in plan.sections if s.title.lower() != "technical execution"]

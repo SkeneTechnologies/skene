@@ -70,13 +70,15 @@ type AnalysisResult struct {
 
 // EngineConfig holds the configuration passed to uvx commands
 type EngineConfig struct {
-	Provider   string
-	Model      string
-	APIKey     string
-	BaseURL    string
-	ProjectDir string
-	OutputDir  string
-	UseGrowth bool
+	Provider       string
+	Model          string
+	APIKey         string
+	BaseURL        string
+	ProjectDir     string
+	OutputDir      string
+	UseGrowth      bool
+	Upstream       string
+	UpstreamAPIKey string
 }
 
 // Engine spawns uvx commands to run Skene libraries in the selected repository
@@ -412,6 +414,12 @@ func (e *Engine) buildEnvVars() []string {
 	}
 	if e.config.BaseURL != "" {
 		envs = append(envs, "SKENE_BASE_URL="+e.config.BaseURL)
+	}
+	if e.config.Upstream != "" {
+		envs = append(envs, "SKENE_UPSTREAM="+e.config.Upstream)
+	}
+	if e.config.UpstreamAPIKey != "" {
+		envs = append(envs, "SKENE_UPSTREAM_API_KEY="+e.config.UpstreamAPIKey)
 	}
 	return envs
 }

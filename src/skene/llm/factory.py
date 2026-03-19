@@ -78,6 +78,10 @@ def create_llm_client(
             if not base_url:
                 raise ValueError("base_url is required for the generic provider")
             client = GenericClient(api_key=api_key, model_name=model_name, base_url=base_url)
+        case "skene":
+            from skene.llm.providers.skene import SkeneClient
+
+            client = SkeneClient(api_key=api_key, model_name=model_name, base_url=base_url)
         case _:
             raise ValueError(f"Unknown provider: {provider}")
 

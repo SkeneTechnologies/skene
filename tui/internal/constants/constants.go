@@ -1,6 +1,9 @@
 package constants
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // Version and repository information
 var (
@@ -10,11 +13,16 @@ var (
 
 // URLs
 const (
-	// TODO: add auth URL once Skene auth is implemented
-	SkeneAuthURL        = ""
+	SkeneAuthURL        = "https://www.skene.ai/auth"
+	SkeneTestAuthURL    = "http://localhost:3000/auth"
 	UVDownloadBaseURL   = "https://github.com/astral-sh/uv/releases/latest/download"
 	OllamaDefaultBase   = "http://localhost:11434/v1"
 	LMStudioDefaultBase = "http://localhost:1234/v1"
+)
+
+// Skene provider defaults
+const (
+	SkeneDefaultModel = "auto"
 )
 
 // API key URLs for providers
@@ -38,8 +46,12 @@ const (
 	UserConfigFile    = "config"
 )
 
-// GrowthPackageSpec returns the versioned package specifier for uvx (e.g. "skene==0.3.0").
+// GrowthPackageSpec returns the package specifier for uvx.
+// Override with SKENE_PACKAGE env var for local dev (e.g. "/path/to/skene").
 func GrowthPackageSpec() string {
+	if pkg := os.Getenv("SKENE_PACKAGE"); pkg != "" {
+		return pkg
+	}
 	return fmt.Sprintf("%s==%s", GrowthPackageName, GrowthPackageVersion)
 }
 

@@ -97,29 +97,30 @@ class Planner:
 
         accumulated: list[str] = []
 
-        # Step 1: Executive Summary
-        exec_summary, exec_tokens = await self._generate_executive_summary(llm, shared_context)
-        exec_md = f"## Executive Summary\n\n{exec_summary}\n"
-        accumulated.append(exec_md)
-        if on_step:
-            on_step(1, "Executive Summary", exec_md, exec_tokens)
+        # Step 1: Executive Summary (disabled)
+        # exec_summary, exec_tokens = await self._generate_executive_summary(llm, shared_context)
+        exec_summary = ""
+        # exec_md = f"## Executive Summary\n\n{exec_summary}\n"
+        # accumulated.append(exec_md)
+        # if on_step:
+        #     on_step(1, "Executive Summary", exec_md, exec_tokens)
 
         # Steps 2..N: Dynamic sections from step definitions
         raw_sections: list[PlanSection] = []
-        for i, step in enumerate(steps, start=2):
+        for i, step in enumerate(steps, start=1):
             content, section_tokens = await self._generate_section(llm, shared_context, step, accumulated)
             section = PlanSection(title=step.title, content=content)
             raw_sections.append(section)
-            section_md = f"### {i - 1}. {step.title}\n\n{content}\n"
+            section_md = f"### {i}. {step.title}\n\n{content}\n"
             accumulated.append(section_md)
             if on_step:
                 on_step(i, step.title, section_md, section_tokens)
 
         # Final step: Technical Execution
-        # section_index: 1-based position among numbered plan sections (exec summary is unnumbered)
-        # callback_step: 1-based position across all LLM calls (1=exec summary, 2..N+1=sections, N+2=TE)
+        # section_index: 1-based position among numbered plan sections
+        # callback_step: 1-based position across all LLM calls (1..N=sections, N+1=TE)
         section_index = len(raw_sections) + 1
-        llm_call_count = len(steps) + 2
+        llm_call_count = len(steps) + 1
         tech_exec, te_tokens = await self._generate_technical_execution(llm, shared_context, accumulated)
         te_md = (
             f"### {section_index}. Technical Execution\n\n"

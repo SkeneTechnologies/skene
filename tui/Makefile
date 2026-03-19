@@ -1,4 +1,4 @@
-.PHONY: build run clean install dev test lint fmt release
+.PHONY: build run run-local run-local-dev clean install dev test lint fmt release
 
 # Binary name
 BINARY_NAME=skene
@@ -52,6 +52,16 @@ run:
 		$(MAKE) build; \
 	fi
 	@$(BUILD_DIR)/$(BINARY_NAME)
+
+# Run with local skene package (parent dir) so the skene provider is available
+run-local:
+	@if [ ! -f $(BUILD_DIR)/$(BINARY_NAME) ]; then $(MAKE) build; fi
+	@SKENE_PACKAGE=$(shell cd .. && pwd) $(BUILD_DIR)/$(BINARY_NAME)
+
+# Run with local skene package + test mode (auth/API → localhost:3000)
+run-local-dev:
+	@if [ ! -f $(BUILD_DIR)/$(BINARY_NAME) ]; then $(MAKE) build; fi
+	@SKENE_PACKAGE=$(shell cd .. && pwd) SKENE_TEST_MODE=1 $(BUILD_DIR)/$(BINARY_NAME)
 
 # Development mode with live reload (requires Go + air)
 dev:
@@ -118,15 +128,17 @@ install-bin: build
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build       - Build the application (downloads binary if Go is not installed)"
-	@echo "  run         - Run the application"
-	@echo "  dev         - Run with live reload (requires Go)"
-	@echo "  clean       - Clean build artifacts"
-	@echo "  install     - Install Go dependencies"
-	@echo "  test        - Run tests (requires Go)"
-	@echo "  lint        - Run linter (requires Go)"
-	@echo "  fmt         - Format code (requires Go)"
-	@echo "  build-all   - Build for all platforms (requires Go)"
-	@echo "  release     - Build and package for release (requires Go)"
-	@echo "  install-bin - Install binary to system"
-	@echo "  help        - Show this help"
+	@echo "  build         - Build the application (downloads binary if Go is not installed)"
+	@echo "  run           - Run the application"
+	@echo "  run-local     - Run with local skene package (parent dir) — skene provider available"
+	@echo "  run-local-dev - Run with local skene + SKENE_TEST_MODE=1 (auth/API → localhost:3000)"
+	@echo "  dev           - Run with live reload (requires Go)"
+	@echo "  clean         - Clean build artifacts"
+	@echo "  install       - Install Go dependencies"
+	@echo "  test          - Run tests (requires Go)"
+	@echo "  lint          - Run linter (requires Go)"
+	@echo "  fmt           - Format code (requires Go)"
+	@echo "  build-all     - Build for all platforms (requires Go)"
+	@echo "  release       - Build and package for release (requires Go)"
+	@echo "  install-bin   - Install binary to system"
+	@echo "  help          - Show this help"

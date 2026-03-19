@@ -553,9 +553,9 @@ async def run_generate_plan(
                 executive_summary = extract_executive_summary(memo_content)
                 todo_summary = extract_next_action(memo_content)
 
-            # Print summary (Executive Summary + dynamic sections + Technical Execution)
+            # Print summary (dynamic sections + Technical Execution; exec summary disabled)
             middle_count = len(growth_plan.sections) if growth_plan else 0
-            section_count = 1 + middle_count + 1  # Executive Summary + sections + Technical Execution
+            section_count = middle_count + 1  # sections + Technical Execution
             todo_count = sum(
                 1 for line in (todo_markdown or "").splitlines() if line.strip().startswith(("-", "*"))
             ) or (1 if todo_markdown else 0)
@@ -563,7 +563,7 @@ async def run_generate_plan(
             total_in = sum(u.get("input_tokens", 0) for u in tokens_used)
             total_out = sum(u.get("output_tokens", 0) for u in tokens_used)
             if total_in > 0 or total_out > 0:
-                status(f"Total tokens: {total_in:,} in / {total_out:,} out")
+                status(f"Total tokens: {total_out:,} out / {total_in:,} in")
 
             return memo_content, (executive_summary, todo_summary, todo_markdown)
 

@@ -11,14 +11,16 @@ import (
 
 // Config represents the skene configuration
 type Config struct {
-	Provider   string
-	Model      string
-	APIKey     string
-	OutputDir  string
-	Verbose    bool
-	ProjectDir string
-	BaseURL    string
-	UseGrowth  bool
+	Provider       string
+	Model          string
+	APIKey         string
+	OutputDir      string
+	Verbose        bool
+	ProjectDir     string
+	BaseURL        string
+	UseGrowth      bool
+	Upstream       string
+	UpstreamAPIKey string
 }
 
 // Manager handles configuration file operations
@@ -117,6 +119,12 @@ func mergeConfig(dst, src *Config) {
 	if src.ProjectDir != "" {
 		dst.ProjectDir = src.ProjectDir
 	}
+	if src.Upstream != "" {
+		dst.Upstream = src.Upstream
+	}
+	if src.UpstreamAPIKey != "" {
+		dst.UpstreamAPIKey = src.UpstreamAPIKey
+	}
 }
 
 func (m *Manager) loadConfigFile(path string) (*Config, error) {
@@ -145,6 +153,10 @@ func (m *Manager) loadConfigFile(path string) (*Config, error) {
 			config.UseGrowth = strings.EqualFold(value, "true")
 		case "project_dir":
 			config.ProjectDir = value
+		case "upstream":
+			config.Upstream = value
+		case "upstream_api_key":
+			config.UpstreamAPIKey = value
 		}
 	}
 	return config, nil
@@ -186,6 +198,12 @@ func (m *Manager) writeConfigToPath(path string) error {
 	if m.Config.OutputDir != "" {
 		existing["output_dir"] = m.Config.OutputDir
 	}
+	if m.Config.Upstream != "" {
+		existing["upstream"] = m.Config.Upstream
+	}
+	if m.Config.UpstreamAPIKey != "" {
+		existing["upstream_api_key"] = m.Config.UpstreamAPIKey
+	}
 
 	content := writeTOML(existing)
 
@@ -218,6 +236,16 @@ func (m *Manager) SetProjectDir(dir string) {
 // SetBaseURL sets the base URL for generic providers
 func (m *Manager) SetBaseURL(url string) {
 	m.Config.BaseURL = url
+}
+
+// SetUpstream sets the upstream workspace URL
+func (m *Manager) SetUpstream(upstream string) {
+	m.Config.Upstream = upstream
+}
+
+// SetUpstreamAPIKey sets the upstream API key
+func (m *Manager) SetUpstreamAPIKey(key string) {
+	m.Config.UpstreamAPIKey = key
 }
 
 // GetMaskedAPIKey returns masked API key for display
@@ -281,7 +309,7 @@ func writeTOML(kv map[string]string) string {
 	b.WriteString("# skene configuration\n")
 	b.WriteString("# See: https://github.com/skene-technologies/skene\n\n")
 
-	ordered := []string{"api_key", "provider", "model", "base_url", "output_dir"}
+	ordered := []string{"api_key", "provider", "model", "base_url", "output_dir", "upstream", "upstream_api_key"}
 	written := make(map[string]bool)
 	for _, key := range ordered {
 		if val, ok := kv[key]; ok && val != "" {
@@ -329,9 +357,8 @@ func GetProviders() []Provider {
 			Description: "Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
 			AuthURL:     constants.SkeneAuthURL,
-			Hidden:      true,
 			Models: []Model{
-				{ID: "skene-v1", Name: "skene-v1", Description: "Growth analysis model"},
+				{ID: constants.SkeneDefaultModel, Name: "skene", Description: "Growth analysis model"},
 			},
 		},
 		{
@@ -394,7 +421,7 @@ func GetProviders() []Provider {
 		// },
 		{
 			ID:          "generic",
-			Name:        "Other (OpenAI-compatible)",
+			Name:        "Generic (OpenAI-compatible)",
 			Description: "Any OpenAI-compatible API endpoint",
 			RequiresKey: true,
 			IsGeneric:   true,

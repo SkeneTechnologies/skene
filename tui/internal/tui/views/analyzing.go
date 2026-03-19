@@ -61,13 +61,9 @@ func (v *AnalyzingView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
 	v.header.SetWidth(width)
-	// Adjust terminal visible lines based on available height
-	termHeight := height - 18
+	termHeight := height - 16
 	if termHeight < 6 {
 		termHeight = 6
-	}
-	if termHeight > 22 {
-		termHeight = 22
 	}
 	v.terminal.SetSize(width, termHeight)
 }
@@ -263,12 +259,9 @@ func (v *AnalyzingView) GetCurrentPhase() string {
 
 // Render the analyzing view
 func (v *AnalyzingView) Render() string {
-	sectionWidth := v.width - 20
+	sectionWidth := v.width - 8
 	if sectionWidth < 60 {
 		sectionWidth = 60
-	}
-	if sectionWidth > 80 {
-		sectionWidth = 80
 	}
 
 	// Wizard header

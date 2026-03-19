@@ -3,12 +3,14 @@ package tui
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"skene/internal/constants"
 	"skene/internal/game"
-	"github.com/atotto/clipboard"
 	"skene/internal/services/auth"
 	"skene/internal/services/config"
 	"skene/internal/services/growth"
@@ -17,11 +19,11 @@ import (
 	"skene/internal/tui/styles"
 	"skene/internal/tui/views"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/browser"
-	"path/filepath"
 )
 
 // ═══════════════════════════════════════════════════════════════════
@@ -94,9 +96,10 @@ type LocalModelDetectMsg struct {
 
 // AuthCallbackMsg is sent when the API key is received from the external auth website
 type AuthCallbackMsg struct {
-	APIKey string
-	Model  string
-	Error  error
+	APIKey   string
+	Model    string
+	Upstream string
+	Error    error
 }
 
 // VersionCheckMsg is sent when the background version check completes
@@ -408,32 +411,26 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AuthCallbackMsg:
 		if msg.Error != nil {
-			// Auth failed, fall back to manual entry
 			if a.authView != nil {
 				a.authView.ShowFallback()
 			}
 		} else {
-			// Auth succeeded - set the API key and model
 			a.configMgr.SetAPIKey(msg.APIKey)
-			if msg.Model != "" {
-				a.configMgr.SetModel(msg.Model)
-			} else {
-				// Default Skene model
-				a.configMgr.SetModel("skene-v1")
+			a.configMgr.SetUpstreamAPIKey(msg.APIKey)
+			a.configMgr.SetModel(constants.SkeneDefaultModel)
+			if msg.Upstream != "" {
+				a.configMgr.SetUpstream(buildUpstreamURL(msg.Upstream))
 			}
 
-			// Show "verifying" spinner first so the user sees activity
 			if a.authView != nil {
 				a.authView.SetAuthState(views.AuthStateVerifying)
 			}
 
-			// Shutdown the callback server
 			if a.callbackServer != nil {
 				a.callbackServer.Shutdown()
 				a.callbackServer = nil
 			}
 
-			// After a fake verification delay, show success
 			cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 				return authVerifiedMsg{}
 			}))
@@ -998,7 +995,6 @@ func (a *App) selectProvider() tea.Cmd {
 
 	// Branch based on provider type
 	if provider.ID == "skene" {
-		// Skene: start callback server and open browser for auth
 		callbackServer, err := auth.NewCallbackServer()
 		if err != nil {
 			a.showError(&views.ErrorInfo{
@@ -1026,12 +1022,8 @@ func (a *App) selectProvider() tea.Cmd {
 
 		a.callbackServer = callbackServer
 
-		// Build the auth URL with the callback parameter
-		authURL := provider.AuthURL
-		if authURL == "" {
-			authURL = constants.SkeneKeyURL
-		}
-		authURL = fmt.Sprintf("%s?callback=%s", authURL, callbackServer.GetCallbackURL())
+		authBaseURL := resolveSkeneAuthURL()
+		authURL := fmt.Sprintf("%s?callback=%s", authBaseURL, url.QueryEscape(callbackServer.GetCallbackURL()))
 
 		a.authView = views.NewAuthView(provider)
 		a.authView.SetAuthURL(authURL)
@@ -1349,8 +1341,9 @@ func (a *App) waitForAuthCallback() tea.Cmd {
 		}
 
 		return AuthCallbackMsg{
-			APIKey: result.APIKey,
-			Model:  result.Model,
+			APIKey:   result.APIKey,
+			Model:    result.Model,
+			Upstream: result.Upstream,
 		}
 	}
 }
@@ -1622,15 +1615,28 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 		outputDir = filepath.Join(projectDir, outputDir)
 	}
 
-	return growth.EngineConfig{
-		Provider:    a.configMgr.Config.Provider,
-		Model:       a.configMgr.Config.Model,
-		APIKey:      a.configMgr.Config.APIKey,
-		BaseURL:     a.configMgr.Config.BaseURL,
-		ProjectDir:  projectDir,
-		OutputDir:   outputDir,
-		UseGrowth: a.configMgr.Config.UseGrowth,
+	cfg := a.configMgr.Config
+
+	ec := growth.EngineConfig{
+		Provider:       cfg.Provider,
+		Model:          cfg.Model,
+		APIKey:         cfg.APIKey,
+		BaseURL:        cfg.BaseURL,
+		ProjectDir:     projectDir,
+		OutputDir:      outputDir,
+		UseGrowth:      cfg.UseGrowth,
+		Upstream:       cfg.Upstream,
+		UpstreamAPIKey: cfg.UpstreamAPIKey,
 	}
+
+	if cfg.Provider == "skene" {
+		ec.Model = constants.SkeneDefaultModel
+		ec.BaseURL = skeneBaseURL()
+		ec.APIKey = resolveSkeneAPIKey(cfg)
+		ec.UpstreamAPIKey = ec.APIKey
+	}
+
+	return ec
 }
 
 func loadFileContent(path string) string {
@@ -1657,4 +1663,55 @@ func countdown(seconds int) tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return CountdownMsg(seconds)
 	})
+}
+
+// isSkeneTestMode returns true when SKENE_TEST_MODE=1.
+func isSkeneTestMode() bool {
+	return os.Getenv("SKENE_TEST_MODE") == "1"
+}
+
+// resolveSkeneAuthURL returns the auth base URL.
+// Priority: SKENE_AUTH_URL env → test mode (localhost:3000) → production.
+func resolveSkeneAuthURL() string {
+	if envURL := os.Getenv("SKENE_AUTH_URL"); envURL != "" {
+		return envURL
+	}
+	if isSkeneTestMode() {
+		return constants.SkeneTestAuthURL
+	}
+	return constants.SkeneAuthURL
+}
+
+// buildUpstreamURL constructs the full upstream URL from a workspace slug.
+// If the slug is already a full URL it is returned as-is.
+func buildUpstreamURL(slug string) string {
+	if strings.HasPrefix(slug, "http://") || strings.HasPrefix(slug, "https://") {
+		return slug
+	}
+	base := "https://www.skene.ai"
+	if isSkeneTestMode() {
+		base = "http://localhost:3000"
+	}
+	return base + "/workspace/" + slug
+}
+
+// skeneBaseURL returns the Skene API base URL for the Python CLI.
+// The SkeneClient appends /chat/completions itself.
+func skeneBaseURL() string {
+	if isSkeneTestMode() {
+		return "http://localhost:3000/api/v1"
+	}
+	return "https://www.skene.ai/api/v1"
+}
+
+// resolveSkeneAPIKey picks the API key for the skene provider.
+// Priority: UpstreamAPIKey → APIKey → SKENE_UPSTREAM_API_KEY env.
+func resolveSkeneAPIKey(cfg *config.Config) string {
+	if cfg.UpstreamAPIKey != "" {
+		return cfg.UpstreamAPIKey
+	}
+	if cfg.APIKey != "" {
+		return cfg.APIKey
+	}
+	return os.Getenv("SKENE_UPSTREAM_API_KEY")
 }

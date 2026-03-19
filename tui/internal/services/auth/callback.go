@@ -12,9 +12,10 @@ import (
 
 // CallbackResult holds the result received from the external auth flow
 type CallbackResult struct {
-	APIKey string `json:"api_key"`
-	Model  string `json:"model,omitempty"`
-	Error  string `json:"error,omitempty"`
+	APIKey   string `json:"api_key"`
+	Model    string `json:"model,omitempty"`
+	Upstream string `json:"slug,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 // CallbackServer runs a temporary local HTTP server to receive the API key
@@ -121,9 +122,9 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 
 	switch r.Method {
 	case "GET":
-		// API key passed as query parameter
 		result.APIKey = r.URL.Query().Get("api_key")
 		result.Model = r.URL.Query().Get("model")
+		result.Upstream = r.URL.Query().Get("slug")
 		result.Error = r.URL.Query().Get("error")
 
 	case "POST":
