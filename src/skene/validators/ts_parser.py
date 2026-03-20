@@ -75,9 +75,14 @@ class TSParsedTree:
         elif node.type == "variable_declarator":
             name_node = node.child_by_field_name("name")
             value_node = node.child_by_field_name("value")
-            if name_node and value_node and value_node.type in (
-                "arrow_function",
-                "function_expression",
+            if (
+                name_node
+                and value_node
+                and value_node.type
+                in (
+                    "arrow_function",
+                    "function_expression",
+                )
             ):
                 names.append(name_node.text.decode("utf-8"))
 
@@ -95,9 +100,14 @@ class TSParsedTree:
                         if decl.type == "variable_declarator":
                             name_node = decl.child_by_field_name("name")
                             value_node = decl.child_by_field_name("value")
-                            if name_node and value_node and value_node.type in (
-                                "arrow_function",
-                                "function_expression",
+                            if (
+                                name_node
+                                and value_node
+                                and value_node.type
+                                in (
+                                    "arrow_function",
+                                    "function_expression",
+                                )
                             ):
                                 names.append(name_node.text.decode("utf-8"))
                     return
