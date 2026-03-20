@@ -364,7 +364,8 @@ Analyze the technical execution context and generate a complete, actionable grow
   - `type` (string, required): One of "contains", "contains_regex", "function_exists", "class_exists", "import_exists"
   - `pattern` (string, required): The pattern, function name, class name, or import to check for
   - `description` (string, required): A clear, human-readable explanation of what this check verifies
-- `function_exists`, `class_exists`, and `import_exists` work for Python, TypeScript, JavaScript, Java, Go, Ruby, Rust, PHP, C#, Kotlin, Swift, and Dart files.
+- `function_exists`, `class_exists`, and `import_exists` work for Python, TypeScript, JavaScript,
+  Java, Go, Ruby, Rust, PHP, C#, Kotlin, Swift, and Dart files.
   Example: `{{"type": "function_exists", "pattern": "scan_for_leaks",
     "description": "Function 'scan_for_leaks' must exist in this file"}}`
   Example: `{{"type": "function_exists", "pattern": "integrateWithWordPress",

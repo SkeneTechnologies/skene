@@ -14,7 +14,6 @@ from skene.validators.loop_validator import (
     validate_function_requirement,
 )
 
-
 # ---------------------------------------------------------------------------
 # _extract_names integration
 # ---------------------------------------------------------------------------

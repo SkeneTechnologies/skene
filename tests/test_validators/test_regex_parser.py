@@ -7,8 +7,7 @@ from textwrap import dedent
 
 import pytest
 
-from skene.validators.regex_parser import ExtractedNames, extract_names, supported_suffix
-
+from skene.validators.regex_parser import extract_names, supported_suffix
 
 # ---------------------------------------------------------------------------
 # supported_suffix
@@ -18,7 +17,10 @@ from skene.validators.regex_parser import ExtractedNames, extract_names, support
 class TestSupportedSuffix:
     @pytest.mark.parametrize(
         "suffix",
-        [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".java", ".go", ".rb", ".rs", ".php", ".cs", ".kt", ".swift", ".dart"],
+        [
+            ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".java",
+            ".go", ".rb", ".rs", ".php", ".cs", ".kt", ".swift", ".dart",
+        ],
     )
     def test_known_extensions(self, suffix: str) -> None:
         assert supported_suffix(suffix) is True
