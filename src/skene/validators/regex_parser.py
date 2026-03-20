@@ -280,9 +280,7 @@ def _strip_comments(content: str, lang: str) -> str:
     return content
 
 
-def _extract_with_patterns(
-    content: str, patterns: list[re.Pattern[str]]
-) -> list[str]:
+def _extract_with_patterns(content: str, patterns: list[re.Pattern[str]]) -> list[str]:
     """Run all patterns against content and return unique ordered matches."""
     seen: set[str] = set()
     names: list[str] = []

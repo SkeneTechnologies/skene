@@ -22,7 +22,8 @@ from skene.validators.loop_validator import (
 class TestExtractNames:
     def test_python_file(self, tmp_path: Path) -> None:
         f = tmp_path / "app.py"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             import os
             from pathlib import Path
 
@@ -31,7 +32,8 @@ class TestExtractNames:
 
             def handle_request(data):
                 pass
-        """))
+        """)
+        )
         result = _extract_names(f)
         assert result is not None
         assert "handle_request" in result.functions
@@ -40,7 +42,8 @@ class TestExtractNames:
 
     def test_typescript_file(self, tmp_path: Path) -> None:
         f = tmp_path / "handler.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             import { Request, Response } from 'express';
 
             export class AuthController {
@@ -52,7 +55,8 @@ class TestExtractNames:
             export function validateToken(token: string): boolean {
                 return token.length > 0;
             }
-        """))
+        """)
+        )
         result = _extract_names(f)
         assert result is not None
         assert "validateToken" in result.functions
@@ -61,7 +65,8 @@ class TestExtractNames:
 
     def test_javascript_file(self, tmp_path: Path) -> None:
         f = tmp_path / "utils.js"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             const lodash = require('lodash');
 
             function formatDate(date) {
@@ -69,7 +74,8 @@ class TestExtractNames:
             }
 
             const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
-        """))
+        """)
+        )
         result = _extract_names(f)
         assert result is not None
         assert "formatDate" in result.functions
@@ -78,7 +84,8 @@ class TestExtractNames:
 
     def test_go_file(self, tmp_path: Path) -> None:
         f = tmp_path / "server.go"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             package main
 
             import "net/http"
@@ -90,7 +97,8 @@ class TestExtractNames:
             func NewRouter() *Router {
                 return &Router{}
             }
-        """))
+        """)
+        )
         result = _extract_names(f)
         assert result is not None
         assert "NewRouter" in result.functions
@@ -114,11 +122,13 @@ class TestExtractNames:
 class TestValidateFileRequirementMultiLang:
     def test_ts_function_exists_passes(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "integration.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             export function integrateWithWordPress(config: WPConfig): void {
                 console.log('integrating');
             }
-        """))
+        """)
+        )
 
         req = {
             "path": "integration.ts",
@@ -135,9 +145,11 @@ class TestValidateFileRequirementMultiLang:
 
     def test_ts_function_exists_fails_when_missing(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "integration.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             export function otherFunction(): void {}
-        """))
+        """)
+        )
 
         req = {
             "path": "integration.ts",
@@ -155,11 +167,13 @@ class TestValidateFileRequirementMultiLang:
 
     def test_ts_class_exists(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "service.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             export class WordPressService {
                 constructor(private config: Config) {}
             }
-        """))
+        """)
+        )
 
         req = {
             "path": "service.ts",
@@ -174,9 +188,11 @@ class TestValidateFileRequirementMultiLang:
 
     def test_ts_import_exists(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "app.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             import { createClient } from '@supabase/supabase-js';
-        """))
+        """)
+        )
 
         req = {
             "path": "app.ts",
@@ -222,7 +238,8 @@ class TestValidateFileRequirementMultiLang:
 
     def test_mixed_checks_on_ts_file(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "plugin.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             import axios from 'axios';
 
             export class PluginManager {
@@ -232,7 +249,8 @@ class TestValidateFileRequirementMultiLang:
             export function initPlugin(): void {}
 
             const API_KEY = 'secret';
-        """))
+        """)
+        )
 
         req = {
             "path": "plugin.ts",
@@ -252,13 +270,15 @@ class TestValidateFileRequirementMultiLang:
 
     def test_java_function_exists(self, tmp_path: Path) -> None:
         java_file = tmp_path / "Service.java"
-        java_file.write_text(dedent("""\
+        java_file.write_text(
+            dedent("""\
             public class UserService {
                 public List<User> getUsers() {
                     return List.of();
                 }
             }
-        """))
+        """)
+        )
 
         req = {
             "path": "Service.java",
@@ -283,11 +303,13 @@ class TestValidateFunctionRequirementMultiLang:
     @pytest.mark.asyncio
     async def test_ts_function_found(self, tmp_path: Path) -> None:
         ts_file = tmp_path / "handler.ts"
-        ts_file.write_text(dedent("""\
+        ts_file.write_text(
+            dedent("""\
             export async function handleWebhook(payload: any): Promise<void> {
                 console.log(payload);
             }
-        """))
+        """)
+        )
 
         req = {
             "file": "handler.ts",
@@ -331,10 +353,12 @@ class TestValidateFunctionRequirementMultiLang:
     @pytest.mark.asyncio
     async def test_python_function_still_works(self, tmp_path: Path) -> None:
         py_file = tmp_path / "app.py"
-        py_file.write_text(dedent("""\
+        py_file.write_text(
+            dedent("""\
             def process_data(items: list) -> dict:
                 return {}
-        """))
+        """)
+        )
 
         req = {
             "file": "app.py",
@@ -349,13 +373,15 @@ class TestValidateFunctionRequirementMultiLang:
     @pytest.mark.asyncio
     async def test_go_function_found(self, tmp_path: Path) -> None:
         go_file = tmp_path / "main.go"
-        go_file.write_text(dedent("""\
+        go_file.write_text(
+            dedent("""\
             package main
 
             func ServeHTTP(w http.ResponseWriter, r *http.Request) {
                 w.WriteHeader(200)
             }
-        """))
+        """)
+        )
 
         req = {
             "file": "main.go",

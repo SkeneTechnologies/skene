@@ -18,8 +18,21 @@ class TestSupportedSuffix:
     @pytest.mark.parametrize(
         "suffix",
         [
-            ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".java",
-            ".go", ".rb", ".rs", ".php", ".cs", ".kt", ".swift", ".dart",
+            ".ts",
+            ".tsx",
+            ".js",
+            ".jsx",
+            ".mjs",
+            ".cjs",
+            ".java",
+            ".go",
+            ".rb",
+            ".rs",
+            ".php",
+            ".cs",
+            ".kt",
+            ".swift",
+            ".dart",
         ],
     )
     def test_known_extensions(self, suffix: str) -> None:
@@ -38,36 +51,42 @@ class TestSupportedSuffix:
 class TestTypeScriptExtraction:
     def test_function_declaration(self, tmp_path: Path) -> None:
         f = tmp_path / "app.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             export function integrateWithWordPress(config: WPConfig): void {
                 console.log('integrating');
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "integrateWithWordPress" in result.functions
 
     def test_async_function(self, tmp_path: Path) -> None:
         f = tmp_path / "api.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             export async function fetchData(url: string): Promise<Response> {
                 return fetch(url);
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "fetchData" in result.functions
 
     def test_arrow_function_const(self, tmp_path: Path) -> None:
         f = tmp_path / "utils.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             export const handleClick = (event: MouseEvent) => {
                 event.preventDefault();
             };
             const processData = async (data: any) => {
                 return data;
             };
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "handleClick" in result.functions
@@ -75,7 +94,8 @@ class TestTypeScriptExtraction:
 
     def test_class_and_interface(self, tmp_path: Path) -> None:
         f = tmp_path / "models.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             export class UserService {
                 constructor() {}
             }
@@ -89,7 +109,8 @@ class TestTypeScriptExtraction:
                 Active,
                 Inactive,
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "UserService" in result.classes
@@ -99,11 +120,13 @@ class TestTypeScriptExtraction:
 
     def test_imports(self, tmp_path: Path) -> None:
         f = tmp_path / "index.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             import { useState, useEffect } from 'react';
             import axios from 'axios';
             import './styles.css';
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "react" in result.imports
@@ -112,10 +135,12 @@ class TestTypeScriptExtraction:
 
     def test_require_import(self, tmp_path: Path) -> None:
         f = tmp_path / "server.js"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             const express = require('express');
             const path = require('path');
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "express" in result.imports
@@ -123,11 +148,13 @@ class TestTypeScriptExtraction:
 
     def test_ignores_commented_functions(self, tmp_path: Path) -> None:
         f = tmp_path / "commented.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             // function oldFunction() {}
             /* function removedFunction() {} */
             export function activeFunction(): void {}
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "activeFunction" in result.functions
@@ -136,7 +163,8 @@ class TestTypeScriptExtraction:
 
     def test_class_method(self, tmp_path: Path) -> None:
         f = tmp_path / "service.ts"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             class ApiService {
                 public async getData(id: string): Promise<Data> {
                     return this.fetch(id);
@@ -145,7 +173,8 @@ class TestTypeScriptExtraction:
                     return res.json();
                 }
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "getData" in result.functions
@@ -160,7 +189,8 @@ class TestTypeScriptExtraction:
 class TestJavaExtraction:
     def test_methods_and_class(self, tmp_path: Path) -> None:
         f = tmp_path / "App.java"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             package com.example;
 
             import java.util.List;
@@ -172,7 +202,8 @@ class TestJavaExtraction:
                 }
                 private void processUser(User user) {}
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "UserController" in result.classes
@@ -190,7 +221,8 @@ class TestJavaExtraction:
 class TestGoExtraction:
     def test_func_and_struct(self, tmp_path: Path) -> None:
         f = tmp_path / "main.go"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             package main
 
             import "fmt"
@@ -210,7 +242,8 @@ class TestGoExtraction:
             func NewServer(port int) *Server {
                 return &Server{Port: port}
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "Server" in result.classes
@@ -228,7 +261,8 @@ class TestGoExtraction:
 class TestRubyExtraction:
     def test_class_and_methods(self, tmp_path: Path) -> None:
         f = tmp_path / "user.rb"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             require 'json'
             require_relative 'base'
 
@@ -247,7 +281,8 @@ class TestRubyExtraction:
                 end
               end
             end
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "Auth" in result.classes
@@ -267,7 +302,8 @@ class TestRubyExtraction:
 class TestRustExtraction:
     def test_fn_struct_trait(self, tmp_path: Path) -> None:
         f = tmp_path / "lib.rs"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             use std::collections::HashMap;
 
             pub struct Config {
@@ -283,7 +319,8 @@ class TestRustExtraction:
             }
 
             fn internal_helper() {}
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "Config" in result.classes
@@ -301,7 +338,8 @@ class TestRustExtraction:
 class TestPHPExtraction:
     def test_class_and_function(self, tmp_path: Path) -> None:
         f = tmp_path / "Controller.php"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             <?php
             use App\\Models\\User;
 
@@ -311,7 +349,8 @@ class TestPHPExtraction:
                 }
                 private function validate($data) {}
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "UserController" in result.classes
@@ -328,7 +367,8 @@ class TestPHPExtraction:
 class TestCSharpExtraction:
     def test_class_and_methods(self, tmp_path: Path) -> None:
         f = tmp_path / "Service.cs"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             using System;
             using System.Collections.Generic;
 
@@ -344,7 +384,8 @@ class TestCSharpExtraction:
                     Task<User> FindById(int id);
                 }
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "UserService" in result.classes
@@ -381,12 +422,14 @@ class TestEdgeCases:
 
     def test_jsx_extension(self, tmp_path: Path) -> None:
         f = tmp_path / "Component.jsx"
-        f.write_text(dedent("""\
+        f.write_text(
+            dedent("""\
             import React from 'react';
             export default function MyComponent() {
                 return <div>Hello</div>;
             }
-        """))
+        """)
+        )
         result = extract_names(f)
         assert result is not None
         assert "MyComponent" in result.functions

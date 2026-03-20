@@ -104,6 +104,7 @@ def supported_suffix(suffix: str) -> bool:
 # CST walking helpers
 # ---------------------------------------------------------------------------
 
+
 def _walk(node: object) -> list[object]:  # type: ignore[override]
     """Depth-first walk of all tree-sitter nodes."""
     cursor = node.walk()  # type: ignore[union-attr]
@@ -141,29 +142,37 @@ def _node_text(node: object, source: bytes) -> str:
     return source[start:end].decode("utf-8", errors="replace")
 
 
-_FUNCTION_NODE_TYPES = frozenset({
-    "function_declaration",
-    "method_definition",
-    "generator_function_declaration",
-})
+_FUNCTION_NODE_TYPES = frozenset(
+    {
+        "function_declaration",
+        "method_definition",
+        "generator_function_declaration",
+    }
+)
 
-_ARROW_VAR_TYPES = frozenset({
-    "lexical_declaration",
-    "variable_declaration",
-    "export_statement",
-})
+_ARROW_VAR_TYPES = frozenset(
+    {
+        "lexical_declaration",
+        "variable_declaration",
+        "export_statement",
+    }
+)
 
-_CLASS_NODE_TYPES = frozenset({
-    "class_declaration",
-    "interface_declaration",
-    "type_alias_declaration",
-    "enum_declaration",
-    "abstract_class_declaration",
-})
+_CLASS_NODE_TYPES = frozenset(
+    {
+        "class_declaration",
+        "interface_declaration",
+        "type_alias_declaration",
+        "enum_declaration",
+        "abstract_class_declaration",
+    }
+)
 
-_IMPORT_NODE_TYPES = frozenset({
-    "import_statement",
-})
+_IMPORT_NODE_TYPES = frozenset(
+    {
+        "import_statement",
+    }
+)
 
 
 def _extract_functions(nodes: list[object], source: bytes) -> list[str]:
@@ -214,14 +223,30 @@ def _extract_imports(nodes: list[object], source: bytes) -> list[str]:
     names: list[str] = []
 
     for node in nodes:
-        if _node_type(node) not in _IMPORT_NODE_TYPES:
-            continue
-        source_node = _child_by_field(node, "source")
-        if source_node:
-            raw = _node_text(source_node, source).strip("'\"")
-            if raw and raw not in seen:
-                seen.add(raw)
-                names.append(raw)
+        ntype = _node_type(node)
+
+        # ES module imports: import ... from 'module'
+        if ntype in _IMPORT_NODE_TYPES:
+            source_node = _child_by_field(node, "source")
+            if source_node:
+                raw = _node_text(source_node, source).strip("'\"")
+                if raw and raw not in seen:
+                    seen.add(raw)
+                    names.append(raw)
+
+        # CommonJS require(): const x = require('module')
+        elif ntype == "call_expression":
+            func_node = _child_by_field(node, "function")
+            if func_node and _node_text(func_node, source) == "require":
+                args_node = _child_by_field(node, "arguments")
+                if args_node:
+                    for child in args_node.children:  # type: ignore[union-attr]
+                        if _node_type(child) == "string":
+                            raw = _node_text(child, source).strip("'\"")
+                            if raw and raw not in seen:
+                                seen.add(raw)
+                                names.append(raw)
+                            break
 
     return names
 

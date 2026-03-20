@@ -677,7 +677,10 @@ def _run_function_exists_check(
     if names is None:
         suffix = file_path.suffix
         return CheckResult(
-            "function_exists", pattern, description, CheckStatus.SKIPPED,
+            "function_exists",
+            pattern,
+            description,
+            CheckStatus.SKIPPED,
             f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
         )
     if pattern in names.functions:
@@ -695,7 +698,10 @@ def _run_class_exists_check(
     if names is None:
         suffix = file_path.suffix
         return CheckResult(
-            "class_exists", pattern, description, CheckStatus.SKIPPED,
+            "class_exists",
+            pattern,
+            description,
+            CheckStatus.SKIPPED,
             f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
         )
     if pattern in names.classes:
@@ -713,7 +719,10 @@ def _run_import_exists_check(
     if names is None:
         suffix = file_path.suffix
         return CheckResult(
-            "import_exists", pattern, description, CheckStatus.SKIPPED,
+            "import_exists",
+            pattern,
+            description,
+            CheckStatus.SKIPPED,
             f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
         )
 
@@ -775,8 +784,7 @@ def validate_file_requirement(
     # Extract names once for all AST-style checks on this file.
     # _extract_names handles Python, tree-sitter, and regex fallback automatically.
     needs_names = any(
-        (normalise_check(r).check_type in ("function_exists", "class_exists", "import_exists"))
-        for r in raw_checks
+        (normalise_check(r).check_type in ("function_exists", "class_exists", "import_exists")) for r in raw_checks
     )
     names = _extract_names(abs_path) if needs_names else None
 
