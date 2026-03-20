@@ -102,6 +102,12 @@ var (
 		Dark:  lipgloss.CompleteColor{TrueColor: "#E6B450", ANSI: "11"},
 		Light: lipgloss.CompleteColor{TrueColor: "#8A6500", ANSI: "3"},
 	}
+
+	// SpinnerColor — activity / loading indicator (distinct from brand accent).
+	SpinnerColor lipgloss.TerminalColor = lipgloss.CompleteAdaptiveColor{
+		Dark:  lipgloss.CompleteColor{TrueColor: "#7EC8E3", ANSI: "14"},
+		Light: lipgloss.CompleteColor{TrueColor: "#0D6E8D", ANSI: "6"},
+	}
 )
 
 
@@ -328,7 +334,7 @@ func rebuildStyles() {
 	FooterHelp = lipgloss.NewStyle().Foreground(MutedColor).MarginTop(1)
 
 	// Spinner style
-	Spinner = accent
+	Spinner = lipgloss.NewStyle().Foreground(SpinnerColor)
 
 	// UpdateNotice — bordered box for update + hint (no bg; centered text)
 	UpdateNotice = lipgloss.NewStyle().
