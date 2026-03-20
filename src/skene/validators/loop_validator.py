@@ -1,11 +1,12 @@
 """
-AST-based growth loop requirement validator.
+Multi-language growth loop requirement validator.
 
 Validates that code requirements defined in growth loop JSON files
 are actually implemented in the codebase by:
 - Checking file existence
-- Parsing Python AST to verify function/class definitions
-- Searching file content for required patterns/imports
+- Parsing source code to verify function/class/import definitions
+  (Python via ``ast``, JS/TS via tree-sitter or regex, other languages via regex)
+- Searching file content for required patterns
 - Tracking telemetry events for validation lifecycle
 
 Designed for modular integration into a CLI ``watch`` command.
@@ -28,6 +29,9 @@ from rich.text import Text
 
 from skene.growth_loops.storage import load_existing_growth_loops
 from skene.output import console, debug, warning
+from skene.validators import regex_parser as _regex
+from skene.validators import ts_parser as _treesitter
+from skene.validators.regex_parser import ExtractedNames
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -267,6 +271,63 @@ def _annotation_str(node: ast.expr | None) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Multi-language name extraction
+# ---------------------------------------------------------------------------
+
+# Extensions that are handled by the Python ``ast`` module.
+_PYTHON_SUFFIXES = frozenset({".py", ".pyi"})
+
+# All extensions with any level of extraction support (Python + regex + tree-sitter).
+_ALL_SUPPORTED_SUFFIXES = _PYTHON_SUFFIXES | frozenset(_regex._LANG_BY_SUFFIX.keys())
+
+
+def _extract_names_python(file_path: Path) -> ExtractedNames | None:
+    """Extract names from a Python file using the built-in ``ast`` module."""
+    tree = _parse_ast(file_path)
+    if tree is None:
+        return None
+    return ExtractedNames(
+        functions=ast_function_names(tree),
+        classes=ast_class_names(tree),
+        imports=ast_import_names(tree),
+    )
+
+
+def _extract_names(file_path: Path) -> ExtractedNames | None:
+    """
+    Extract function, class, and import names from a source file.
+
+    Resolution order:
+    1. Python ``ast`` module for ``.py`` / ``.pyi`` files.
+    2. Tree-sitter (if installed) for JS/TS and other supported grammars.
+    3. Regex-based extraction as the always-available fallback.
+
+    Returns ``None`` only when the file extension is completely unsupported
+    or the file cannot be read.
+    """
+    suffix = file_path.suffix.lower()
+
+    if suffix in _PYTHON_SUFFIXES:
+        return _extract_names_python(file_path)
+
+    # Try tree-sitter first (more accurate).
+    if _treesitter.supported_suffix(suffix):
+        result = _treesitter.extract_names(file_path)
+        if result is not None:
+            debug(f"Extracted names via tree-sitter for {file_path}")
+            return result
+
+    # Regex fallback (always available for known languages).
+    if _regex.supported_suffix(suffix):
+        result = _regex.extract_names(file_path)
+        if result is not None:
+            debug(f"Extracted names via regex for {file_path}")
+            return result
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Codebase function extraction (for finding alternatives)
 # ---------------------------------------------------------------------------
 
@@ -285,7 +346,10 @@ class FunctionInfo:
 
 def extract_all_functions(project_root: Path, exclude_dirs: list[str] | None = None) -> list[FunctionInfo]:
     """
-    Extract all function definitions from Python files in the project.
+    Extract all function definitions from source files in the project.
+
+    Scans Python files via the ``ast`` module and other supported languages
+    (JS, TS, etc.) via tree-sitter or regex extraction.
 
     Args:
         project_root: Root directory of the project
@@ -299,14 +363,12 @@ def extract_all_functions(project_root: Path, exclude_dirs: list[str] | None = N
 
     functions: list[FunctionInfo] = []
 
+    # --- Python files (rich AST with signatures & docstrings) ---
     for py_file in project_root.rglob("*.py"):
-        # Skip excluded directories
         if any(excluded in str(py_file) for excluded in exclude_dirs):
             continue
-
-        # Skip if file is too large (likely generated)
         try:
-            if py_file.stat().st_size > 1_000_000:  # 1MB
+            if py_file.stat().st_size > 1_000_000:
                 continue
         except OSError:
             continue
@@ -327,7 +389,6 @@ def extract_all_functions(project_root: Path, exclude_dirs: list[str] | None = N
                 sig = _format_signature(node)
                 docstring = ast.get_docstring(node) or ""
 
-                # Extract source code snippet (first 20 lines of function)
                 source_snippet = ""
                 if source_lines and hasattr(node, "lineno"):
                     start_line = node.lineno - 1
@@ -342,6 +403,34 @@ def extract_all_functions(project_root: Path, exclude_dirs: list[str] | None = N
                         docstring=docstring,
                         line_number=node.lineno if hasattr(node, "lineno") else 0,
                         source_code=source_snippet,
+                    )
+                )
+
+    # --- Non-Python files (tree-sitter / regex, names only) ---
+    non_py_globs = ["*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.go", "*.java", "*.rb", "*.rs", "*.php"]
+    for glob in non_py_globs:
+        for src_file in project_root.rglob(glob):
+            if any(excluded in str(src_file) for excluded in exclude_dirs):
+                continue
+            try:
+                if src_file.stat().st_size > 1_000_000:
+                    continue
+            except OSError:
+                continue
+
+            names = _extract_names(src_file)
+            if names is None:
+                continue
+
+            rel_path = str(src_file.relative_to(project_root))
+            for func_name in names.functions:
+                functions.append(
+                    FunctionInfo(
+                        file_path=rel_path,
+                        name=func_name,
+                        signature=func_name,
+                        docstring="",
+                        line_number=0,
                     )
                 )
 
@@ -579,55 +668,68 @@ def _run_contains_regex_check(
 
 
 def _run_function_exists_check(
-    tree: ast.Module | None,
+    names: ExtractedNames | None,
+    file_path: Path,
     pattern: str,
     description: str,
 ) -> CheckResult:
-    """Check whether a function named *pattern* exists in the AST."""
-    if tree is None:
-        return CheckResult("function_exists", pattern, description, CheckStatus.FAILED, "Could not parse file AST")
-    if pattern in ast_function_names(tree):
+    """Check whether a function named *pattern* exists in the extracted names."""
+    if names is None:
+        suffix = file_path.suffix
+        return CheckResult(
+            "function_exists", pattern, description, CheckStatus.SKIPPED,
+            f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
+        )
+    if pattern in names.functions:
         return CheckResult("function_exists", pattern, description, CheckStatus.PASSED)
     return CheckResult("function_exists", pattern, description, CheckStatus.FAILED, f"Function '{pattern}' not found")
 
 
 def _run_class_exists_check(
-    tree: ast.Module | None,
+    names: ExtractedNames | None,
+    file_path: Path,
     pattern: str,
     description: str,
 ) -> CheckResult:
-    """Check whether a class named *pattern* exists in the AST."""
-    if tree is None:
-        return CheckResult("class_exists", pattern, description, CheckStatus.FAILED, "Could not parse file AST")
-    if pattern in ast_class_names(tree):
+    """Check whether a class named *pattern* exists in the extracted names."""
+    if names is None:
+        suffix = file_path.suffix
+        return CheckResult(
+            "class_exists", pattern, description, CheckStatus.SKIPPED,
+            f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
+        )
+    if pattern in names.classes:
         return CheckResult("class_exists", pattern, description, CheckStatus.PASSED)
     return CheckResult("class_exists", pattern, description, CheckStatus.FAILED, f"Class '{pattern}' not found")
 
 
 def _run_import_exists_check(
-    tree: ast.Module | None,
+    names: ExtractedNames | None,
+    file_path: Path,
     pattern: str,
     description: str,
 ) -> CheckResult:
-    """Check whether an import matching *pattern* exists in the AST."""
-    if tree is None:
-        return CheckResult("import_exists", pattern, description, CheckStatus.FAILED, "Could not parse file AST")
+    """Check whether an import matching *pattern* exists in the extracted names."""
+    if names is None:
+        suffix = file_path.suffix
+        return CheckResult(
+            "import_exists", pattern, description, CheckStatus.SKIPPED,
+            f"Code parsing not supported for '{suffix}' files; use 'contains' or 'contains_regex' instead",
+        )
 
-    import_names = ast_import_names(tree)
-    # Allow substring matching for flexibility
-    for name in import_names:
+    for name in names.imports:
         if pattern in name or name.endswith(pattern):
             return CheckResult("import_exists", pattern, description, CheckStatus.PASSED)
 
     return CheckResult("import_exists", pattern, description, CheckStatus.FAILED, f"Import '{pattern}' not found")
 
 
-_CHECK_RUNNERS = {
-    "contains": lambda fp, tree, pat, desc: _run_contains_check(fp, pat, desc),
-    "contains_regex": lambda fp, tree, pat, desc: _run_contains_regex_check(fp, pat, desc),
-    "function_exists": lambda fp, tree, pat, desc: _run_function_exists_check(tree, pat, desc),
-    "class_exists": lambda fp, tree, pat, desc: _run_class_exists_check(tree, pat, desc),
-    "import_exists": lambda fp, tree, pat, desc: _run_import_exists_check(tree, pat, desc),
+_CHECK_RUNNERS: dict[str, Callable[..., CheckResult]] = {
+    "contains": lambda fp, names, pat, desc: _run_contains_check(fp, pat, desc),
+    "contains_regex": lambda fp, names, pat, desc: _run_contains_regex_check(fp, pat, desc),
+    "function_exists": lambda fp, names, pat, desc: _run_function_exists_check(names, fp, pat, desc),
+    "class_exists": lambda fp, names, pat, desc: _run_class_exists_check(names, fp, pat, desc),
+    "import_exists": lambda fp, names, pat, desc: _run_import_exists_check(names, fp, pat, desc),
 }
 
 
@@ -670,14 +772,19 @@ def validate_file_requirement(
             )
         return result
 
-    # Parse AST once for all checks on this file
-    tree = _parse_ast(abs_path) if abs_path.suffix == ".py" else None
+    # Extract names once for all AST-style checks on this file.
+    # _extract_names handles Python, tree-sitter, and regex fallback automatically.
+    needs_names = any(
+        (normalise_check(r).check_type in ("function_exists", "class_exists", "import_exists"))
+        for r in raw_checks
+    )
+    names = _extract_names(abs_path) if needs_names else None
 
     for raw in raw_checks:
         nc = normalise_check(raw)
         runner = _CHECK_RUNNERS.get(nc.check_type)
         if runner:
-            check_result = runner(abs_path, tree, nc.pattern, nc.description)
+            check_result = runner(abs_path, names, nc.pattern, nc.description)
         else:
             check_result = CheckResult(
                 nc.check_type,
@@ -712,22 +819,34 @@ async def validate_function_requirement(
     if not abs_path.is_file():
         detail = "File does not exist"
     else:
-        tree = _parse_ast(abs_path)
-        if tree is None:
-            detail = "Could not parse file AST"
+        names = _extract_names(abs_path)
+        if names is None:
+            suffix = abs_path.suffix
+            if suffix.lower() in _PYTHON_SUFFIXES:
+                detail = "Could not parse Python file AST"
+            else:
+                detail = (
+                    f"Code parsing not supported for '{suffix}' files; "
+                    "use 'contains' or 'contains_regex' checks instead"
+                )
         else:
-            found = name in ast_function_names(tree)
+            found = name in names.functions
 
-            if found and expected_sig:
-                actual_sig = ast_function_signature(tree, name)
-                if actual_sig:
-                    norm_expected = re.sub(r"\s+", " ", expected_sig.strip())
-                    norm_actual = re.sub(r"\s+", " ", actual_sig.strip())
-                    sig_match = norm_expected == norm_actual
-                    if not sig_match:
-                        detail = f"Signature mismatch: expected '{norm_expected}', got '{norm_actual}'"
+            if found and expected_sig and abs_path.suffix.lower() in _PYTHON_SUFFIXES:
+                # Signature matching only available for Python via ast
+                tree = _parse_ast(abs_path)
+                if tree is not None:
+                    actual_sig = ast_function_signature(tree, name)
+                    if actual_sig:
+                        norm_expected = re.sub(r"\s+", " ", expected_sig.strip())
+                        norm_actual = re.sub(r"\s+", " ", actual_sig.strip())
+                        sig_match = norm_expected == norm_actual
+                        if not sig_match:
+                            detail = f"Signature mismatch: expected '{norm_expected}', got '{norm_actual}'"
+                    else:
+                        detail = "Function found but could not extract signature"
                 else:
-                    detail = "Function found but could not extract signature"
+                    sig_match = True
             elif found:
                 sig_match = True
 

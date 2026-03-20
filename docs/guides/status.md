@@ -68,11 +68,40 @@ Each growth loop JSON defines requirements in two categories:
 
 - `contains` — file contains a literal substring
 - `contains_regex` — file matches a regular expression
-- `function_exists` — a function with the given name exists (Python AST parsing)
-- `class_exists` — a class with the given name exists (Python AST parsing)
-- `import_exists` — an import matching the given name exists (Python AST parsing)
+- `function_exists` — a function with the given name exists in the source file
+- `class_exists` — a class with the given name exists in the source file
+- `import_exists` — an import matching the given name exists in the source file
 
-**Function requirements** — The command checks that each required function exists in the specified file, using Python AST parsing. If an expected signature is provided, it also validates that the actual signature matches.
+**Function requirements** — The command checks that each required function exists in the specified file. For Python files, if an expected signature is provided, it also validates that the actual signature matches.
+
+#### Multi-language support
+
+The `function_exists`, `class_exists`, and `import_exists` checks work across multiple languages, not just Python. The validator uses a tiered parsing strategy:
+
+| Language | Extensions | Parser |
+|----------|-----------|--------|
+| Python | `.py`, `.pyi` | Built-in `ast` module (full signature matching) |
+| TypeScript | `.ts`, `.tsx` | tree-sitter (if installed) or regex fallback |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | tree-sitter (if installed) or regex fallback |
+| Java | `.java` | Regex-based extraction |
+| Go | `.go` | Regex-based extraction |
+| Ruby | `.rb` | Regex-based extraction |
+| Rust | `.rs` | Regex-based extraction |
+| PHP | `.php` | Regex-based extraction |
+| C# | `.cs` | Regex-based extraction |
+| Kotlin | `.kt`, `.kts` | Regex-based extraction |
+| Swift | `.swift` | Regex-based extraction |
+| Dart | `.dart` | Regex-based extraction |
+
+**tree-sitter (optional)** — For more accurate JS/TS parsing, install the optional `ast` extra:
+
+```bash
+pip install skene[ast]
+```
+
+This installs tree-sitter grammars for JavaScript and TypeScript. When tree-sitter is not installed, regex-based extraction is used automatically. The regex approach covers the vast majority of real-world patterns but may produce false positives on unusual code constructs.
+
+For unsupported file extensions, AST-style checks are skipped with a clear message suggesting `contains` or `contains_regex` as alternatives.
 
 ### Step 3: Display validation report
 
@@ -86,7 +115,7 @@ A loop is marked **COMPLETE** when all its file and function requirements pass. 
 
 ## Finding alternative implementations
 
-When `--find-alternatives` is enabled, the command extracts all function definitions from the project using AST parsing, then sends missing requirements to the LLM for semantic matching. This helps discover:
+When `--find-alternatives` is enabled, the command extracts all function definitions from the project (Python via AST, JS/TS/Go/Java/etc. via tree-sitter or regex), then sends missing requirements to the LLM for semantic matching. This helps discover:
 
 - Functions that already fulfill a requirement but have a different name
 - Existing implementations in unexpected file locations

@@ -36,6 +36,11 @@ dependencies = [
 ui = [
     "questionary>=2.0",
 ]
+ast = [
+    "tree-sitter>=0.23",
+    "tree-sitter-javascript>=0.23",
+    "tree-sitter-typescript>=0.23",
+]
 
 [project.scripts]
 skene = "skene.cli.main:skene_entry_point"
