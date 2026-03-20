@@ -21,6 +21,13 @@ const (
 	terrainAmplitude = 3.0
 	terrainFreq      = 0.08
 	terrainBorder    = 2
+
+	// Fixed playfield (not terminal-responsive). Ratio width:height = 39:11.
+	playfieldWidth  = 78
+	playfieldHeight = 22
+
+	// Horizontal drift toward the player, in grid cells per game tick (was 1.0).
+	enemyHorizMoveRate = 0.5
 )
 
 var (
@@ -95,10 +102,11 @@ type Game struct {
 	shootCd     int
 	dead        bool
 	started     bool
-	scroll      int
-	scrollSpeed float64
-	scrollAccum float64
-	rng         *rand.Rand
+	scroll           int
+	scrollSpeed      float64
+	scrollAccum      float64
+	enemyMoveAccum   float64
+	rng              *rand.Rand
 
 	bullets      []bullet
 	enemyBullets []bullet
@@ -146,39 +154,16 @@ func generateTerrain(offset int, count int, h int) (ceil []int, floor []int) {
 	return
 }
 
-// gridDimensions computes the playable grid size from terminal dimensions.
-// Layout: HUD(1) + blank(1) + border-top(1) + grid(H) + border-bottom(1) + progress(1) + footer(1) = H+6
-// Width: border-left(1) + grid(W) + border-right(1), capped to sectionWidth pattern.
-func gridDimensions(termW, termH int) (gridW, gridH int) {
-	sectionW := termW - 20
-	if sectionW < 40 {
-		sectionW = 40
-	}
-	if sectionW > 120 {
-		sectionW = 120
-	}
-	gridW = sectionW - 2
-	gridH = termH - 8
-	if gridH < 10 {
-		gridH = 10
-	}
-	if gridH > 30 {
-		gridH = 30
-	}
-	return
-}
-
 // NewGame creates a new R-Type game instance.
 func NewGame(termW, termH int) *Game {
-	gw, gh := gridDimensions(termW, termH)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	c, f := generateTerrain(0, gw+20, gh)
+	c, f := generateTerrain(0, playfieldWidth+20, playfieldHeight)
 	midY := (c[playerX] + f[playerX]) / 2
 	return &Game{
 		termWidth:       termW,
 		termHeight:      termH,
-		width:           gw,
-		height:          gh,
+		width:           playfieldWidth,
+		height:          playfieldHeight,
 		ceil:            c,
 		floor:           f,
 		playerY:         midY,
@@ -190,27 +175,10 @@ func NewGame(termW, termH int) *Game {
 	}
 }
 
-// SetSize updates game dimensions from terminal size.
+// SetSize records terminal size; the playfield stays fixed (see playfieldWidth/Height).
 func (g *Game) SetSize(termW, termH int) {
-	if termW == g.termWidth && termH == g.termHeight {
-		return
-	}
 	g.termWidth = termW
 	g.termHeight = termH
-	gw, gh := gridDimensions(termW, termH)
-	if gw == g.width && gh == g.height {
-		return
-	}
-	g.width = gw
-	g.height = gh
-	g.ceil, g.floor = generateTerrain(g.scroll, gw+20, gh)
-	col := g.scroll + playerX
-	if col < len(g.ceil) {
-		mid := (g.ceil[playerX] + g.floor[playerX]) / 2
-		if g.playerY < g.ceil[playerX]+1 || g.playerY > g.floor[playerX]-1 {
-			g.playerY = mid
-		}
-	}
 }
 
 // MoveUp decreases the player Y (thrust up).
@@ -417,11 +385,19 @@ func (g *Game) gameTick() {
 		}
 	}
 
+	g.enemyMoveAccum += enemyHorizMoveRate
+	enemySteps := 0
+	for g.enemyMoveAccum >= 1 {
+		g.enemyMoveAccum--
+		enemySteps++
+	}
 	for i := range g.enemies {
 		if !g.enemies[i].alive {
 			continue
 		}
-		g.enemies[i].pos.x--
+		if enemySteps > 0 {
+			g.enemies[i].pos.x -= enemySteps
+		}
 		g.enemies[i].phase += 0.15
 		g.enemies[i].pos.y += int(math.Round(math.Sin(g.enemies[i].phase) * 0.8))
 
@@ -597,6 +573,7 @@ func (g *Game) Restart() {
 	g.scroll = 0
 	g.scrollSpeed = 0.7
 	g.scrollAccum = 0
+	g.enemyMoveAccum = 0
 	g.bullets = nil
 	g.enemyBullets = nil
 	g.enemies = nil
@@ -747,7 +724,7 @@ func (g *Game) Render() string {
 			set(e.pos.x, e.pos.y+1, '▄', styleEnemy)
 			set(e.pos.x-1, e.pos.y+1, '▄', styleEnemy)
 		} else {
-			ch := '>'
+			ch := '◀'
 			switch e.kind {
 			case 1:
 				ch = '✦'
