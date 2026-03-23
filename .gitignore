@@ -92,9 +92,6 @@ supabase/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Plans (local drafts)
-docs/plans/
-
 # Cursor plugin
 cursor-plugin/.skene/
 
