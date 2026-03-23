@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "./scripts/check-growth-status.sh"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "./scripts/validate-skene-commands.sh",
+        "matcher": "uvx skene"
+      }
+    ]
+  }
+}

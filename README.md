@@ -79,6 +79,7 @@ This repository contains two packages:
 |-----------|-------------|----------|-------------|
 | `src/skene/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene/) |
 | `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
+| `cursor-plugin/` | Cursor IDE plugin | — | [Cursor Marketplace](https://cursor.com/marketplace) |
 
 The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
 

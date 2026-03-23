@@ -1,0 +1,62 @@
+---
+description: Best practices for implementing product-led growth features with Skene
+alwaysApply: true
+---
+
+skene-plg-best-practices:
+
+Skene agent behavior (always follow, applies to ALL commands and skills):
+
+Autonomy:
+- Every Skene command should run autonomously end-to-end. The user runs a slash command and gets a short result. No mid-flow questions unless there is a genuine blocker.
+- "Genuine blocker" = something the agent cannot infer, fix, or default (e.g. API key missing everywhere, destructive action like applying database migrations). Everything else the agent handles silently.
+- When the agent encounters a CLI prompt (e.g. "Do you want to edit? [y/n]"), it decides the safe default and pipes it. It does NOT surface routine CLI prompts to the user.
+
+Communication:
+- One-line status + next command. No explanations, no PLG lectures, no preambles.
+- Example: "Skene init complete. Provider: gemini, model: gemini-2.5-flash. Run `/skene-analyze` next."
+
+CLI is the source of truth:
+- The Skene CLI (`uvx skene`) produces all analysis, plans, and implementation data.
+- If a CLI command fails, report the exact error and suggest a fix. Do NOT substitute your own PLG analysis, growth loops, tech stack guesses, or implementation plans.
+- Only present data that came from CLI output or `.skene/` files.
+
+CLI discovery (important):
+- Do NOT hardcode CLI flags or assume which options exist. The CLI evolves.
+- Before running any `uvx skene <subcommand>` for the first time in a session, run `uvx skene <subcommand> --help` to discover the actual available options.
+- Choose the appropriate flags based on the --help output. If a flag doesn't appear in --help, do not use it.
+- Cache the --help output mentally for the session — no need to re-run it every time.
+
+Terminal rules:
+- The user CANNOT type into agent-spawned terminals. The agent handles ALL terminal input.
+- For CLI prompts the agent can answer: pipe the answer automatically (e.g. `echo n | uvx skene config --show`).
+- For CLI menus (e.g. "Select option [1/2/3/4]"): pipe the best option for agent use. For `uvx skene build`, always pipe `3` ("Show full prompt") so the agent gets the full text: `echo 3 | uvx skene build`.
+- For CLI prompts that represent a genuine user decision (e.g. "apply database migrations?"): ask the user in chat, get their answer, then pipe it.
+- `uvx skene config` (no flags): NEVER run — multi-step interactive. Detect/infer settings and write `.skene.config` directly.
+- Stuck terminal: kill the process (pid from terminal file header), re-run with piped input.
+
+Error handling:
+- Permission errors ("Operation not permitted"): Do NOT retry. Tell the user the exact command to run in their own terminal (outside agent).
+- API quota/billing (429): Report error, tell user to check billing. Do NOT fall back to own analysis.
+- API key missing: Tell user to set `SKENE_API_KEY`, then re-run the command.
+
+Phase guidance:
+- After each step, state the next command. Sequence: `/skene-init` → `/skene-analyze` → `/skene-plan` → `/skene-build` → `/skene-status` → `/skene-deploy`.
+
+When implementing growth loops or PLG features:
+
+Analytics and Telemetry:
+- Implement telemetry BEFORE the feature goes live.
+- Event naming: `{object}_{action}` (e.g. `user_signed_up`, `invite_sent`).
+- Include user_id, timestamp, and relevant properties.
+- Never track PII without explicit consent.
+
+Code Organization:
+- Growth code in dedicated modules (`growth/`, `analytics/`, `telemetry/`).
+- Feature flags for A/B testing.
+- Integration tests for critical paths (signup → activation → conversion).
+
+Compliance:
+- GDPR: consent management for EU users.
+- CCPA: opt-out for California users.
+- Allow users to disable tracking entirely.

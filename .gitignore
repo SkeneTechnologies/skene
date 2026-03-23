@@ -92,6 +92,9 @@ supabase/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Cursor plugin
+cursor-plugin/.skene/
+
 # Benchmarks
 benchmarks/results/
 !benchmarks/results/.keep

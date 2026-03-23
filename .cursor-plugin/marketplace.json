@@ -1,0 +1,13 @@
+{
+  "name": "skene",
+  "owner": {
+    "name": "Skene Technologies",
+    "email": "hello@skene.ai"
+  },
+  "plugins": [
+    {
+      "name": "skene",
+      "source": "./cursor-plugin"
+    }
+  ]
+}

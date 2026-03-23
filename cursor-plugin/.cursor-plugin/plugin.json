@@ -1,0 +1,23 @@
+{
+  "name": "skene",
+  "displayName": "Skene",
+  "version": "0.1.0",
+  "description": "Product-Led Growth codebase analysis and implementation toolkit. Scan your code, detect growth opportunities, and build actionable implementation plans.",
+  "author": {
+    "name": "Skene Technologies",
+    "email": "hello@skene.ai"
+  },
+  "homepage": "https://www.skene.ai",
+  "repository": "https://github.com/SkeneTechnologies/skene",
+  "license": "MIT",
+  "keywords": [
+    "product-led-growth",
+    "plg",
+    "growth-hacking",
+    "analytics",
+    "telemetry",
+    "monetization",
+    "codebase-analysis"
+  ],
+  "logo": "assets/logo.svg"
+}
