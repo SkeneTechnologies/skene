@@ -920,7 +920,7 @@ wheels = [
 
 [[package]]
 name = "skene"
-version = "0.3.1rc1"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

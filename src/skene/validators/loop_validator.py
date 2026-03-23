@@ -179,11 +179,20 @@ _JS_TS_SUFFIXES = {".js", ".ts", ".jsx", ".tsx", ".mjs", ".mts"}
 class ParsedTree(Protocol):
     """Language-agnostic protocol for parsed AST trees."""
 
-    def function_names(self) -> list[str]: ...
-    def class_names(self) -> list[str]: ...
-    def import_names(self) -> list[str]: ...
-    def function_signature(self, func_name: str) -> str | None: ...
-    def function_infos(self) -> list[FunctionInfo]: ...
+    def function_names(self) -> list[str]:
+        pass
+
+    def class_names(self) -> list[str]:
+        pass
+
+    def import_names(self) -> list[str]:
+        pass
+
+    def function_signature(self, func_name: str) -> str | None:
+        pass
+
+    def function_infos(self) -> list[FunctionInfo]:
+        pass
 
 
 def parse_file(file_path: Path) -> ParsedTree | None:
