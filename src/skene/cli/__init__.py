@@ -12,6 +12,6 @@ Usage with pip install:
     skene validate ./growth-manifest.json
 """
 
-from skene.cli.main import app
+from skene.cli.app import app
 
 __all__ = ["app"]

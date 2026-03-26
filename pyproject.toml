@@ -41,8 +41,8 @@ ui = [
 ]
 
 [project.scripts]
-skene = "skene.cli.main:skene_entry_point"
-skene-growth = "skene.cli.main:skene_growth_entry"
+skene = "skene.cli.app:skene_entry_point"
+skene-growth = "skene.cli.app:skene_growth_entry"
 
 [project.urls]
 Homepage = "https://www.skene.ai"
