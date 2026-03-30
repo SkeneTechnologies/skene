@@ -142,7 +142,7 @@ BASE_SCHEMA_SQL = "\n\n".join(
 )
 
 
-def _normalize_ingest_url(url: str) -> str:
+def normalize_ingest_url(url: str) -> str:
     """Return full webhook URL, appending db-trigger path only if not already present."""
     base = url.rstrip("/")
     if base.endswith(DB_TRIGGER_PATH):
@@ -155,7 +155,7 @@ def notify_event_log_sql(upstream_ingest_url: str, proxy_secret: str) -> str:
     Generate CREATE OR REPLACE for notify_event_log with given upstream ingest URL and proxy secret.
     Use when --local URL is provided to override the default placeholders.
     """
-    full_url = _normalize_ingest_url(upstream_ingest_url)
+    full_url = normalize_ingest_url(upstream_ingest_url)
     sql = _notify_event_log_function_sql(
         full_url.replace("'", "''"),
         proxy_secret.replace("'", "''"),
