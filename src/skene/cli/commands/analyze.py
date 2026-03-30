@@ -2,7 +2,6 @@
 
 import asyncio
 from pathlib import Path
-from typing import Optional
 
 import typer
 from pydantic import SecretStr
@@ -30,31 +29,31 @@ def analyze(
         dir_okay=True,
         resolve_path=True,
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(
         None,
         "-o",
         "--output",
         help="Output path for growth-manifest.json",
     ),
-    api_key: Optional[str] = typer.Option(
+    api_key: str | None = typer.Option(
         None,
         "--api-key",
         envvar="SKENE_API_KEY",
         help="API key for LLM provider (or set SKENE_API_KEY env var)",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",
         help="LLM provider to use (openai, gemini, anthropic/claude, lmstudio, ollama, generic, skene)",
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",
         help="LLM model name (e.g., gemini-3-flash-preview for v1beta API)",
     ),
-    base_url: Optional[str] = typer.Option(
+    base_url: str | None = typer.Option(
         None,
         "--base-url",
         envvar="SKENE_BASE_URL",
@@ -76,7 +75,7 @@ def analyze(
         "--features",
         help="Only analyze growth features and update feature-registry.json",
     ),
-    exclude: Optional[list[str]] = typer.Option(
+    exclude: list[str] | None = typer.Option(
         None,
         "--exclude",
         "-e",

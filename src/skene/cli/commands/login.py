@@ -1,6 +1,5 @@
 """Login and logout commands."""
 
-from typing import Optional
 
 import typer
 
@@ -10,7 +9,7 @@ from skene.cli.auth import cmd_login, cmd_login_status, cmd_logout
 
 @app.command(rich_help_panel="manage")
 def login(
-    upstream: Optional[str] = typer.Option(
+    upstream: str | None = typer.Option(
         None,
         "--upstream",
         "-u",

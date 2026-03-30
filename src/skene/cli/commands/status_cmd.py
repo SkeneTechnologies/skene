@@ -2,7 +2,7 @@
 
 import asyncio
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import typer
 from pydantic import SecretStr
@@ -22,7 +22,7 @@ def status(
         dir_okay=True,
         resolve_path=True,
     ),
-    context: Optional[Path] = typer.Option(
+    context: Path | None = typer.Option(
         None,
         "--context",
         "-c",
@@ -33,19 +33,19 @@ def status(
         "--find-alternatives",
         help="Use LLM to find existing functions that might fulfill missing requirements (requires API key)",
     ),
-    api_key: Optional[str] = typer.Option(
+    api_key: str | None = typer.Option(
         None,
         "--api-key",
         envvar="SKENE_API_KEY",
         help="API key for LLM provider (required for --find-alternatives)",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",
         help="LLM provider: openai, gemini, anthropic, ollama, generic, skene (uses config if not provided)",
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",

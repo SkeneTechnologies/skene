@@ -3,7 +3,6 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import typer
 from pydantic import SecretStr
@@ -25,36 +24,36 @@ from skene.output import status as output_status
 
 @app.command()
 def build(
-    plan: Optional[Path] = typer.Option(
+    plan: Path | None = typer.Option(
         None,
         "--plan",
         help="Path to growth plan markdown file",
     ),
-    context: Optional[Path] = typer.Option(
+    context: Path | None = typer.Option(
         None,
         "--context",
         "-c",
         help="Directory containing growth-plan.md (auto-detected if not specified)",
     ),
-    api_key: Optional[str] = typer.Option(
+    api_key: str | None = typer.Option(
         None,
         "--api-key",
         envvar="SKENE_API_KEY",
         help="API key for LLM (uses config if not provided)",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",
         help="LLM provider: openai, gemini, anthropic, ollama, generic, skene (uses config if not provided)",
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",
         help="LLM model (uses provider default if not provided)",
     ),
-    base_url: Optional[str] = typer.Option(
+    base_url: str | None = typer.Option(
         None,
         "--base-url",
         envvar="SKENE_BASE_URL",
@@ -76,13 +75,13 @@ def build(
         "--no-fallback",
         help="Disable model fallback on rate limits; retry same model instead",
     ),
-    target: Optional[str] = typer.Option(
+    target: str | None = typer.Option(
         None,
         "--target",
         "-t",
         help="Where to send the prompt (skip interactive menu). Options: cursor, claude, show, file",
     ),
-    feature: Optional[str] = typer.Option(
+    feature: str | None = typer.Option(
         None,
         "--feature",
         "-f",
@@ -146,11 +145,11 @@ def build(
 
 async def _build_async(
     rc: ResolvedConfig,
-    plan: Optional[Path],
-    context: Optional[Path],
-    target: Optional[str] = None,
-    no_fallback: Optional[bool] = False,
-    bias_feature: Optional[str] = None,
+    plan: Path | None,
+    context: Path | None,
+    target: str | None = None,
+    no_fallback: bool | None = False,
+    bias_feature: str | None = None,
 ):
     """Async implementation of build command."""
     # Validate LLM configuration

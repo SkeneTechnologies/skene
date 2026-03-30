@@ -1,7 +1,7 @@
 """Build Supabase migrations from growth loop telemetry and push to upstream."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import typer
 
@@ -22,19 +22,19 @@ def push(
         dir_okay=True,
         resolve_path=True,
     ),
-    context: Optional[Path] = typer.Option(
+    context: Path | None = typer.Option(
         None,
         "--context",
         "-c",
         help="Path to skene-context directory (auto-detected if omitted)",
     ),
-    loop_id: Optional[str] = typer.Option(
+    loop_id: str | None = typer.Option(
         None,
         "--loop",
         "-l",
         help="Push only this loop (by loop_id); if omitted, pushes all loops with Supabase telemetry",
     ),
-    upstream: Optional[str] = typer.Option(
+    upstream: str | None = typer.Option(
         None,
         "--upstream",
         "-u",
@@ -50,12 +50,12 @@ def push(
         "--local",
         help="Build migrations locally without pushing upstream (uses default Skene Cloud ingest URL).",
     ),
-    ingest_url: Optional[str] = typer.Option(
+    ingest_url: str | None = typer.Option(
         None,
         "--ingest-url",
         help=f"Custom upstream ingest URL (use with --local). Default: {DEFAULT_LOCAL_INGEST_BASE}{DB_TRIGGER_PATH}",
     ),
-    proxy_secret: Optional[str] = typer.Option(
+    proxy_secret: str | None = typer.Option(
         None,
         "--proxy-secret",
         help="Proxy secret for upstream ingest endpoint (use with --local). Default: YOUR_PROXY_SECRET.",

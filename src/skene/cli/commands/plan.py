@@ -2,7 +2,6 @@
 
 import asyncio
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -16,17 +15,17 @@ from skene.planner import find_plan_steps_path
 
 @app.command()
 def plan(
-    manifest: Optional[Path] = typer.Option(
+    manifest: Path | None = typer.Option(
         None,
         "--manifest",
         help="Path to growth-manifest.json",
     ),
-    template: Optional[Path] = typer.Option(
+    template: Path | None = typer.Option(
         None,
         "--template",
         help="Path to growth-template.json",
     ),
-    context: Optional[Path] = typer.Option(
+    context: Path | None = typer.Option(
         None,
         "--context",
         "-c",
@@ -38,25 +37,25 @@ def plan(
         "--output",
         help="Output path for growth plan (markdown)",
     ),
-    api_key: Optional[str] = typer.Option(
+    api_key: str | None = typer.Option(
         None,
         "--api-key",
         envvar="SKENE_API_KEY",
         help="API key for LLM provider (or set SKENE_API_KEY env var)",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",
         help="LLM provider to use (openai, gemini, anthropic/claude, ollama, generic, skene)",
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",
         help="LLM model name (e.g., gemini-3-flash-preview for v1beta API)",
     ),
-    base_url: Optional[str] = typer.Option(
+    base_url: str | None = typer.Option(
         None,
         "--base-url",
         envvar="SKENE_BASE_URL",
@@ -73,7 +72,7 @@ def plan(
         "--activation",
         help="Generate activation-focused plan using Senior Activation Engineer perspective",
     ),
-    prompt: Optional[str] = typer.Option(
+    prompt: str | None = typer.Option(
         None,
         "--prompt",
         help="Additional user prompt to influence the plan generation",
