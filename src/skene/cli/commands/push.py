@@ -169,10 +169,10 @@ def push(
             raise typer.Exit(1)
 
     if local:
-        from skene.growth_loops.schema_sql import _normalize_ingest_url
+        from skene.growth_loops.schema_sql import normalize_ingest_url
 
         default_ingest = DEFAULT_LOCAL_INGEST_BASE + DB_TRIGGER_PATH
-        forward_url = _normalize_ingest_url(ingest_url.strip()) if ingest_url and ingest_url.strip() else default_ingest
+        forward_url = normalize_ingest_url(ingest_url.strip()) if ingest_url and ingest_url.strip() else default_ingest
     else:
         forward_url = None
     secret = proxy_secret or "YOUR_PROXY_SECRET"
