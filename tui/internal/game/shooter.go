@@ -21,6 +21,13 @@ const (
 	terrainAmplitude = 3.0
 	terrainFreq      = 0.08
 	terrainBorder    = 2
+
+	// Fixed playfield (not terminal-responsive). Ratio width:height = 39:11.
+	playfieldWidth  = 78
+	playfieldHeight = 22
+
+	// Horizontal drift toward the player, in grid cells per game tick (was 1.0).
+	enemyHorizMoveRate = 0.5
 )
 
 var (
@@ -95,10 +102,11 @@ type Game struct {
 	shootCd     int
 	dead        bool
 	started     bool
-	scroll      int
-	scrollSpeed float64
-	scrollAccum float64
-	rng         *rand.Rand
+	scroll           int
+	scrollSpeed      float64
+	scrollAccum      float64
+	enemyMoveAccum   float64
+	rng              *rand.Rand
 
 	bullets      []bullet
 	enemyBullets []bullet
@@ -126,7 +134,7 @@ func generateTerrain(offset int, count int, h int) (ceil []int, floor []int) {
 			terrainAmplitude*0.5*math.Sin(float64(col)*terrainFreq*2.3+1.2)
 		mid := float64(h) / 2.0
 		ceilRow := int(math.Round(mid - float64(h)/2.0 + terrainBorder + wave))
-		floorRow := int(math.Round(mid + float64(h)/2.0 - terrainBorder - wave*0.7))
+		floorRow := int(math.Round(mid + float64(h)/2.0 - (terrainBorder + 1) - wave*0.7))
 
 		if ceilRow < 1 {
 			ceilRow = 1
@@ -146,39 +154,16 @@ func generateTerrain(offset int, count int, h int) (ceil []int, floor []int) {
 	return
 }
 
-// gridDimensions computes the playable grid size from terminal dimensions.
-// Layout: HUD(1) + blank(1) + border-top(1) + grid(H) + border-bottom(1) + progress(1) + footer(1) = H+6
-// Width: border-left(1) + grid(W) + border-right(1), capped to sectionWidth pattern.
-func gridDimensions(termW, termH int) (gridW, gridH int) {
-	sectionW := termW - 20
-	if sectionW < 40 {
-		sectionW = 40
-	}
-	if sectionW > 120 {
-		sectionW = 120
-	}
-	gridW = sectionW - 2
-	gridH = termH - 8
-	if gridH < 10 {
-		gridH = 10
-	}
-	if gridH > 30 {
-		gridH = 30
-	}
-	return
-}
-
 // NewGame creates a new R-Type game instance.
 func NewGame(termW, termH int) *Game {
-	gw, gh := gridDimensions(termW, termH)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	c, f := generateTerrain(0, gw+20, gh)
+	c, f := generateTerrain(0, playfieldWidth+20, playfieldHeight)
 	midY := (c[playerX] + f[playerX]) / 2
 	return &Game{
 		termWidth:       termW,
 		termHeight:      termH,
-		width:           gw,
-		height:          gh,
+		width:           playfieldWidth,
+		height:          playfieldHeight,
 		ceil:            c,
 		floor:           f,
 		playerY:         midY,
@@ -190,27 +175,10 @@ func NewGame(termW, termH int) *Game {
 	}
 }
 
-// SetSize updates game dimensions from terminal size.
+// SetSize records terminal size; the playfield stays fixed (see playfieldWidth/Height).
 func (g *Game) SetSize(termW, termH int) {
-	if termW == g.termWidth && termH == g.termHeight {
-		return
-	}
 	g.termWidth = termW
 	g.termHeight = termH
-	gw, gh := gridDimensions(termW, termH)
-	if gw == g.width && gh == g.height {
-		return
-	}
-	g.width = gw
-	g.height = gh
-	g.ceil, g.floor = generateTerrain(g.scroll, gw+20, gh)
-	col := g.scroll + playerX
-	if col < len(g.ceil) {
-		mid := (g.ceil[playerX] + g.floor[playerX]) / 2
-		if g.playerY < g.ceil[playerX]+1 || g.playerY > g.floor[playerX]-1 {
-			g.playerY = mid
-		}
-	}
 }
 
 // MoveUp decreases the player Y (thrust up).
@@ -402,11 +370,11 @@ func (g *Game) gameTick() {
 			if gap > 10 {
 				h := 3 + g.rng.Intn(3)
 				w := 3 + g.rng.Intn(4)
-				spawnRange := gap - h - 6
+				spawnRange := gap - h - 1
 				if spawnRange < 1 {
 					spawnRange = 1
 				}
-				oy := ceilY + 3 + g.rng.Intn(spawnRange)
+				oy := ceilY + 2 + g.rng.Intn(spawnRange)
 				g.obstacles = append(g.obstacles, obstacle{
 					worldX: spawnCol,
 					y:      oy,
@@ -417,11 +385,19 @@ func (g *Game) gameTick() {
 		}
 	}
 
+	g.enemyMoveAccum += enemyHorizMoveRate
+	enemySteps := 0
+	for g.enemyMoveAccum >= 1 {
+		g.enemyMoveAccum--
+		enemySteps++
+	}
 	for i := range g.enemies {
 		if !g.enemies[i].alive {
 			continue
 		}
-		g.enemies[i].pos.x--
+		if enemySteps > 0 {
+			g.enemies[i].pos.x -= enemySteps
+		}
 		g.enemies[i].phase += 0.15
 		g.enemies[i].pos.y += int(math.Round(math.Sin(g.enemies[i].phase) * 0.8))
 
@@ -597,6 +573,7 @@ func (g *Game) Restart() {
 	g.scroll = 0
 	g.scrollSpeed = 0.7
 	g.scrollAccum = 0
+	g.enemyMoveAccum = 0
 	g.bullets = nil
 	g.enemyBullets = nil
 	g.enemies = nil
@@ -747,7 +724,7 @@ func (g *Game) Render() string {
 			set(e.pos.x, e.pos.y+1, '▄', styleEnemy)
 			set(e.pos.x-1, e.pos.y+1, '▄', styleEnemy)
 		} else {
-			ch := '>'
+			ch := '◀'
 			switch e.kind {
 			case 1:
 				ch = '✦'
@@ -792,7 +769,7 @@ func (g *Game) Render() string {
 	}
 
 	hp := strings.Repeat("♥ ", g.playerHP) + strings.Repeat("♡ ", 5-g.playerHP)
-	hud := styleHUD.Render(fmt.Sprintf(constants.GameHUDFormat, g.score, hp, g.scroll))
+	hud := styleHUD.Render(fmt.Sprintf(constants.GameHUDFormat, g.score*g.scroll, hp, g.scroll))
 
 	gameBox := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
@@ -894,11 +871,12 @@ func (g *Game) deathScreen() string {
 
 	gameOverTitle := styleDead.Render(constants.GameOver)
 
+	finalScore := g.score * g.scroll
 	statsContent := lipgloss.JoinVertical(
 		lipgloss.Left,
-		styles.Muted.Render(constants.GameStatScore)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
-		styles.Muted.Render(constants.GameStatDistance)+styles.Body.Render(fmt.Sprintf("%d meters", g.scroll)),
 		styles.Muted.Render(constants.GameStatDefeated)+styles.Body.Render(fmt.Sprintf("%d", g.score)),
+		styles.Muted.Render(constants.GameStatDistance)+styles.Body.Render(fmt.Sprintf("%d meters", g.scroll)),
+		styles.Muted.Render(constants.GameStatFinalScore)+styles.Body.Render(fmt.Sprintf("%d", finalScore)),
 	)
 
 	innerContent := lipgloss.JoinVertical(

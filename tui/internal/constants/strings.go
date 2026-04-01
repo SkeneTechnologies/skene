@@ -195,15 +195,15 @@ const (
 
 // Game strings
 const (
-	GameTitle        = "TIME TO"
-	GameOver         = "GAME OVER"
-	GameAutoFire     = "auto-fire is on"
-	GameThrustUp     = "thrust up"
-	GameThrustDown   = "thrust down"
-	GameStatScore    = "Score    "
-	GameStatDistance = "Distance "
-	GameStatDefeated = "Defeated "
-	GameHUDFormat    = " SCORE: %d  HP: %s  DIST: %d "
+	GameTitle          = "TIME TO"
+	GameOver           = "GAME OVER"
+	GameAutoFire       = "auto-fire is on"
+	GameThrustUp       = "thrust up"
+	GameThrustDown     = "thrust down"
+	GameStatDistance   = "Distance "
+	GameStatDefeated   = "Defeated "
+	GameStatFinalScore = "Score    "
+	GameHUDFormat      = " SCORE: %d  HP: %s  DIST: %d "
 )
 
 // Engine phase names

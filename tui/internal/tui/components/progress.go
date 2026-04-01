@@ -13,7 +13,7 @@ type Spinner struct {
 // NewSpinner creates a new spinner
 func NewSpinner() *Spinner {
 	return &Spinner{
-		frames: []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+		frames: []string{"░","░", "▄", "▄", "░","░", "▀", "▀", "▀", "▀"},
 		index:  0,
 	}
 }
@@ -25,7 +25,7 @@ func (s *Spinner) Tick() {
 
 // Render the spinner
 func (s *Spinner) Render() string {
-	return styles.Accent.Render(s.frames[s.index])
+	return styles.Spinner.Render(s.frames[s.index])
 }
 
 // SpinnerWithText renders spinner with text
