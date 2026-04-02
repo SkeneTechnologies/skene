@@ -340,6 +340,17 @@ def get_registry_path_for_output(output_path: Path) -> Path:
     return output_path.parent / FEATURE_REGISTRY_FILENAME
 
 
+def registry_path_for_project(project_root: Path, output_dir: str) -> Path:
+    """
+    Absolute path to feature-registry.json for the project's configured Skene output directory.
+
+    Matches `build`: registry is a sibling of growth-manifest.json under that directory.
+    """
+    base = Path(output_dir).expanduser()
+    resolved_base = base.resolve() if base.is_absolute() else (project_root / base).resolve()
+    return get_registry_path_for_output(resolved_base / "growth-manifest.json")
+
+
 def merge_registry_and_enrich_manifest(
     manifest_data: dict[str, Any],
     existing_engine_features: list[dict[str, Any]] | None,

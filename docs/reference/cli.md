@@ -254,9 +254,9 @@ See the [configuration guide](../guides/configuration.md) for file format and al
 
 ## `push`
 
-Push pre-generated engine and trigger artifacts to upstream.
+Push pre-generated engine, feature registry, and trigger artifacts to upstream.
 
-`push` no longer generates migrations. Run `skene build` first to update `skene/engine.yaml` and `supabase/migrations/*_skene_triggers.sql`.
+`push` no longer generates migrations. Run `skene build` first to update `skene/engine.yaml`, `{output_dir}/feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql`.
 
 ```
 skene push [PATH] [OPTIONS]
@@ -284,7 +284,7 @@ skene push [PATH] [OPTIONS]
 ### Behavior notes
 
 - Requires existing `skene/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
-- When `--upstream` is provided (or resolved from `.skene.config`), pushes package contents (`engine.yaml` + `trigger.sql`) to the upstream API.
+- When `--upstream` is provided (or resolved from `.skene.config`), pushes package contents (`engine.yaml`, `feature_registry_json`, `trigger_sql`) to the upstream API. Registry content is read from `{output_dir}/feature-registry.json` when the file exists.
 - Use `skene login` to authenticate before pushing to upstream.
 - Deprecated flags now return an error with migration guidance.
 

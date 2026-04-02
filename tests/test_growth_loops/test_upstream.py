@@ -39,7 +39,8 @@ class TestBuildPackage:
 
         package = build_package(tmp_path)
         assert package["engine_yaml"] == "version: 1\nsubjects: []\nfeatures: []\n"
-        assert package["telemetry_sql"] == "CREATE TRIGGER"
+        assert package["trigger_sql"] == "CREATE TRIGGER"
+        assert package["feature_registry_json"] is None
 
     def test_package_excludes_schema_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
@@ -48,8 +49,8 @@ class TestBuildPackage:
         trigger_sql.write_text("CREATE TRIGGER")
 
         package = build_package(tmp_path)
-        assert "CREATE SCHEMA" not in (package["telemetry_sql"] or "")
-        assert package["telemetry_sql"] == "CREATE TRIGGER"
+        assert "CREATE SCHEMA" not in (package["trigger_sql"] or "")
+        assert package["trigger_sql"] == "CREATE TRIGGER"
 
     def test_package_uses_latest_trigger_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
@@ -57,7 +58,7 @@ class TestBuildPackage:
         (tmp_path / "supabase" / "migrations" / "20260304151537_skene_triggers.sql").write_text("-- latest")
 
         package = build_package(tmp_path)
-        assert package["telemetry_sql"] == "-- latest"
+        assert package["trigger_sql"] == "-- latest"
 
     def test_package_uses_explicit_engine_path(self, tmp_path: Path):
         custom_engine = tmp_path / "custom" / "engine.yaml"
@@ -66,6 +67,17 @@ class TestBuildPackage:
 
         package = build_package(tmp_path, engine_path=custom_engine)
         assert package["engine_yaml"] == "version: 1\nsubjects: []\nfeatures: []\n"
+
+    def test_package_includes_feature_registry_json(self, tmp_path: Path):
+        (tmp_path / "skene").mkdir(parents=True)
+        (tmp_path / "skene" / "engine.yaml").write_text("version: 1\n")
+        (tmp_path / "skene-context").mkdir(parents=True)
+        (tmp_path / "skene-context" / "feature-registry.json").write_text('{"features": []}\n')
+        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
+        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_triggers.sql").write_text("--")
+
+        package = build_package(tmp_path, output_dir="./skene-context")
+        assert package["feature_registry_json"] == '{"features": []}\n'
 
 
 class TestBuildPushManifest:
@@ -117,7 +129,8 @@ class TestPushToUpstream:
         assert "package" in payload
         assert payload["manifest"]["workspace_slug"] == "test"
         assert "engine_yaml" in payload["package"]
-        assert "telemetry_sql" in payload["package"]
+        assert "trigger_sql" in payload["package"]
+        assert "feature_registry_json" in payload["package"]
 
     @patch("skene.growth_loops.upstream.httpx.post")
     def test_push_401_returns_auth_error(self, mock_post, tmp_path: Path):

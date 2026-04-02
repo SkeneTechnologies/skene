@@ -1,7 +1,7 @@
 """
 Upstream push logic for skene push.
 
-Builds a single package (engine.yaml + trigger.sql) and POSTs to upstream API.
+Builds a single package (engine.yaml, feature-registry.json, trigger.sql) and POSTs to upstream API.
 """
 
 import hashlib
@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from skene.feature_registry import registry_path_for_project
 from skene.growth_loops.push import find_trigger_migration
 
 
@@ -66,24 +67,35 @@ def validate_token(api_base: str, token: str) -> bool:
 def build_package(
     project_root: Path,
     engine_path: Path | None = None,
+    *,
+    output_dir: str = "./skene-context",
 ) -> dict[str, Any]:
     """
-    Build a single package for upstream: engine_yaml + trigger SQL content.
+    Build a single package for upstream: engine YAML, feature registry JSON, trigger SQL.
 
     Returns dict:
         engine_yaml: content of skene/engine.yaml (or provided engine_path), or None
-        telemetry_sql: content of the trigger migration (legacy key), or None if missing
+        feature_registry_json: content of feature-registry.json, or None if missing
+        trigger_sql: content of the trigger migration, or None if missing
     """
-    package: dict[str, Any] = {"engine_yaml": None, "telemetry_sql": None}
+    package: dict[str, Any] = {
+        "engine_yaml": None,
+        "feature_registry_json": None,
+        "trigger_sql": None,
+    }
 
     resolved_engine_path = engine_path or project_root / "skene" / "engine.yaml"
     if resolved_engine_path.exists() and resolved_engine_path.is_file():
         package["engine_yaml"] = resolved_engine_path.read_text(encoding="utf-8")
 
+    reg_path = registry_path_for_project(project_root, output_dir)
+    if reg_path.is_file():
+        package["feature_registry_json"] = reg_path.read_text(encoding="utf-8")
+
     migrations_dir = project_root / "supabase" / "migrations"
     trigger_path = find_trigger_migration(migrations_dir)
     if trigger_path:
-        package["telemetry_sql"] = trigger_path.read_text(encoding="utf-8")
+        package["trigger_sql"] = trigger_path.read_text(encoding="utf-8")
 
     return package
 
@@ -94,9 +106,11 @@ def build_push_manifest(
     trigger_events: list[str],
     loops_count: int = 1,
     engine_path: Path | None = None,
+    *,
+    output_dir: str = "./skene-context",
 ) -> dict[str, Any]:
     """Build push manifest with package checksum."""
-    package = build_package(project_root, engine_path=engine_path)
+    package = build_package(project_root, engine_path=engine_path, output_dir=output_dir)
     package_json = json.dumps(package, sort_keys=True)
     return {
         "version": "1.0",
@@ -115,15 +129,17 @@ def push_to_upstream(
     trigger_events: list[str],
     loops_count: int = 1,
     engine_path: Path | None = None,
+    *,
+    output_dir: str = "./skene-context",
 ) -> dict[str, Any]:
     """
-    Push a single package (engine.yaml + trigger.sql) to upstream API.
+    Push a single package (engine.yaml, feature-registry.json, trigger.sql) to upstream API.
 
     Returns dict: on success {"ok": True, **response}; on failure {"ok": False, "error": str}.
     """
     api_base = _api_base_from_upstream(upstream_url)
     workspace_slug = _workspace_slug_from_url(upstream_url)
-    package = build_package(project_root, engine_path=engine_path)
+    package = build_package(project_root, engine_path=engine_path, output_dir=output_dir)
     package_json = json.dumps(package, sort_keys=True)
     manifest = {
         "version": "1.0",

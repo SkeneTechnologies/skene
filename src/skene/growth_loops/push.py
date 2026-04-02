@@ -238,9 +238,11 @@ def push_to_upstream(
     token: str,
     trigger_events: list[str],
     features_count: int,
+    *,
+    output_dir: str = "./skene-context",
 ) -> dict[str, Any] | None:
     """
-    Push package (engine.yaml + trigger.sql) to upstream.
+    Push package (engine.yaml, feature-registry.json, trigger.sql) to upstream.
     Returns response dict on success, None on failure.
     """
     from skene.growth_loops.upstream import push_to_upstream as _push_to_upstream
@@ -252,6 +254,7 @@ def push_to_upstream(
         trigger_events=trigger_events,
         loops_count=features_count,
         engine_path=project_root / "skene" / "engine.yaml",
+        output_dir=output_dir,
     )
 
 

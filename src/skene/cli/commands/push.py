@@ -7,6 +7,7 @@ import typer
 from skene.cli.app import app, resolve_cli_config
 from skene.config import resolve_upstream_token
 from skene.engine import collect_engine_trigger_events, default_engine_path, load_engine_document
+from skene.feature_registry import registry_path_for_project
 from skene.growth_loops.push import find_trigger_migration, push_to_upstream
 from skene.output import error, success, warning
 from skene.output import status as output_status
@@ -78,7 +79,7 @@ def push(
     ),
 ):
     """
-    Push existing `skene/engine.yaml` and trigger migration SQL to upstream.
+    Push existing `skene/engine.yaml`, `feature-registry.json`, and trigger migration SQL to upstream.
 
     This command no longer builds migrations. Run `skene build` first.
     """
@@ -125,6 +126,15 @@ def push(
     if schema_path is None:
         warning("Base schema migration not found (skene_growth_schema). Did you run skene build recently?")
 
+    registry_path = registry_path_for_project(project_root, rc.config.output_dir)
+    if registry_path.is_file():
+        success(f"Feature registry: {registry_path}")
+    else:
+        warning(
+            f"No feature registry at {registry_path}. Run `skene build` (or analyze) so the registry exists; "
+            "push will omit it from the package until then."
+        )
+
     if push_only:
         output_status("`--push-only` is now implicit; pushing existing artifacts.")
 
@@ -143,10 +153,12 @@ def push(
             token=resolved_token,
             trigger_events=trigger_events,
             features_count=len(engine_doc.features),
+            output_dir=rc.config.output_dir,
         )
         if result.get("ok"):
             success(
-                f"Pushed to upstream commit_hash={result.get('commit_hash', '?')} (package: engine.yaml, trigger.sql)"
+                f"Pushed to upstream commit_hash={result.get('commit_hash', '?')} "
+                "(package: engine_yaml, feature_registry_json, trigger_sql)"
             )
             output_status("Upstream parses the package and deploys.")
             return

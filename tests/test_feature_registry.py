@@ -14,6 +14,7 @@ from skene.feature_registry import (
     load_features_for_build,
     merge_features_into_registry,
     merge_registry_and_enrich_manifest,
+    registry_path_for_project,
     upsert_registry_from_engine,
     write_feature_registry,
 )
@@ -338,3 +339,14 @@ class TestExportRegistryToFormat:
     def test_unknown_format_raises(self):
         with pytest.raises(ValueError, match="Unknown format"):
             export_registry_to_format({}, "unknown")
+
+
+class TestRegistryPathForProject:
+    def test_default_output_dir(self, tmp_path):
+        p = registry_path_for_project(tmp_path, "./skene-context")
+        assert p == tmp_path / "skene-context" / FEATURE_REGISTRY_FILENAME
+
+    def test_absolute_output_dir(self, tmp_path):
+        abs_ctx = (tmp_path / "ctx").resolve()
+        p = registry_path_for_project(tmp_path, str(abs_ctx))
+        assert p == abs_ctx / FEATURE_REGISTRY_FILENAME

@@ -243,7 +243,7 @@ from skene.growth_loops.push import (
 
 from skene.growth_loops.upstream import (
     validate_token,                     # Validate token via upstream API
-    build_package,                      # Assemble deployment package
+    build_package,                      # engine_yaml + feature_registry_json + trigger_sql
     build_push_manifest,                # Create push manifest with checksum
     push_to_upstream,                   # POST package to /api/v1/deploys
 )
