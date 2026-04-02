@@ -1,6 +1,5 @@
 """Prompt building and deep link utilities for build command."""
 
-import asyncio
 import json
 import os
 import platform
@@ -9,7 +8,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import quote
 
-from skene.output import console, status, warning
+from skene.output import status, warning
+from skene.progress import run_with_progress
 
 
 def _load_growth_plan_json(plan_path: Path) -> dict | None:
@@ -91,23 +91,6 @@ def extract_technical_execution(plan_path: Path) -> dict[str, str] | None:
     }
 
 
-async def _show_progress_indicator(stop_event: asyncio.Event) -> None:
-    """Show progress indicator with filled boxes every second."""
-    count = 0
-    while not stop_event.is_set():
-        count += 1
-        # Print filled box (█) every second
-        console.print("[cyan]█[/cyan]", end="")
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=1.0)
-            break
-        except asyncio.TimeoutError:
-            continue
-    # Print newline when done
-    if count > 0:
-        console.print()
-
-
 async def build_prompt_with_llm(
     plan_path: Path,
     technical_execution: dict[str, str],
@@ -172,13 +155,8 @@ async def build_prompt_with_llm(
         f"Generate the prompt now (output ONLY the prompt, no explanations):"
     )
 
-    # Start progress indicator
-    stop_event = asyncio.Event()
-    progress_task = None
-
     try:
-        progress_task = asyncio.create_task(_show_progress_indicator(stop_event))
-        generated_prompt = await llm.generate_content(meta_prompt)
+        generated_prompt = await run_with_progress(llm.generate_content(meta_prompt))
 
         # Clean up any markdown code fences if present
         generated_prompt = generated_prompt.strip()
@@ -190,14 +168,6 @@ async def build_prompt_with_llm(
         warning(f"LLM prompt generation failed: {e}")
         status("Falling back to template...")
         return build_prompt_from_template(plan_path, technical_execution)
-    finally:
-        # Stop progress indicator
-        if progress_task is not None:
-            stop_event.set()
-            try:
-                await progress_task
-            except Exception:
-                pass
 
 
 def build_prompt_from_template(plan_path: Path, technical_execution: dict[str, str]) -> str:

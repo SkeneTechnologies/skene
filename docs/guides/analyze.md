@@ -110,11 +110,11 @@ uvx skene analyze . --features
 This mode:
 
 1. Runs the growth features analyzer only (skips opportunities and revenue leakage)
-2. Loads existing growth loops from `skene-context/growth-loops/`
-3. Maps loops to features and updates `feature-registry.json`
-4. Enriches the manifest with `loop_ids` and `growth_pillars`
+2. Loads existing engine context from `skene/engine.yaml` (if present)
+3. Maps engine features to registry entries and updates `feature-registry.json`
+4. Enriches the manifest with feature links and growth metadata
 
-This is faster than a full analysis and useful when you want to refresh the feature registry after building new growth loops.
+This is faster than a full analysis and useful when you want to refresh the feature registry after updating the engine model.
 
 ## Excluding folders
 

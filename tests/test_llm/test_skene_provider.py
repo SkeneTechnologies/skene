@@ -55,6 +55,24 @@ def test_factory_creates_skene_client_with_base_url():
     assert client._endpoint == "http://localhost:3000/api/v1/chat/completions"
 
 
+def test_skene_client_normalizes_production_root_base_url():
+    client = SkeneClient(
+        api_key=SecretStr("secret"),
+        model_name="auto",
+        base_url="https://www.skene.ai",
+    )
+    assert client._endpoint == "https://www.skene.ai/api/v1/chat/completions"
+
+
+def test_skene_client_normalizes_workspace_base_url():
+    client = SkeneClient(
+        api_key=SecretStr("secret"),
+        model_name="auto",
+        base_url="https://www.skene.ai/workspace/my-app",
+    )
+    assert client._endpoint == "https://www.skene.ai/api/v1/chat/completions"
+
+
 async def test_skene_client_uses_production_endpoint(monkeypatch):
     from skene.llm.providers import skene as skene_module
 

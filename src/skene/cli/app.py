@@ -7,6 +7,7 @@ helper (ResolvedConfig), and registers all command modules.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 import click
@@ -14,7 +15,7 @@ import typer
 from typer.core import TyperGroup
 
 from skene import __version__
-from skene.config import Config, default_model_for_provider, load_config
+from skene.config import Config, default_model_for_provider, find_project_config, load_config, load_toml
 from skene.output import apply_verbosity, console, error
 
 # ---------------------------------------------------------------------------
@@ -79,6 +80,48 @@ def requires_base_url(provider: str) -> bool:
     return provider.lower() in _OPENAI_COMPAT_PROVIDERS
 
 
+def _project_config_defines_base_url() -> bool:
+    """True when project .skene.config contains a non-empty base_url key."""
+    path = find_project_config()
+    if path is None or not path.exists():
+        return False
+    try:
+        data = load_toml(path)
+    except Exception:
+        return False
+    value = data.get("base_url")
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _resolve_base_url(
+    *,
+    provider: str,
+    cli_base_url: str | None,
+    merged_config_base_url: str | None,
+) -> str | None:
+    """
+    Resolve LLM base URL.
+
+    For provider ``skene``, default to Skene Cloud API (via ``None`` → SkeneClient
+    production endpoint) unless ``base_url`` is set via CLI, ``SKENE_BASE_URL``,
+    or project ``.skene.config``. User-level config alone does not pin base_url
+    for skene, so a stale global ``localhost`` does not override production.
+    """
+    p = (provider or "").lower()
+    cli = (cli_base_url or "").strip() if cli_base_url is not None else ""
+    if cli:
+        return cli
+
+    if p == "skene":
+        if os.environ.get("SKENE_BASE_URL", "").strip():
+            return merged_config_base_url
+        if _project_config_defines_base_url():
+            return merged_config_base_url
+        return None
+
+    return merged_config_base_url
+
+
 # ---------------------------------------------------------------------------
 # Shared config resolution
 # ---------------------------------------------------------------------------
@@ -114,7 +157,11 @@ def resolve_cli_config(
     config = load_config()
     resolved_debug = apply_verbosity(quiet, debug, config.debug)
     resolved_provider = provider or config.provider
-    resolved_base_url = base_url or config.base_url
+    resolved_base_url = _resolve_base_url(
+        provider=resolved_provider,
+        cli_base_url=base_url,
+        merged_config_base_url=config.base_url,
+    )
     resolved_model = model or config.get("model") or default_model_for_provider(resolved_provider)
     resolved_api_key = api_key or config.api_key
     is_local = is_local_provider(resolved_provider)

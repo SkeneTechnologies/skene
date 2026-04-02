@@ -11,7 +11,7 @@ Scan your code, detect growth opportunities, and build actionable implementation
 | **Codebase Analysis** | Detect tech stack, existing growth features, and revenue leakage |
 | **Growth Planning** | Generate prioritized growth loops ranked by impact and effort |
 | **Implementation Prompts** | Context-aware code generation matched to your stack |
-| **Telemetry Deployment** | Set up Supabase-backed analytics and event tracking |
+| **Telemetry Deployment** | After `skene build`, `*_skene_triggers.sql` in `supabase/migrations/`; `skene push` uploads to upstream |
 | **Validation** | Verify that growth loop requirements are actually implemented |
 | **Best Practices** | Always-on PLG guidance via Cursor rules |
 
@@ -38,7 +38,7 @@ Open a project and type `/skene-init` in the Cursor agent to configure Skene.
 | `/skene-plan` | Generate growth loop implementation plan |
 | `/skene-build` | Build implementation prompt for selected loop |
 | `/skene-status` | Check implementation progress |
-| `/skene-deploy` | Deploy telemetry infrastructure |
+| `/skene-deploy` | Push engine + trigger migration to upstream (run `skene build` first) |
 
 ## Skills
 

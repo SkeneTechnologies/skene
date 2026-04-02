@@ -216,32 +216,34 @@ from skene.feature_registry import (
 | Function | Description |
 |----------|-------------|
 | `merge_features_into_registry(new_features, registry)` | Merges new features: adds new, updates matched, archives missing |
-| `merge_registry_and_enrich_manifest(manifest, context_dir)` | Full pipeline: loads loops, maps to features, writes registry, enriches manifest |
+| `merge_registry_and_enrich_manifest(manifest, engine_features, output_path)` | Full pipeline: loads/maps engine features, writes registry, enriches manifest |
+| `upsert_registry_from_engine(engine_doc, registry_path)` | Upserts feature-registry entries from `engine.yaml` features |
 | `load_features_for_build(context_dir)` | Returns active features list for the build command |
 | `export_registry_to_format(registry, format)` | Exports to `"json"`, `"csv"`, or `"markdown"` |
 
-## Growth loops
+## Engine and migrations
 
 ```python
-from skene.growth_loops.storage import (
-    load_existing_growth_loops,         # Load all loop JSONs from growth-loops/
-    write_growth_loop_json,             # Write a loop JSON to disk
-    generate_loop_definition_with_llm,  # Generate loop definition via LLM
-    derive_loop_id,                     # Derive loop_id from name
-    derive_loop_name,                   # Derive name from technical execution
+from skene.engine import (
+    load_engine_document,               # Load skene/engine.yaml
+    write_engine_document,              # Write skene/engine.yaml
+    merge_engine_documents,             # Merge delta by key
+    parse_source_to_db_event,           # Parse schema.table.operation source
+    engine_features_to_loop_definitions # Adapter for migration builder
 )
 
 from skene.growth_loops.push import (
     ensure_base_schema_migration,       # Check, build, update base schema (creates or overwrites)
-    build_loops_to_supabase,            # Build Supabase migrations from loops
+    build_loops_to_supabase,            # Build Supabase migrations from trigger definitions
     build_migration_sql,                # Generate migration SQL
-    write_migration,                    # Write migration file
+    find_trigger_migration,             # Latest telemetry migration path (*_skene_triggers.sql + legacy names)
+    write_migration,                    # Write timestamped *_skene_triggers.sql (default migration_name)
     push_to_upstream,                   # Push to upstream API
 )
 
 from skene.growth_loops.upstream import (
     validate_token,                     # Validate token via upstream API
-    build_package,                      # Assemble deployment package
+    build_package,                      # engine_yaml + feature_registry_json + trigger_sql
     build_push_manifest,                # Create push manifest with checksum
     push_to_upstream,                   # POST package to /api/v1/deploys
 )

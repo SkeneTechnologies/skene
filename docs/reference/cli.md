@@ -103,9 +103,9 @@ See the [plan guide](../guides/plan.md) for detailed usage.
 
 ## `build`
 
-Build an AI-ready implementation prompt from your growth plan, then choose where to send it.
+Build engine artifacts and an AI-ready implementation prompt from your growth plan.
 
-Extracts the Technical Execution section from the growth plan, uses an LLM to generate a focused implementation prompt, and offers interactive delivery options (Cursor deep link, Claude CLI, or display).
+Extracts the Technical Execution section from the growth plan, updates `skene/engine.yaml`, updates `skene-context/feature-registry.json`, generates Supabase trigger migration SQL (unless skipped), and then offers prompt delivery options (Cursor deep link, Claude CLI, or display).
 
 ```
 skene build [OPTIONS]
@@ -125,7 +125,8 @@ skene build [OPTIONS]
 | `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
 | `--target TEXT` | `-t` | interactive | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
-| `--feature TEXT` | `-f` | | Bias toward this feature name when linking the growth loop to a feature in the registry |
+| `--feature TEXT` | `-f` | | Bias toward this feature name when linking engine features to the registry |
+| `--skip-migrations` | | `false` | Skip writing Supabase trigger migration files from actionable engine features |
 
 ### Delivery targets
 
@@ -142,7 +143,9 @@ The prompt is always saved to a file in the plan's parent directory regardless o
 ### Behavior notes
 
 - Requires a configured LLM (API key + provider). Falls back to a template-based prompt if the LLM call fails.
-- Also generates and saves a growth loop definition JSON alongside the prompt.
+- Ensures `skene/engine.yaml` exists and merges a new LLM-generated engine delta into it.
+- Updates `skene-context/feature-registry.json` from engine features.
+- Generates `supabase/migrations/*_skene_triggers.sql` from engine features that include `action` (unless `--skip-migrations` is used).
 - Use `--target file` for non-interactive pipelines (e.g. `analyze && plan && build --target file`).
 
 See the [build guide](../guides/build.md) for detailed usage.
@@ -151,9 +154,9 @@ See the [build guide](../guides/build.md) for detailed usage.
 
 ## `status`
 
-Show implementation status of growth loop requirements.
+Show implementation status for `skene/engine.yaml`.
 
-Loads all growth loop JSON definitions from `skene-context/growth-loops/` and uses AST parsing to verify that required files, functions, and patterns are implemented. Displays a report showing which requirements are met and which are missing.
+Loads `skene/engine.yaml`, validates structure, and checks whether action-enabled features have matching trigger/function entries in `supabase/migrations/*.sql`.
 
 ```
 skene status [PATH] [OPTIONS]
@@ -169,27 +172,23 @@ skene status [PATH] [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--context PATH` | `-c` | auto-detected | Path to `skene-context` directory. Auto-detected from `<PATH>/skene-context/` or `./skene-context/`. |
-| `--find-alternatives` | | `false` | Use LLM to search for existing functions that might fulfill missing requirements |
-| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider. Required when `--find-alternatives` is set. |
-| `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`, `ollama` |
-| `--model TEXT` | `-m` | provider default | LLM model name |
+| `--context PATH` | `-c` | | Deprecated. If set to a `skene-context` path, the parent directory is used as project root. |
+| `--find-alternatives` | | `false` | Deprecated for engine status checks; currently ignored. |
+| `--api-key TEXT` | | `$SKENE_API_KEY` or config | Deprecated for engine status checks; currently ignored. |
+| `--provider TEXT` | `-p` | config value | Deprecated for engine status checks; currently ignored. |
+| `--model TEXT` | `-m` | provider default | Deprecated for engine status checks; currently ignored. |
 
-### Context auto-detection
+### Project root resolution
 
-When `--context` is not specified, the command checks these paths in order:
-
-1. `<PATH>/skene-context/` (where `PATH` is the positional argument)
-2. `./skene-context/`
-
-The directory must contain a `growth-loops/` subdirectory with at least one JSON file.
+- Uses `PATH` as project root by default.
+- If `--context` points to `.../skene-context`, uses the parent directory as project root.
 
 ### Behavior notes
 
-- Validates every growth loop JSON file found in `<context>/growth-loops/`.
-- Uses Python AST parsing to verify function and class definitions, import statements, and content patterns.
-- With `--find-alternatives`, extracts all functions from the codebase and uses the LLM to find semantic matches for missing requirements (confidence threshold: 60%).
-- Does not require an API key unless `--find-alternatives` is enabled.
+- Validates `skene/engine.yaml` and checks duplicate keys/required fields.
+- For features with `action`, expects matching trigger/function tokens in SQL migrations. The detail column shows the latest matching migration filename; if the same trigger appears in older files, the suffix `(+N)` indicates how many additional matches exist.
+- For features without `action`, reports code-only mode (no trigger required).
+- Returns non-zero exit code when required engine/migration checks fail.
 
 See the [status guide](../guides/status.md) for detailed usage.
 
@@ -255,9 +254,9 @@ See the [configuration guide](../guides/configuration.md) for file format and al
 
 ## `push`
 
-Build Supabase migrations from growth loop telemetry and push artifacts to upstream.
+Push pre-generated engine, feature registry, and trigger artifacts to upstream.
 
-Creates idempotent trigger-based migrations that INSERT into `event_log` for each telemetry-defined table. Optionally pushes growth loops and telemetry SQL to Skene Cloud upstream.
+`push` no longer generates migrations. Run `skene build` first to update `skene/engine.yaml`, `{output_dir}/feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql`.
 
 ```
 skene push [PATH] [OPTIONS]
@@ -273,24 +272,21 @@ skene push [PATH] [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--context PATH` | `-c` | auto-detected | Path to `skene-context` directory. Auto-detected from `<PATH>/skene-context/` or `./skene-context/`. |
-| `--loop TEXT` | `-l` | | Push only this loop (by `loop_id`). If omitted, pushes all loops with Supabase telemetry. |
 | `--upstream TEXT` | `-u` | config | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
-| `--push-only` | | `false` | Re-push current output without regenerating migrations. |
-| `--local` | | `false` | Build schema + telemetry migrations locally without pushing (uses default Skene Cloud ingest URL). Mutually exclusive with `--upstream` and `--push-only`. |
-| `--ingest-url TEXT` | | | Custom upstream ingest URL to bake into `notify_event_log()`. Use with `--local`. Default: `https://www.skene.ai/api/v1/cloud/ingest/db-trigger`. |
-| `--proxy-secret TEXT` | | `YOUR_PROXY_SECRET` | Proxy secret for the `x-skene-secret` header in `notify_event_log()`. Use with `--local`. |
-| `--init` | | `false` | Create or update the base schema migration only, without building telemetry or pushing. |
+| `--push-only` | | `false` | Legacy no-op flag. Push is already artifact-only. |
+| `--context PATH` | `-c` | | Deprecated; no longer used. |
+| `--loop TEXT` | `-l` | | Deprecated; loop filtering is removed. |
+| `--local` | | `false` | Deprecated; migration generation moved to `build`. |
+| `--ingest-url TEXT` | | | Deprecated; migration generation moved to `build`. |
+| `--proxy-secret TEXT` | | | Deprecated; migration generation moved to `build`. |
+| `--init` | | `false` | Deprecated; migration generation moved to `build`. |
 
 ### Behavior notes
 
-- On every run, checks and updates `supabase/migrations/20260201000000_skene_growth_schema.sql`. Creates it if missing; overwrites if exists (no duplicate migrations).
-- Unless `--push-only` is used: requires growth loops with Supabase telemetry (type `"supabase"`) in `skene-context/growth-loops/`.
-- Unless `--push-only` is used: generates trigger migrations at `supabase/migrations/<timestamp>_skene_telemetry.sql`.
-- When `--upstream` is provided (or resolved from `.skene.config`), pushes the package (growth loops + telemetry SQL) to the upstream API.
+- Requires existing `skene/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
+- When `--upstream` is provided (or resolved from `.skene.config`), pushes package contents (`engine.yaml`, `feature_registry_json`, `trigger_sql`) to the upstream API. Registry content is read from `{output_dir}/feature-registry.json` when the file exists.
 - Use `skene login` to authenticate before pushing to upstream.
-- `--local` skips the upstream push entirely and uses Skene Cloud upstream ingest by default. Use `--ingest-url https://...` to bake a custom upstream ingest URL into `notify_event_log()` in the telemetry migration.
-- `--init` writes only the base schema migration and exits. Equivalent to the former `skene init` command.
+- Deprecated flags now return an error with migration guidance.
 
 See the [push guide](../guides/push.md) for detailed usage.
 
@@ -418,29 +414,21 @@ uvx skene plan --activation
 # Validate a manifest
 uvx skene validate ./skene-context/growth-manifest.json
 
-# Check growth loop implementation status
+# Check engine implementation status
 uvx skene status
-
-# Check status with LLM-powered alternative matching
-uvx skene status --find-alternatives --api-key "YOUR_KEY"
 
 # Features-only analysis (updates feature registry without full analysis)
 uvx skene analyze . --features
 
-# Push growth loops to Supabase + upstream
+# Build engine + trigger artifacts, then push upstream
+uvx skene build
 uvx skene push
-uvx skene push --local
-uvx skene push --local --ingest-url https://skene.ai --proxy-secret my-secret
 uvx skene push --upstream https://skene.ai/workspace/my-app
-uvx skene push --loop my_loop_id
 
 # Login/logout from upstream
 uvx skene login --upstream https://skene.ai/workspace/my-app
 uvx skene login --status
 uvx skene logout
-
-# Initialize Supabase base schema
-uvx skene push --init
 
 # Export feature registry
 uvx skene features export --format markdown -o features.md

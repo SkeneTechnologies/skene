@@ -32,7 +32,7 @@ The wizard walks you through provider selection, authentication, and analysis â€
 - **Revenue leakage analysis** -- spots missing monetization and weak pricing tiers
 - **Growth plan generation** -- produces prioritized growth loops with implementation roadmaps
 - **Implementation prompts** -- builds ready-to-use prompts for Cursor, Claude, or other AI tools
-- **Telemetry deployment** -- generates Supabase migrations and pushes to upstream
+- **Telemetry deployment** -- `build` writes `supabase/migrations/*_skene_triggers.sql`; `push` sends engine + that SQL to upstream
 - **Loop validation** -- verifies that growth loop requirements are implemented
 - **Interactive chat** -- ask questions about your codebase in the terminal
 

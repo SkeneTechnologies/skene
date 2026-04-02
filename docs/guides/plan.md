@@ -160,7 +160,7 @@ For the template:
 - `./skene-context/growth-template.json`
 - `./growth-template.json`
 
-The command also loads any existing **growth loop definitions** from `<context>/growth-loops/`. When previous growth loops are found, the plan is instructed not to suggest duplicate features and to focus on complementary opportunities.
+The command also loads existing engine context from `<project-root>/skene/engine.yaml` (when present). Existing engine features are used as prior context so the plan focuses on complementary work instead of duplicating what already exists.
 
 ## Output format
 

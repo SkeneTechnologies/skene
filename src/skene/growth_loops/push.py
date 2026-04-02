@@ -1,5 +1,5 @@
 """
-Push utilities for building Supabase migrations from growth loop telemetry.
+Push utilities for building Supabase trigger migrations from growth loop telemetry.
 
 Builds migration files that create:
 - Base schema (event_log, failed_events, enrichment_map) via init
@@ -32,7 +32,6 @@ def _function_name(table: str, operation: str, loop_id: str) -> str:
 def _build_trigger_function_sql(
     *,
     loop_id: str,
-    action_name: str,
     table: str,
     operation: str,
     properties: list[str],
@@ -122,7 +121,6 @@ def extract_supabase_telemetry(loop_def: dict[str, Any]) -> list[dict[str, Any]]
 def build_migration_sql(
     loops: list[dict[str, Any]],
     *,
-    supabase_url_placeholder: str = "https://YOUR_PROJECT.supabase.co",
     forward_url: str | None = None,
     proxy_secret: str = "YOUR_PROXY_SECRET",
 ) -> str:
@@ -147,7 +145,6 @@ def build_migration_sql(
         for t in extract_supabase_telemetry(loop_def):
             table = t.get("table")
             operation = (t.get("operation") or "INSERT").upper()
-            action_name = t.get("action_name", "action")
             properties = t.get("properties") or ["id"]
 
             if not table:
@@ -159,7 +156,6 @@ def build_migration_sql(
 
             fn_sql = _build_trigger_function_sql(
                 loop_id=loop_id,
-                action_name=action_name,
                 table=table,
                 operation=operation,
                 properties=properties,
@@ -186,11 +182,29 @@ def build_migration_sql(
     return migration.strip()
 
 
+def find_trigger_migration(migrations_dir: Path) -> Path | None:
+    """Find the latest telemetry trigger migration (excludes base schema)."""
+    if not migrations_dir.exists():
+        return None
+    candidates: list[Path] = []
+    for p in migrations_dir.glob("*.sql"):
+        n = p.name.lower()
+        if "skene_growth_schema" in n:
+            continue
+        if n.endswith("_skene_triggers.sql"):
+            candidates.append(p)
+        elif "skene_trigger" in n:
+            candidates.append(p)
+        elif "skene_telemetry" in n:
+            candidates.append(p)
+    return max(candidates, key=lambda q: q.name) if candidates else None
+
+
 def write_migration(
     migration_sql: str,
     output_dir: Path,
     *,
-    migration_name: str = "skene_telemetry",
+    migration_name: str = "skene_triggers",
 ) -> Path:
     """Write migration SQL to supabase/migrations/ with timestamp filename."""
     migrations_dir = output_dir / "supabase" / "migrations"
@@ -218,24 +232,25 @@ def push_to_upstream(
     project_root: Path,
     upstream_url: str,
     token: str,
-    loops: list[dict[str, Any]],
-    context: Path | None = None,
-) -> dict[str, Any] | None:
+    trigger_events: list[str],
+    features_count: int,
+    *,
+    output_dir: str = "./skene-context",
+) -> dict[str, Any]:
     """
-    Push package (growth loops + telemetry.sql) to upstream.
+    Push package (engine.yaml, feature-registry.json, trigger.sql) to upstream.
     Returns response dict on success, None on failure.
     """
-    from skene.growth_loops.upstream import push_to_upstream
+    from skene.growth_loops.upstream import push_to_upstream as _push_to_upstream
 
-    loops_dir = (context / "growth-loops") if context else None
-    trigger_events = _trigger_events_from_loops(loops)
-    return push_to_upstream(
+    return _push_to_upstream(
         project_root=project_root,
         upstream_url=upstream_url,
         token=token,
         trigger_events=trigger_events,
-        loops_count=len(loops),
-        loops_dir=loops_dir,
+        loops_count=features_count,
+        engine_path=project_root / "skene" / "engine.yaml",
+        output_dir=output_dir,
     )
 
 
@@ -243,7 +258,6 @@ def build_loops_to_supabase(
     loops: list[dict[str, Any]],
     output_dir: Path,
     *,
-    supabase_url_placeholder: str = "https://YOUR_PROJECT.supabase.co",
     forward_url: str | None = None,
     proxy_secret: str = "YOUR_PROXY_SECRET",
 ) -> Path:
@@ -256,7 +270,6 @@ def build_loops_to_supabase(
     """
     migration_sql = build_migration_sql(
         loops,
-        supabase_url_placeholder=supabase_url_placeholder,
         forward_url=forward_url,
         proxy_secret=proxy_secret,
     )

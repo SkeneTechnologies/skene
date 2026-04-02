@@ -27,7 +27,7 @@ Check implementation status via the Skene CLI.
    If it fails, report error. Do NOT build your own checklist.
 
 4. **Present CLI output**
-   Present the implementation checklist from CLI output. Compact table or bullet list.
+   Present the engine status table from CLI output. For action features, **Detail** uses `Found in: <newest migration> (+N)` when the same trigger exists in multiple SQL files (`+N` = additional files beyond the one shown).
 
 5. **Suggest next step**
    - All done → "Growth loop implemented. Run `/skene-deploy` for telemetry."

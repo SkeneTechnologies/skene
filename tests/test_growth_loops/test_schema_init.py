@@ -56,7 +56,6 @@ class TestEventLogTriggers:
     def test_trigger_inserts_into_event_log(self) -> None:
         sql = _build_trigger_function_sql(
             loop_id="test_loop",
-            action_name="test_action",
             table="api_keys",
             operation="INSERT",
             properties=["id", "workspace_id"],

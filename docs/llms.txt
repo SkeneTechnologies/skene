@@ -19,17 +19,16 @@ skene plan
   Flags: --manifest, --template, -c/--context, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --activation, --prompt, --debug, --no-fallback
 
 skene build
-  Generate implementation prompt from growth plan. Send to Cursor, Claude, or display in terminal.
-  Flags: --plan, -c/--context, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --debug, --no-fallback, -t/--target (cursor|claude|show|file — skips interactive menu)
+  Build engine artifacts (engine.yaml + feature registry + trigger SQL) and generate implementation prompt.
+  Flags: --plan, -c/--context, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --debug, --no-fallback, -t/--target (cursor|claude|show|file — skips interactive menu), --skip-migrations
 
 skene status [PATH]
-  Check implementation status of growth loop requirements. Uses AST parsing to verify files, functions, and patterns.
+  Check implementation status of engine features (engine.yaml shape + action-trigger migration checks).
   Flags: -c/--context, --find-alternatives, --api-key, -p/--provider, -m/--model
 
 skene push [PATH]
-  Build Supabase migrations from growth loop telemetry and push to upstream.
-  On every run: checks and updates skene_growth_schema (creates or overwrites).
-  Flags: -c/--context, -l/--loop, -u/--upstream, --push-only, --local [URL], --init (schema only, no telemetry)
+  Push existing engine + trigger artifacts upstream (does not build SQL).
+  Flags: -u/--upstream, --push-only, deprecated: -c/--context, -l/--loop, --local, --ingest-url, --proxy-secret, --init
 
 skene login
   Log in to Skene Cloud upstream for push.
@@ -75,7 +74,7 @@ Default output directory: ./skene-context/
 growth-manifest.json — Structured analysis: tech_stack, current_growth_features, growth_opportunities, revenue_leakage, industry
 growth-template.json — Custom PLG template with lifecycle stages and metrics
 growth-plan.md — Actionable plan with 3-5 growth loops, implementation roadmap, metrics
-growth-loops/*.json — Individual loop definitions with requirements, telemetry specs, and feature links
+skene/engine.yaml — Engine model with subjects + features merged by key
 feature-registry.json — Persistent feature registry tracking features across analysis runs
 product-docs.md — User-facing feature documentation (with --product-docs flag)
 
@@ -92,6 +91,6 @@ Config: Config, load_config, save_upstream_to_config, remove_upstream_from_confi
 LLM: LLMClient, create_llm_client
 Schemas: GrowthManifest, DocsManifest, TechStack, GrowthFeature, GrowthOpportunity, IndustryInfo, ProductOverview, Feature
 Feature Registry: load_feature_registry, merge_features_into_registry, merge_registry_and_enrich_manifest, export_registry_to_format
-Growth Loops: load_existing_growth_loops, build_loops_to_supabase, push_to_upstream, build_package
+Engine/Migrations: load_engine_document, write_engine_document, build_loops_to_supabase, push_to_upstream, build_package
 Docs: DocsGenerator, PSEOBuilder
 Planning: Planner, decline_plan, load_declined_plans

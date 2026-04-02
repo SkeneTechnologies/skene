@@ -56,7 +56,7 @@ uvx skene build
 
 Generates a focused implementation prompt from your growth plan and asks where to send it -- **Cursor**, **Claude**, or **Show** in terminal.
 
-Also saves a growth loop definition with telemetry specs to `./skene-context/`.
+Also updates `skene/engine.yaml` and writes trigger migration SQL to `supabase/migrations/` for action-enabled features.
 
 > **Tip:** Use `--target file` to skip the interactive menu (useful for scripting).
 
@@ -64,24 +64,23 @@ Also saves a growth loop definition with telemetry specs to `./skene-context/`.
 
 ### Check implementation status
 
-After implementing the growth loop, verify that all requirements are met:
+After implementing your engine feature plan, verify engine/migration alignment:
 
 ```bash
 uvx skene status
 ```
 
-Checks that required files, functions, and patterns exist in your codebase. Each loop is marked **COMPLETE** or **INCOMPLETE**. Add `--find-alternatives` to use the LLM to find alternative implementations.
+Checks `skene/engine.yaml` structure and verifies action-enabled features have matching migration triggers.
 
 ### Push to Supabase and upstream
 
-If your project uses Supabase, push growth loop telemetry. The `push` command checks and updates the base schema on every run:
+If your project uses Supabase, build artifacts first and then push upstream:
 
 ```bash
 uvx skene login --upstream https://skene.ai/workspace/<my-workspace-name>
+uvx skene build
 uvx skene push
 ```
-
-To create or update the base schema without building telemetry, run `skene push --init` first.
 
 ## What you get
 
@@ -91,10 +90,10 @@ Your `./skene-context/` directory contains:
 |---|---|
 | `growth-manifest.json` | Tech stack, growth features, opportunities |
 | `growth-template.json` | Growth template tailored to your business type |
-| `feature-registry.json` | Features tracked across analysis runs, linked to growth loops |
+| `feature-registry.json` | Features tracked across analysis runs, linked to engine features |
 | `growth-plan.md` | Prioritized growth plan with technical execution details |
 | `implementation-prompt.md` | Ready-to-use prompt for your AI coding assistant |
-| `growth-loops/*.json` | Growth loop definitions with telemetry specs and verification requirements |
+| `skene/engine.yaml` | Engine model (subjects + features), merged incrementally by `build` |
 
 ## Alternative: Quick one-liner
 

@@ -9,6 +9,7 @@ Workspace is derived from the API key; no slug in the URL.
 
 import json
 from typing import AsyncGenerator, Optional
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import SecretStr
@@ -47,8 +48,26 @@ class SkeneClient(LLMClient):
         """Return the chat completions endpoint URL."""
         if self._base_url:
             base = self._base_url.rstrip("/")
-            if base.endswith("/chat/completions"):
+            if base.endswith("/api/v1/chat/completions") or base.endswith("/chat/completions"):
                 return base
+            if base.endswith("/api/v1"):
+                return f"{base}/chat/completions"
+            if base.endswith("/api"):
+                return f"{base}/v1/chat/completions"
+
+            parsed = urlparse(base)
+            host = (parsed.hostname or "").lower()
+            path = (parsed.path or "").rstrip("/")
+
+            # Handle workspace URLs like https://www.skene.ai/workspace/<slug>
+            if "/workspace/" in path:
+                root = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+                return f"{root}/api/v1/chat/completions"
+
+            # Handle plain host URLs like https://www.skene.ai or http://localhost:3000
+            if host in {"skene.ai", "www.skene.ai", "localhost", "127.0.0.1"} and not path:
+                return f"{base}/api/v1/chat/completions"
+
             return f"{base}/chat/completions"
         return PRODUCTION_ENDPOINT
 
@@ -72,10 +91,28 @@ class SkeneClient(LLMClient):
     def _format_http_error(error: httpx.HTTPStatusError) -> str:
         """Return a concise error string with status and response body."""
         try:
-            body = error.response.text
+            response = error.response
+            content_type = (response.headers.get("content-type") or "").lower()
+
+            body = ""
+            try:
+                payload = response.json()
+                if isinstance(payload, dict):
+                    body = str(payload.get("error") or payload.get("message") or payload)
+                elif payload is not None:
+                    body = str(payload)
+            except Exception:
+                body = response.text
+
+            body = (body or "").strip()
+            lower_body = body.lower()
+            if "text/html" in content_type or lower_body.startswith("<!doctype html") or lower_body.startswith("<html"):
+                body = "HTML error response (likely wrong base_url path)"
+            elif len(body) > 320:
+                body = f"{body[:320]}..."
         except Exception:
             body = ""
-        return f"Error calling Skene: {error.response.status_code} {body}"
+        return f"Error calling Skene: {error.response.status_code} {body}".strip()
 
     async def generate_content_with_usage(
         self,
