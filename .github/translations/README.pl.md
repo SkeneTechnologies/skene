@@ -34,7 +34,7 @@
 </p>
 
 
-Skene to zestaw narzedzi do analizy bazy kodu ukierunkowany na wzrost oparty na produkcie. Skanuje Twoja baze kodu, wykrywa mozliwosci wzrostu i generuje praktyczne plany wdrozeniowe.
+Skene to zestaw narzędzi do analizy bazy kodu ukierunkowany na wzrost oparty na produkcie. Skanuje Twoją bazę kodu, wykrywa możliwości wzrostu i generuje praktyczne plany wdrożeniowe.
 
 ## Szybki start
 
@@ -45,25 +45,25 @@ curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/in
 skene
 ```
 
-Kreator przeprowadzi Cie przez wybor dostawcy, uwierzytelnianie i analize -- zadna wstepna konfiguracja nie jest wymagana.
+Kreator przeprowadzi Cię przez wybór dostawcy, uwierzytelnianie i analizę — bez konieczności wcześniejszej konfiguracji.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## Co robi
+## Co potrafi
 
-- **Wykrywanie stosu technologicznego** -- identyfikuje frameworki, bazy danych, uwierzytelnianie, wdrozenia
-- **Odkrywanie funkcji wzrostowych** -- znajduje istniejace przeplywy rejestracji, udostepnianie, zaproszenia, rozliczenia
-- **Rejestr funkcji** -- sledzi funkcje w kolejnych analizach, laczy je z petlami wzrostu
-- **Analiza wycieku przychodow** -- wykrywa brakujaca monetyzacje i slabe progi cenowe
-- **Generowanie planu wzrostu** -- tworzy priorytetyzowane petle wzrostu z harmonogramami wdrozen
-- **Prompty implementacyjne** -- buduje gotowe do uzycia prompty dla Cursor, Claude lub innych narzedzi AI
-- **Wdrazanie telemetrii** -- generuje migracje Supabase i przesyla je do repozytorium nadrzednego
-- **Walidacja petli** -- weryfikuje, czy wymagania petli wzrostu zostaly wdrozone
-- **Interaktywny czat** -- zadawaj pytania o swoja baze kodu w terminalu
+- **Wykrywanie stosu technologicznego** -- identyfikuje frameworki, bazy danych, uwierzytelnianie, wdrażanie
+- **Wykrywanie funkcji wzrostu** -- znajduje istniejące przepływy rejestracji, udostępnianie, zaproszenia, rozliczenia
+- **Rejestr funkcji** -- śledzi funkcje w różnych uruchomieniach analizy i łączy je z pętlami wzrostu
+- **Analiza wycieków przychodów** -- wykrywa brakującą monetyzację i słabe poziomy cenowe
+- **Generowanie planów wzrostu** -- tworzy priorytetowe pętle wzrostu z planami wdrożeniowymi
+- **Prompty wdrożeniowe** -- buduje gotowe do użycia prompty dla Cursor, Claude lub innych narzędzi AI
+- **Wdrażanie telemetrii** -- generuje migracje Supabase i wypycha je do upstreamu
+- **Walidacja pętli** -- weryfikuje, czy wymagania pętli wzrostu zostały zaimplementowane
+- **Czat interaktywny** -- zadawaj pytania o swoją bazę kodu w terminalu
 
-Obsluguje OpenAI, Gemini, Claude, LM Studio, Ollama oraz dowolny punkt koncowy kompatybilny z OpenAI. Dostepny darmowy audyt lokalny bez wymaganego klucza API.
+Obsługuje OpenAI, Gemini, Claude, LM Studio, Ollama i każdy punkt końcowy zgodny z OpenAI. Bezpłatny lokalny audyt dostępny bez klucza API.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -71,46 +71,46 @@ Obsluguje OpenAI, Gemini, Claude, LM Studio, Ollama oraz dowolny punkt koncowy k
 
 ### Interfejs terminalowy (zalecany)
 
-TUI to interaktywny kreator, ktory przeprowadzi Cie przez caly proces. Brak wymaganych zaleznosci -- instalator zajmie sie wszystkim.
+TUI to interaktywny kreator, który prowadzi Cię przez cały przepływ pracy. Brak wymagań wstępnych — instalator zajmie się wszystkim.
 
 ```bash
 # Zainstaluj TUI
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 
-# Uruchom
+# Uruchom go
 skene
 ```
 
 ### Python CLI
 
-Jesli wolisz wiersz polecen, mozesz uruchomic Skene bezposrednio za pomoca `uvx` (bez potrzeby instalacji) lub zainstalowac globalnie:
+Jeśli wolisz wiersz poleceń, możesz uruchomić Skene bezpośrednio za pomocą `uvx` (bez instalacji) lub zainstalować go globalnie:
 
 ```bash
-# Zainstaluj uv (jesli go nie masz)
+# Zainstaluj uv (jeśli go nie masz)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Uruchom bezposrednio (bez potrzeby instalacji)
+# Uruchom bezpośrednio (bez instalacji)
 uvx skene
 
 # Lub zainstaluj globalnie
 pip install skene
 ```
 
-Szczegoly dotyczace uzycia CLI znajdziesz w [dokumentacji](https://www.skene.ai/resources/docs/skene).
+Szczegóły dotyczące korzystania z CLI znajdziesz w [dokumentacji](https://www.skene.ai/resources/docs/skene).
 
 ## Struktura monorepo
 
-| Katalog | Opis | Jezyk | Dystrybucja |
+| Katalog | Opis | Język | Dystrybucja |
 |-----------|-------------|----------|-------------|
 | `src/skene/` | CLI + silnik analizy | Python | [PyPI](https://pypi.org/project/skene/) |
-| `tui/` | Interaktywny kreator terminala UI | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
+| `tui/` | Interaktywny kreator interfejsu terminalowego | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Wtyczka Cursor IDE | — | — |
 
-TUI (`tui/`) to aplikacja Bubble Tea, ktora zapewnia interaktywne doswiadczenie kreatora i orkiestruje Python CLI za pomoca `uvx`. Kazdy pakiet ma niezalezne potoki CI/CD.
+TUI (`tui/`) to aplikacja Bubble Tea, która zapewnia interaktywne doświadczenie kreatora i orkiestruje Python CLI za pośrednictwem `uvx`. Każdy pakiet ma niezależne potoki CI/CD.
 
-## Wspoltworzenie
+## Współpraca
 
-Wklady sa mile widziane. Prosimy o [otwarcie zgloszenia](https://github.com/SkeneTechnologies/skene/issues) lub wyslanie [pull requesta](https://github.com/SkeneTechnologies/skene/pulls).
+Wkład jest mile widziany. Prosimy [otworzyć zgłoszenie](https://github.com/SkeneTechnologies/skene/issues) lub przesłać [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Licencja
 

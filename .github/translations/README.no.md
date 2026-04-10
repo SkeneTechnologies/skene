@@ -34,7 +34,7 @@
 </p>
 
 
-Skene er et analyseverktoy for kodebase rettet mot produktledet vekst. Det skanner kodebasen din, oppdager vekstmuligheter og genererer handlingsrettede implementeringsplaner.
+Skene er et analyseverktøy for kodebase rettet mot produktledet vekst. Det skanner kodebasen din, oppdager vekstmuligheter og genererer handlingsrettede implementeringsplaner.
 
 ## Hurtigstart
 
@@ -45,25 +45,25 @@ curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/in
 skene
 ```
 
-Veiviseren guider deg gjennom valg av leverandor, autentisering og analyse -- ingen konfigurasjon nodvendig pa forhand.
+Veiviseren guider deg gjennom valg av leverandør, autentisering og analyse — ingen konfigurasjon nødvendig på forhånd.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## Hva det gjor
+## Hva den gjør
 
-- **Teknologistackdeteksjon** -- identifiserer rammeverk, databaser, autentisering, distribusjon
+- **Tech-stack-deteksjon** -- identifiserer rammeverk, databaser, autentisering, distribusjon
 - **Oppdagelse av vekstfunksjoner** -- finner eksisterende registreringsflyter, deling, invitasjoner, fakturering
-- **Funksjonsregister** -- sporer funksjoner pa tvers av analysekjoringer, kobler dem til vekstlooper
-- **Inntektslekkasjeanalyse** -- avdekker manglende inntektsgenerering og svake prisniva
-- **Vekstplangenerering** -- produserer prioriterte vekstlooper med implementeringsveikart
-- **Implementeringsprompter** -- bygger klare til bruk-prompter for Cursor, Claude eller andre AI-verktoy
-- **Telemetriutrulling** -- genererer Supabase-migreringer og pusher til oppstrom
-- **Loopvalidering** -- verifiserer at kravene til vekstlooper er implementert
-- **Interaktiv chat** -- still sporsmal om kodebasen din i terminalen
+- **Funksjonsregister** -- sporer funksjoner på tvers av analysekjøringer og kobler dem til vekstløkker
+- **Analyse av inntektslekkasje** -- finner manglende monetarisering og svake prisnivåer
+- **Generering av vekstplaner** -- produserer prioriterte vekstløkker med implementeringsveikart
+- **Implementeringsprompter** -- bygger klare-til-bruk prompter for Cursor, Claude eller andre AI-verktøy
+- **Telemetri-distribusjon** -- genererer Supabase-migreringer og pusher til oppstrøms
+- **Validering av løkker** -- verifiserer at krav til vekstløkker er implementert
+- **Interaktiv chat** -- still spørsmål om kodebasen din i terminalen
 
-Stotter OpenAI, Gemini, Claude, LM Studio, Ollama og alle OpenAI-kompatible endepunkter. Gratis lokal revisjon tilgjengelig uten behov for API-nokkel.
+Støtter OpenAI, Gemini, Claude, LM Studio, Ollama og ethvert OpenAI-kompatibelt endepunkt. Gratis lokal revisjon tilgjengelig uten API-nøkkel.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -71,10 +71,10 @@ Stotter OpenAI, Gemini, Claude, LM Studio, Ollama og alle OpenAI-kompatible ende
 
 ### Terminalgrensesnitt (anbefalt)
 
-TUI-et er en interaktiv veiviser som guider deg gjennom hele arbeidsflyten. Ingen forutsetninger -- installasjonsprogrammet handterer alt.
+TUI er en interaktiv veiviser som guider deg gjennom hele arbeidsflyten. Ingen forutsetninger — installasjonsprogrammet håndterer alt.
 
 ```bash
-# Installer TUI-et
+# Installer TUI
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 
 # Start det
@@ -83,13 +83,13 @@ skene
 
 ### Python CLI
 
-Hvis du foretrekker kommandolinjen, kan du kjore Skene direkte med `uvx` (ingen installasjon nodvendig) eller installere det globalt:
+Hvis du foretrekker kommandolinjen, kan du kjøre Skene direkte med `uvx` (ingen installasjon nødvendig) eller installere det globalt:
 
 ```bash
 # Installer uv (hvis du ikke har det)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Kjor direkte (ingen installasjon nodvendig)
+# Kjør direkte (ingen installasjon nødvendig)
 uvx skene
 
 # Eller installer globalt
@@ -100,17 +100,17 @@ For detaljer om CLI-bruk, se [dokumentasjonen](https://www.skene.ai/resources/do
 
 ## Monorepo-struktur
 
-| Katalog | Beskrivelse | Sprak | Distribusjon |
+| Katalog | Beskrivelse | Språk | Distribusjon |
 |-----------|-------------|----------|-------------|
 | `src/skene/` | CLI + analysemotor | Python | [PyPI](https://pypi.org/project/skene/) |
 | `tui/` | Interaktiv terminal-UI-veiviser | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
-| `cursor-plugin/` | Cursor IDE-utvidelse | — | — |
+| `cursor-plugin/` | Cursor IDE-plugin | — | — |
 
-TUI-et (`tui/`) er en Bubble Tea-app som gir en interaktiv veiviseropplevelse og orkestrerer Python CLI via `uvx`. Hver pakke har uavhengige CI/CD-pipelines.
+TUI (`tui/`) er en Bubble Tea-app som gir en interaktiv veiviseropplevelse og orkestrerer Python CLI via `uvx`. Hver pakke har uavhengige CI/CD-pipelines.
 
 ## Bidra
 
-Bidrag er velkomne. Vennligst [opprett en sak](https://github.com/SkeneTechnologies/skene/issues) eller send inn en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Bidrag er velkomne. Vennligst [åpne et issue](https://github.com/SkeneTechnologies/skene/issues) eller send inn en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Lisens
 

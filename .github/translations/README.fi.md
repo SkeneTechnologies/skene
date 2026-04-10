@@ -34,59 +34,59 @@
 </p>
 
 
-Skene on koodipohjan analyysityokalu tuotevetoiseen kasvuun. Se skannaa koodipohjaasi, loytaa kasvumahdollisuuksia ja tuottaa toimintakelpoisia toteutussuunnitelmia.
+Skene on koodipohjan analyysityökalu tuotevetoiseen kasvuun. Se skannaa koodipohjaasi, löytää kasvumahdollisuuksia ja tuottaa toimintakelpoisia toteutussuunnitelmia.
 
 ## Pikaopas
 
-Asenna ja kaynnista interaktiivinen terminaalikayottoliittyma:
+Asenna ja käynnistä interaktiivinen terminaalikäyttöliittymä:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 skene
 ```
 
-Ohjattu toiminto opastaa sinut palveluntarjoajan valinnan, todennuksen ja analyysin lapi -- etukateiskonfigurointia ei tarvita.
+Ohjattu toiminto opastaa sinut palveluntarjoajan valinnan, todennuksen ja analyysin läpi — etukäteiskonfigurointia ei tarvita.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## Mita se tekee
+## Mitä se tekee
 
-- **Teknologiapinon tunnistus** -- tunnistaa sovelluskehykset, tietokannat, todennuksen, kayttoonoton
-- **Kasvuominaisuuksien loytaminen** -- loytaa olemassa olevat rekisteroitymisvirrat, jakamisen, kutsut, laskutuksen
-- **Ominaisuusrekisteri** -- seuraa ominaisuuksia analyysiajojen valilla, yhdistaa ne kasvusilmukoihin
-- **Tuottomenetysanalyysi** -- loytaa puuttuvan monetisoinnin ja heikot hinnoittelutasot
+- **Teknologiapinon tunnistus** -- tunnistaa sovelluskehykset, tietokannat, todennuksen, käyttöönoton
+- **Kasvuominaisuuksien löytäminen** -- löytää olemassa olevat rekisteröitymisvirrat, jakamisen, kutsut, laskutuksen
+- **Ominaisuusrekisteri** -- seuraa ominaisuuksia analyysiajojen välillä, yhdistää ne kasvusilmukoihin
+- **Tuottomenetysanalyysi** -- löytää puuttuvan monetisoinnin ja heikot hinnoittelutasot
 - **Kasvusuunnitelmien luonti** -- tuottaa priorisoidut kasvusilmukat toteutuksen tiekartan kanssa
-- **Toteutuskehotteet** -- rakentaa kayottovalmiit kehotteet Cursor-, Claude- tai muille tekoalytyokaluille
-- **Telemetrian kayttoonotto** -- luo Supabase-migraatiot ja tyontaa ne ylavirtaan
-- **Silmukan validointi** -- varmistaa, etta kasvusilmukan vaatimukset on toteutettu
-- **Interaktiivinen keskustelu** -- kysy kysymyksia koodipohjastasiasi terminaalissa
+- **Toteutuskehotteet** -- rakentaa käyttövalmiit kehotteet Cursor-, Claude- tai muille tekoälytyökaluille
+- **Telemetrian käyttöönotto** -- luo Supabase-migraatiot ja työntää ne ylävirtaan
+- **Silmukan validointi** -- varmistaa, että kasvusilmukan vaatimukset on toteutettu
+- **Interaktiivinen keskustelu** -- kysy kysymyksiä koodipohjastasi terminaalissa
 
-Tukee OpenAI-, Gemini-, Claude-, LM Studio-, Ollama- ja mita tahansa OpenAI-yhteensopivaa paatepistetta. Ilmainen paikallinen tarkastus saatavilla ilman API-avainta.
+Tukee OpenAI-, Gemini-, Claude-, LM Studio-, Ollama- ja mitä tahansa OpenAI-yhteensopivaa päätepistettä. Ilmainen paikallinen tarkastus saatavilla ilman API-avainta.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
 ## Asennus
 
-### Terminaalikayottoliittyma (suositeltu)
+### Terminaalikäyttöliittymä (suositeltu)
 
-TUI on interaktiivinen opas, joka ohjaa sinut koko tyonkulun lapi. Ei esivaatimuksia -- asennusohjelma hoitaa kaiken.
+TUI on interaktiivinen opas, joka ohjaa sinut koko työnkulun läpi. Ei esivaatimuksia — asennusohjelma hoitaa kaiken.
 
 ```bash
 # Asenna TUI
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 
-# Kaynnista se
+# Käynnistä se
 skene
 ```
 
 ### Python CLI
 
-Jos suosit komentorivia, voit ajaa Skene-ohjelmaa suoraan `uvx`-komennolla (asennusta ei tarvita) tai asentaa sen globaalisti:
+Jos suosit komentoriviä, voit ajaa Skene-ohjelmaa suoraan `uvx`-komennolla (asennusta ei tarvita) tai asentaa sen globaalisti:
 
 ```bash
-# Asenna uv (jos sinulla ei ole sita)
+# Asenna uv (jos sinulla ei ole sitä)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Aja suoraan (asennusta ei tarvita)
@@ -96,21 +96,21 @@ uvx skene
 pip install skene
 ```
 
-CLI-kayton yksityiskohdat loydat [dokumentaatiosta](https://www.skene.ai/resources/docs/skene).
+CLI-käytön yksityiskohdat löydät [dokumentaatiosta](https://www.skene.ai/resources/docs/skene).
 
 ## Monorepo-rakenne
 
 | Kansio | Kuvaus | Kieli | Jakelu |
 |-----------|-------------|----------|-------------|
 | `src/skene/` | CLI + analysointimoottori | Python | [PyPI](https://pypi.org/project/skene/) |
-| `tui/` | Interaktiivinen terminaalikayottoliittymaopas | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
+| `tui/` | Interaktiivinen terminaalikäyttöliittymäopas | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Cursor IDE -laajennus | — | — |
 
-TUI (`tui/`) on Bubble Tea -sovellus, joka tarjoaa interaktiivisen ohjatun kokemuksen ja ohjaa Python CLI:ta `uvx`-komennon kautta. Jokaisella paketilla on itsenaiset CI/CD-putket.
+TUI (`tui/`) on Bubble Tea -sovellus, joka tarjoaa interaktiivisen ohjatun kokemuksen ja ohjaa Python CLI:tä `uvx`-komennon kautta. Jokaisella paketilla on itsenäiset CI/CD-putket.
 
 ## Osallistuminen
 
-Osallistuminen on tervetullutta. [Luo ongelmaraportti](https://github.com/SkeneTechnologies/skene/issues) tai lahetä [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Osallistuminen on tervetullutta. [Luo ongelmaraportti](https://github.com/SkeneTechnologies/skene/issues) tai lähetä [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Lisenssi
 
