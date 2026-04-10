@@ -78,6 +78,7 @@ For CLI usage details, see the [documentation](https://www.skene.ai/resources/do
 | `src/skene/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene/) |
 | `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Cursor IDE plugin | — | — |
+| `skene-db/` | Ready-made Supabase schema (CRM, PM, billing, helpdesk, calendar) | SQL | `supabase db push` |
 
 The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
 

@@ -86,8 +86,9 @@ htmlcov/
 *.db
 *.sqlite3
 
-# Supabase
+# Supabase (user-generated migrations in project roots)
 supabase/
+!skene-db/supabase/
 
 # Jupyter Notebook
 .ipynb_checkpoints
