@@ -34,18 +34,18 @@
 </p>
 
 
-Skene là bộ công cụ phân tích mã nguồn cho tăng trưởng dẫn dắt bởi sản phẩm. Nó quét mã nguồn của bạn, phát hiện cơ hội tăng trưởng và tạo ra các kế hoạch triển khai khả thi.
+Skene là bộ công cụ phân tích mã nguồn dành cho tăng trưởng dẫn dắt bởi sản phẩm. Nó quét mã nguồn của bạn, phát hiện cơ hội tăng trưởng và tạo ra các kế hoạch triển khai cụ thể.
 
 ## Bắt đầu nhanh
 
-Cài đặt và khởi chạy giao diện terminal tương tác:
+Cài đặt và mở giao diện terminal tương tác:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 skene
 ```
 
-Trình hướng dẫn sẽ đưa bạn qua quá trình chọn nhà cung cấp, xác thực và phân tích — không cần cấu hình trước.
+Trình hướng dẫn sẽ dẫn bạn qua các bước chọn nhà cung cấp, xác thực và phân tích — không cần cấu hình trước.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
@@ -53,17 +53,17 @@ Trình hướng dẫn sẽ đưa bạn qua quá trình chọn nhà cung cấp, x
 
 ## Chức năng
 
-- **Phát hiện ngăn xếp công nghệ** -- nhận diện các framework, cơ sở dữ liệu, xác thực, triển khai
-- **Khám phá tính năng tăng trưởng** -- tìm các luồng đăng ký hiện có, chia sẻ, lời mời, thanh toán
-- **Sổ đăng ký tính năng** -- theo dõi tính năng qua các lần phân tích, liên kết chúng với các vòng tăng trưởng
-- **Phân tích thất thoát doanh thu** -- phát hiện thiếu kiến tạo hoá và các bậc giá yếu
-- **Tạo kế hoạch tăng trưởng** -- tạo các vòng tăng trưởng ưu tiên với lộ trình triển khai
-- **Câu lệnh triển khai** -- xây dựng các câu lệnh sẵn sàng sử dụng cho Cursor, Claude hoặc các công cụ AI khác
-- **Triển khai đo lường** -- tạo các migration Supabase và đẩy lên upstream
-- **Xác thực vòng lặp** -- xác minh rằng các yêu cầu của vòng tăng trưởng đã được triển khai
+- **Phát hiện tech stack** -- nhận diện framework, cơ sở dữ liệu, xác thực và triển khai
+- **Khám phá tính năng tăng trưởng** -- tìm các luồng đăng ký, chia sẻ, mời và thanh toán hiện có
+- **Sổ đăng ký tính năng** -- theo dõi tính năng qua các lần phân tích và liên kết chúng với growth loop
+- **Phân tích thất thoát doanh thu** -- phát hiện cơ hội kiếm tiền bị bỏ lỡ và các bậc giá yếu
+- **Tạo kế hoạch tăng trưởng** -- tạo các growth loop được ưu tiên kèm lộ trình triển khai
+- **Lời nhắc triển khai** -- xây dựng các prompt sẵn sàng dùng cho Cursor, Claude hoặc các công cụ AI khác
+- **Triển khai telemetry** -- tạo migration Supabase và đẩy lên upstream
+- **Xác thực vòng lặp** -- kiểm tra xem các yêu cầu của growth loop đã được triển khai hay chưa
 - **Trò chuyện tương tác** -- đặt câu hỏi về mã nguồn của bạn ngay trong terminal
 
-Hỗ trợ OpenAI, Gemini, Claude, LM Studio, Ollama và bất kỳ điểm cuối tương thích OpenAI nào. Có sẵn kiểm tra cục bộ miễn phí, không cần khóa API.
+Hỗ trợ OpenAI, Gemini, Claude, LM Studio, Ollama và bất kỳ endpoint nào tương thích OpenAI. Có sẵn kiểm tra cục bộ miễn phí, không cần khóa API.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 

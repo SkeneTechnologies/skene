@@ -34,9 +34,9 @@
 </p>
 
 
-Skene, ürün odaklı büyüme için bir kod tabanı analiz araç setidir. Kod tabanınızı tarar, büyüme fırsatlarını tespit eder ve uygulanabilir uygulama planları oluşturur.
+Skene, ürün odaklı büyüme için tasarlanmış bir kod tabanı analiz araç setidir. Kod tabanınızı tarar, büyüme fırsatlarını tespit eder ve hayata geçirilebilir uygulama planları üretir.
 
-## Hızlı Başlangıç
+## Hızlı başlangıç
 
 Etkileşimli terminal arayüzünü kurun ve başlatın:
 
@@ -45,31 +45,31 @@ curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/in
 skene
 ```
 
-Sihirbaz, sağlayıcı seçimi, kimlik doğrulama ve analiz sürecinde size rehberlik eder — önceden yapılandırma gerekmez.
+Sihirbaz; sağlayıcı seçimi, kimlik doğrulama ve analiz sürecinde size yol gösterir — önceden yapılandırmaya gerek yok.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## Ne Yapar
+## Ne yapar
 
 - **Teknoloji yığını tespiti** -- framework'leri, veritabanlarını, kimlik doğrulamayı ve dağıtımı tanımlar
-- **Büyüme özelliği keşfi** -- mevcut kayıt akışlarını, paylaşımı, davetleri ve faturalandırmayı bulur
-- **Özellik kaydı** -- analiz çalışmaları boyunca özellikleri takip eder, bunları büyüme döngülerine bağlar
-- **Gelir kaçağı analizi** -- eksik gelir kazanımını ve zayıf fiyatlandırma katmanlarını tespit eder
-- **Büyüme planı oluşturma** -- uygulama yol haritalarıyla önceliklendirilmiş büyüme döngüleri üretir
-- **Uygulama komutları** -- Cursor, Claude veya diğer yapay zeka araçları için kullanıma hazır komutlar oluşturur
-- **Telemetri dağıtımı** -- Supabase geçişleri oluşturur ve yukarı akışa gönderir
-- **Döngü doğrulama** -- büyüme döngüsü gereksinimlerinin uygulandığını doğrular
-- **Etkileşimli sohbet** -- terminalde kod tabanınız hakkında sorular sorun
+- **Büyüme özelliklerinin keşfi** -- mevcut kayıt akışlarını, paylaşımı, davetleri ve faturalandırmayı bulur
+- **Özellik kayıt defteri** -- özellikleri analiz çalışmaları boyunca takip eder ve büyüme döngülerine bağlar
+- **Gelir kaçağı analizi** -- eksik kalan gelir fırsatlarını ve zayıf fiyatlandırma katmanlarını tespit eder
+- **Büyüme planı oluşturma** -- uygulama yol haritalarıyla birlikte önceliklendirilmiş büyüme döngüleri üretir
+- **Uygulama promptları** -- Cursor, Claude ya da diğer yapay zekâ araçları için kullanıma hazır promptlar üretir
+- **Telemetri dağıtımı** -- Supabase migrasyonları üretir ve upstream'e gönderir
+- **Döngü doğrulama** -- büyüme döngüsü gereksinimlerinin uygulanıp uygulanmadığını doğrular
+- **Etkileşimli sohbet** -- terminalde kod tabanınız hakkında soru sorun
 
-OpenAI, Gemini, Claude, LM Studio, Ollama ve herhangi bir OpenAI uyumlu uç noktayı destekler. API anahtarı gerektirmeyen ücretsiz yerel denetim mevcuttur.
+OpenAI, Gemini, Claude, LM Studio, Ollama ve OpenAI ile uyumlu herhangi bir uç noktayı destekler. API anahtarı gerektirmeyen ücretsiz yerel denetim de mevcuttur.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
 ## Kurulum
 
-### Terminal Arayüzü (önerilen)
+### Terminal arayüzü (önerilen)
 
 TUI, tüm iş akışında size rehberlik eden etkileşimli bir sihirbazdır. Ön koşul yok — yükleyici her şeyi halleder.
 
@@ -98,7 +98,7 @@ pip install skene
 
 CLI kullanım detayları için [dokümantasyona](https://www.skene.ai/resources/docs/skene) bakın.
 
-## Monorepo Yapısı
+## Monorepo yapısı
 
 | Dizin | Açıklama | Dil | Dağıtım |
 |-----------|-------------|----------|-------------|
@@ -108,9 +108,9 @@ CLI kullanım detayları için [dokümantasyona](https://www.skene.ai/resources/
 
 TUI (`tui/`), etkileşimli bir sihirbaz deneyimi sunan ve Python CLI'yi `uvx` aracılığıyla yöneten bir Bubble Tea uygulamasıdır. Her paketin bağımsız CI/CD süreçleri vardır.
 
-## Katkıda Bulunma
+## Katkıda bulunma
 
-Katkılarınızı bekliyoruz. Lütfen bir [sorun açın](https://github.com/SkeneTechnologies/skene/issues) veya bir [pull request](https://github.com/SkeneTechnologies/skene/pulls) gönderin.
+Katkılarınızı bekliyoruz. Bir [issue açabilir](https://github.com/SkeneTechnologies/skene/issues) ya da [pull request](https://github.com/SkeneTechnologies/skene/pulls) gönderebilirsiniz.
 
 ## Lisans
 

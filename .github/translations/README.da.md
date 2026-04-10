@@ -34,7 +34,7 @@
 </p>
 
 
-Skene er et kodebaseanalyseværktøj til produktdrevet vækst. Det scanner din kodebase, opdager vækstmuligheder og genererer handlingsorienterede implementeringsplaner.
+Skene er et analyseværktøj til kodebaser med fokus på produktdrevet vækst. Det skanner din kodebase, finder vækstmuligheder og genererer konkrete implementeringsplaner.
 
 ## Hurtig start
 
@@ -53,17 +53,17 @@ Guiden fører dig gennem valg af udbyder, autentificering og analyse — ingen k
 
 ## Hvad den gør
 
-- **Detektering af tech-stack** -- identificerer frameworks, databaser, autentificering, deployment
-- **Opdagelse af vækstfunktioner** -- finder eksisterende tilmeldingsflows, deling, invitationer, fakturering
-- **Funktionsregister** -- sporer funktioner på tværs af analysekørsler og kobler dem til vækstloops
+- **Detektering af tech stack** -- identificerer frameworks, databaser, autentificering og deployment
+- **Opdagelse af vækstfunktioner** -- finder eksisterende tilmeldingsflows, deling, invitationer og fakturering
+- **Funktionsregister** -- sporer funktioner på tværs af analysekørsler og kobler dem til growth loops
 - **Analyse af indtægtstab** -- finder manglende monetarisering og svage prisniveauer
-- **Generering af vækstplaner** -- producerer prioriterede vækstloops med implementeringsplaner
-- **Implementeringsprompts** -- bygger klar-til-brug prompts til Cursor, Claude eller andre AI-værktøjer
-- **Telemetri-deployment** -- genererer Supabase-migreringer og pusher til upstream
-- **Loop-validering** -- verificerer at vækstloop-krav er implementeret
-- **Interaktiv chat** -- stil spørgsmål om din kodebase i terminalen
+- **Generering af vækstplaner** -- producerer prioriterede growth loops med konkrete implementeringsplaner
+- **Implementerings-prompts** -- bygger klar-til-brug prompts til Cursor, Claude og andre AI-værktøjer
+- **Telemetri-deployment** -- genererer Supabase-migreringer og pusher dem til upstream
+- **Loop-validering** -- verificerer, at growth loop-kravene er implementeret
+- **Interaktiv chat** -- stil spørgsmål om din kodebase direkte i terminalen
 
-Understøtter OpenAI, Gemini, Claude, LM Studio, Ollama og ethvert OpenAI-kompatibelt endpoint. Gratis lokal revision tilgængelig uden API-nøgle.
+Understøtter OpenAI, Gemini, Claude, LM Studio, Ollama og ethvert OpenAI-kompatibelt endpoint. Gratis lokal audit er tilgængelig uden API-nøgle.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -110,7 +110,7 @@ TUI (`tui/`) er en Bubble Tea-app, der giver en interaktiv guideoplevelse og ork
 
 ## Bidrag
 
-Bidrag er velkomne. Venligst [opret et issue](https://github.com/SkeneTechnologies/skene/issues) eller indsend en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Bidrag er velkomne. [Opret et issue](https://github.com/SkeneTechnologies/skene/issues) eller indsend en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Licens
 

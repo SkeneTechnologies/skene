@@ -34,7 +34,7 @@
 </p>
 
 
-Skene to zestaw narzędzi do analizy bazy kodu ukierunkowany na wzrost oparty na produkcie. Skanuje Twoją bazę kodu, wykrywa możliwości wzrostu i generuje praktyczne plany wdrożeniowe.
+Skene to zestaw narzędzi do analizy bazy kodu nastawiony na wzrost napędzany produktem. Skanuje Twoją bazę kodu, wyszukuje możliwości wzrostu i generuje konkretne plany wdrożeniowe.
 
 ## Szybki start
 
@@ -53,17 +53,17 @@ Kreator przeprowadzi Cię przez wybór dostawcy, uwierzytelnianie i analizę —
 
 ## Co potrafi
 
-- **Wykrywanie stosu technologicznego** -- identyfikuje frameworki, bazy danych, uwierzytelnianie, wdrażanie
-- **Wykrywanie funkcji wzrostu** -- znajduje istniejące przepływy rejestracji, udostępnianie, zaproszenia, rozliczenia
-- **Rejestr funkcji** -- śledzi funkcje w różnych uruchomieniach analizy i łączy je z pętlami wzrostu
+- **Wykrywanie stosu technologicznego** -- identyfikuje frameworki, bazy danych, uwierzytelnianie i wdrażanie
+- **Wykrywanie funkcji wzrostu** -- znajduje istniejące przepływy rejestracji, udostępnianie, zaproszenia i rozliczenia
+- **Rejestr funkcji** -- śledzi funkcje pomiędzy uruchomieniami analizy i łączy je z growth loopami
 - **Analiza wycieków przychodów** -- wykrywa brakującą monetyzację i słabe poziomy cenowe
-- **Generowanie planów wzrostu** -- tworzy priorytetowe pętle wzrostu z planami wdrożeniowymi
-- **Prompty wdrożeniowe** -- buduje gotowe do użycia prompty dla Cursor, Claude lub innych narzędzi AI
+- **Generowanie planów wzrostu** -- tworzy priorytetowe growth loopy wraz z konkretnymi planami wdrożenia
+- **Prompty wdrożeniowe** -- buduje gotowe do użycia prompty dla Cursor, Claude i innych narzędzi AI
 - **Wdrażanie telemetrii** -- generuje migracje Supabase i wypycha je do upstreamu
-- **Walidacja pętli** -- weryfikuje, czy wymagania pętli wzrostu zostały zaimplementowane
-- **Czat interaktywny** -- zadawaj pytania o swoją bazę kodu w terminalu
+- **Walidacja pętli** -- weryfikuje, czy wymagania growth loopów zostały zaimplementowane
+- **Czat interaktywny** -- zadawaj pytania o swoją bazę kodu prosto w terminalu
 
-Obsługuje OpenAI, Gemini, Claude, LM Studio, Ollama i każdy punkt końcowy zgodny z OpenAI. Bezpłatny lokalny audyt dostępny bez klucza API.
+Obsługuje OpenAI, Gemini, Claude, LM Studio, Ollama oraz dowolny endpoint zgodny z OpenAI. Bezpłatny lokalny audyt jest dostępny bez klucza API.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -110,7 +110,7 @@ TUI (`tui/`) to aplikacja Bubble Tea, która zapewnia interaktywne doświadczeni
 
 ## Współpraca
 
-Wkład jest mile widziany. Prosimy [otworzyć zgłoszenie](https://github.com/SkeneTechnologies/skene/issues) lub przesłać [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Wkład jest mile widziany. [Otwórz issue](https://github.com/SkeneTechnologies/skene/issues) lub prześlij [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Licencja
 

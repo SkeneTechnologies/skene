@@ -34,7 +34,7 @@
 </p>
 
 
-Skene est une boîte à outils d'analyse de code pour la croissance produit. Il scanne votre code, détecte les opportunités de croissance et génère des plans d'implémentation actionnables.
+Skene est une boîte à outils d'analyse de code dédiée à la croissance produit. Il analyse votre code, repère les opportunités de croissance et génère des plans d'implémentation concrets.
 
 ## Démarrage rapide
 
@@ -53,25 +53,25 @@ L'assistant vous guide à travers la sélection du fournisseur, l'authentificati
 
 ## Ce qu'il fait
 
-- **Détection de la stack technique** -- identifie les frameworks, bases de données, authentification, déploiement
-- **Découverte des fonctionnalités de croissance** -- trouve les flux d'inscription existants, le partage, les invitations, la facturation
-- **Registre des fonctionnalités** -- suit les fonctionnalités à travers les analyses et les relie aux boucles de croissance
-- **Analyse des fuites de revenus** -- repère la monétisation manquante et les paliers tarifaires faibles
-- **Génération de plans de croissance** -- produit des boucles de croissance priorisées avec des feuilles de route d'implémentation
-- **Prompts d'implémentation** -- crée des prompts prêts à l'emploi pour Cursor, Claude ou d'autres outils d'IA
-- **Déploiement de la télémétrie** -- génère des migrations Supabase et les pousse en amont
-- **Validation des boucles** -- vérifie que les exigences des boucles de croissance sont implémentées
-- **Chat interactif** -- posez des questions sur votre code dans le terminal
+- **Détection de la stack technique** -- identifie frameworks, bases de données, authentification et déploiement
+- **Découverte des fonctionnalités de croissance** -- repère les flux d'inscription, le partage, les invitations et la facturation déjà en place
+- **Registre des fonctionnalités** -- suit les fonctionnalités d'une analyse à l'autre et les relie aux growth loops
+- **Analyse des fuites de revenus** -- détecte la monétisation manquante et les paliers tarifaires faibles
+- **Génération de plans de croissance** -- produit des growth loops priorisés avec leur feuille de route d'implémentation
+- **Prompts d'implémentation** -- prépare des prompts prêts à l'emploi pour Cursor, Claude ou d'autres outils d'IA
+- **Déploiement de la télémétrie** -- génère les migrations Supabase et les pousse en upstream
+- **Validation des boucles** -- vérifie que les exigences des growth loops sont bien implémentées
+- **Chat interactif** -- posez des questions sur votre code directement dans le terminal
 
-Prend en charge OpenAI, Gemini, Claude, LM Studio, Ollama et tout point de terminaison compatible OpenAI. Audit local gratuit disponible sans clé API.
+Compatible avec OpenAI, Gemini, Claude, LM Studio, Ollama et tout endpoint compatible OpenAI. Un audit local gratuit est disponible, sans clé API.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
 ## Installation
 
-### Interface utilisateur de terminal (recommandée)
+### Interface en terminal (recommandée)
 
-La TUI est un assistant interactif qui vous guide à travers tout le flux de travail. Aucun prérequis — l'installateur s'occupe de tout.
+La TUI est un assistant interactif qui vous accompagne tout au long du workflow. Aucun prérequis — le script d'installation s'occupe de tout.
 
 ```bash
 # Installer la TUI
@@ -83,7 +83,7 @@ skene
 
 ### CLI Python
 
-Si vous préférez la ligne de commande, vous pouvez exécuter Skene directement avec `uvx` (aucune installation nécessaire) ou l'installer globalement :
+Si vous préférez la ligne de commande, vous pouvez lancer Skene directement avec `uvx` (sans rien installer) ou l'installer globalement :
 
 ```bash
 # Installer uv (si vous ne l'avez pas)
@@ -103,14 +103,14 @@ Pour les détails d'utilisation de la CLI, voir la [documentation](https://www.s
 | Répertoire | Description | Langage | Distribution |
 |-----------|-------------|----------|-------------|
 | `src/skene/` | CLI + moteur d'analyse | Python | [PyPI](https://pypi.org/project/skene/) |
-| `tui/` | Assistant interactif d'interface utilisateur de terminal | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
+| `tui/` | Assistant interactif en terminal | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Plugin Cursor IDE | — | — |
 
-La TUI (`tui/`) est une application Bubble Tea qui offre une expérience d'assistant interactif et orchestre la CLI Python via `uvx`. Chaque package dispose de pipelines CI/CD indépendants.
+La TUI (`tui/`) est une application Bubble Tea qui offre une expérience guidée interactive et orchestre la CLI Python via `uvx`. Chaque package dispose de ses propres pipelines CI/CD.
 
 ## Contribuer
 
-Les contributions sont les bienvenues. Veuillez [ouvrir une issue](https://github.com/SkeneTechnologies/skene/issues) ou soumettre une [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Les contributions sont les bienvenues. [Ouvrez une issue](https://github.com/SkeneTechnologies/skene/issues) ou envoyez une [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Licence
 

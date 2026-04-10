@@ -34,7 +34,7 @@
 </p>
 
 
-Skene on koodipohjan analyysityökalu tuotevetoiseen kasvuun. Se skannaa koodipohjaasi, löytää kasvumahdollisuuksia ja tuottaa toimintakelpoisia toteutussuunnitelmia.
+Skene on koodipohjien analyysityökalu tuotevetoiseen kasvuun. Se skannaa koodipohjasi, löytää kasvumahdollisuuksia ja tuottaa konkreettisia toteutussuunnitelmia.
 
 ## Pikaopas
 
@@ -53,17 +53,17 @@ Ohjattu toiminto opastaa sinut palveluntarjoajan valinnan, todennuksen ja analyy
 
 ## Mitä se tekee
 
-- **Teknologiapinon tunnistus** -- tunnistaa sovelluskehykset, tietokannat, todennuksen, käyttöönoton
-- **Kasvuominaisuuksien löytäminen** -- löytää olemassa olevat rekisteröitymisvirrat, jakamisen, kutsut, laskutuksen
-- **Ominaisuusrekisteri** -- seuraa ominaisuuksia analyysiajojen välillä, yhdistää ne kasvusilmukoihin
-- **Tuottomenetysanalyysi** -- löytää puuttuvan monetisoinnin ja heikot hinnoittelutasot
-- **Kasvusuunnitelmien luonti** -- tuottaa priorisoidut kasvusilmukat toteutuksen tiekartan kanssa
-- **Toteutuskehotteet** -- rakentaa käyttövalmiit kehotteet Cursor-, Claude- tai muille tekoälytyökaluille
-- **Telemetrian käyttöönotto** -- luo Supabase-migraatiot ja työntää ne ylävirtaan
-- **Silmukan validointi** -- varmistaa, että kasvusilmukan vaatimukset on toteutettu
-- **Interaktiivinen keskustelu** -- kysy kysymyksiä koodipohjastasi terminaalissa
+- **Teknologiapinon tunnistus** -- tunnistaa sovelluskehykset, tietokannat, todennuksen ja käyttöönoton
+- **Kasvuominaisuuksien löytäminen** -- löytää olemassa olevat rekisteröitymisvirrat, jakamisen, kutsut ja laskutuksen
+- **Ominaisuusrekisteri** -- seuraa ominaisuuksia analyysiajojen välillä ja yhdistää ne kasvusilmukoihin
+- **Tuottomenetysanalyysi** -- paljastaa puuttuvan monetisoinnin ja heikot hinnoittelutasot
+- **Kasvusuunnitelmien luonti** -- tuottaa priorisoituja kasvusilmukoita konkreettisten toteutuspolkujen kanssa
+- **Toteutuskehotteet** -- rakentaa käyttövalmiita kehotteita Cursorille, Claudelle ja muille tekoälytyökaluille
+- **Telemetrian käyttöönotto** -- luo Supabase-migraatiot ja työntää ne upstreamiin
+- **Silmukoiden validointi** -- varmistaa, että kasvusilmukoiden vaatimukset on toteutettu
+- **Interaktiivinen keskustelu** -- esitä kysymyksiä koodipohjastasi suoraan terminaalissa
 
-Tukee OpenAI-, Gemini-, Claude-, LM Studio-, Ollama- ja mitä tahansa OpenAI-yhteensopivaa päätepistettä. Ilmainen paikallinen tarkastus saatavilla ilman API-avainta.
+Tukee OpenAI:ta, Geminiä, Claudea, LM Studiota, Ollamaa ja mitä tahansa OpenAI-yhteensopivaa päätepistettä. Ilmainen paikallinen tarkastus on saatavilla ilman API-avainta.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -110,7 +110,7 @@ TUI (`tui/`) on Bubble Tea -sovellus, joka tarjoaa interaktiivisen ohjatun kokem
 
 ## Osallistuminen
 
-Osallistuminen on tervetullutta. [Luo ongelmaraportti](https://github.com/SkeneTechnologies/skene/issues) tai lähetä [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Osallistuminen on tervetullutta. [Avaa issue](https://github.com/SkeneTechnologies/skene/issues) tai lähetä [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Lisenssi
 

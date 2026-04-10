@@ -34,44 +34,44 @@
 </p>
 
 
-Skene é um kit de ferramentas de análise de código para crescimento liderado pelo produto. Ele escaneia sua base de código, detecta oportunidades de crescimento e gera planos de implementação acionáveis.
+Skene é um kit de ferramentas de análise de código focado em crescimento liderado por produto. Ele escaneia sua base de código, identifica oportunidades de crescimento e gera planos de implementação prontos para executar.
 
-## Início Rápido
+## Início rápido
 
-Instale e inicie a interface de terminal interativa:
+Instale e abra a interface de terminal interativa:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 skene
 ```
 
-O assistente guia você pela seleção do provedor, autenticação e análise — nenhuma configuração prévia necessária.
+O assistente guia você pela escolha do provedor, autenticação e análise — sem precisar de configuração prévia.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## O Que Ele Faz
+## O que ele faz
 
-- **Detecção de stack tecnológico** -- identifica frameworks, bancos de dados, autenticação, implantação
-- **Descoberta de funcionalidades de crescimento** -- encontra fluxos de cadastro existentes, compartilhamento, convites, faturamento
-- **Registro de funcionalidades** -- rastreia funcionalidades entre execuções de análise, vincula-as a loops de crescimento
-- **Análise de vazamento de receita** -- identifica monetização ausente e faixas de preço fracas
-- **Geração de plano de crescimento** -- produz loops de crescimento priorizados com roteiros de implementação
-- **Prompts de implementação** -- cria prompts prontos para uso no Cursor, Claude ou outras ferramentas de IA
-- **Implantação de telemetria** -- gera migrações Supabase e envia para o upstream
-- **Validação de loops** -- verifica se os requisitos do loop de crescimento foram implementados
-- **Chat interativo** -- faça perguntas sobre sua base de código no terminal
+- **Detecção de stack tecnológico** -- identifica frameworks, bancos de dados, autenticação e deploy
+- **Descoberta de recursos de crescimento** -- encontra fluxos de cadastro, compartilhamento, convites e cobrança já existentes
+- **Registro de recursos** -- rastreia recursos entre execuções de análise e os conecta a growth loops
+- **Análise de perda de receita** -- aponta monetização ausente e faixas de preço fracas
+- **Geração de plano de crescimento** -- produz growth loops priorizados com roteiros de implementação
+- **Prompts de implementação** -- monta prompts prontos para usar no Cursor, Claude ou outras ferramentas de IA
+- **Deploy de telemetria** -- gera migrações Supabase e envia para o upstream
+- **Validação de loops** -- verifica se os requisitos do growth loop foram implementados
+- **Chat interativo** -- faça perguntas sobre sua base de código direto no terminal
 
-Suporta OpenAI, Gemini, Claude, LM Studio, Ollama e qualquer endpoint compatível com OpenAI. Auditoria local gratuita disponível sem necessidade de chave de API.
+Suporta OpenAI, Gemini, Claude, LM Studio, Ollama e qualquer endpoint compatível com OpenAI. Auditoria local gratuita disponível, sem precisar de chave de API.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
 ## Instalação
 
-### Interface de Terminal (recomendado)
+### Interface de terminal (recomendada)
 
-A TUI é um assistente interativo que guia você por todo o fluxo de trabalho. Sem pré-requisitos — o instalador cuida de tudo.
+A TUI é um assistente interativo que conduz você por todo o fluxo de trabalho. Sem pré-requisitos — o instalador cuida de tudo.
 
 ```bash
 # Instalar a TUI
@@ -81,9 +81,9 @@ curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/in
 skene
 ```
 
-### Python CLI
+### CLI em Python
 
-Se você prefere a linha de comando, pode executar o Skene diretamente com `uvx` (sem necessidade de instalação) ou instalá-lo globalmente:
+Se preferir a linha de comando, você pode rodar o Skene diretamente com `uvx` (sem precisar instalar nada) ou instalá-lo globalmente:
 
 ```bash
 # Instalar uv (se você não tiver)
@@ -96,9 +96,9 @@ uvx skene
 pip install skene
 ```
 
-Para detalhes de uso do CLI, consulte a [documentação](https://www.skene.ai/resources/docs/skene).
+Para detalhes de uso da CLI, consulte a [documentação](https://www.skene.ai/resources/docs/skene).
 
-## Estrutura do Monorepo
+## Estrutura do monorepo
 
 | Diretório | Descrição | Linguagem | Distribuição |
 |-----------|-------------|----------|-------------|
@@ -106,11 +106,11 @@ Para detalhes de uso do CLI, consulte a [documentação](https://www.skene.ai/re
 | `tui/` | Assistente interativo de terminal | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Plugin para Cursor IDE | — | — |
 
-A TUI (`tui/`) é um aplicativo Bubble Tea que fornece uma experiência de assistente interativo e orquestra o Python CLI via `uvx`. Cada pacote possui pipelines de CI/CD independentes.
+A TUI (`tui/`) é um app Bubble Tea que oferece uma experiência de assistente interativo e orquestra a CLI em Python via `uvx`. Cada pacote tem pipelines de CI/CD independentes.
 
 ## Contribuindo
 
-Contribuições são bem-vindas. Por favor, [abra uma issue](https://github.com/SkeneTechnologies/skene/issues) ou envie um [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Contribuições são bem-vindas. [Abra uma issue](https://github.com/SkeneTechnologies/skene/issues) ou envie um [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Licença
 

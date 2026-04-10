@@ -34,9 +34,9 @@
 </p>
 
 
-Skene je alat za analizu kodne baze za rast vođen proizvodom. Skenira vašu kodnu bazu, otkriva prilike za rast i generiše planove implementacije koji se mogu odmah primijeniti.
+Skene je alat za analizu kodne baze namijenjen rastu vođenom proizvodom. Skenira vašu kodnu bazu, otkriva prilike za rast i generiše konkretne planove implementacije.
 
-## Brzi Početak
+## Brzi početak
 
 Instalirajte i pokrenite interaktivni terminal UI:
 
@@ -51,19 +51,19 @@ skene
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
 <p>
 
-## Šta Radi
+## Šta radi
 
-- **Detekcija tehnološkog steka** -- identificira frameworke, baze podataka, autentifikaciju, deployment
-- **Otkrivanje funkcionalnosti rasta** -- pronalazi postojeće tokove registracije, dijeljenje, pozivnice, naplatu
-- **Registar funkcionalnosti** -- prati funkcionalnosti kroz analize, povezuje ih sa petljama rasta
-- **Analiza gubitka prihoda** -- otkriva nedostajuću monetizaciju i slabe cjenovne razrede
-- **Generisanje plana rasta** -- proizvodi prioritizirane petlje rasta sa planovima implementacije
-- **Promptovi za implementaciju** -- kreira promptove spremne za upotrebu za Cursor, Claude ili druge AI alate
-- **Deployment telemetrije** -- generiše Supabase migracije i šalje na upstream
-- **Validacija petlji** -- provjerava da li su zahtjevi petlje rasta implementirani
-- **Interaktivni chat** -- postavljajte pitanja o svojoj kodnoj bazi u terminalu
+- **Detekcija tehnološkog steka** -- prepoznaje frameworke, baze podataka, autentifikaciju i deployment
+- **Otkrivanje funkcionalnosti rasta** -- pronalazi postojeće tokove registracije, dijeljenje, pozivnice i naplatu
+- **Registar funkcionalnosti** -- prati funkcionalnosti kroz različita pokretanja analize i povezuje ih sa growth loop-ovima
+- **Analiza gubitka prihoda** -- otkriva propuštenu monetizaciju i slabe cjenovne nivoe
+- **Generisanje plana rasta** -- pravi prioritizirane growth loop-ove sa planovima implementacije
+- **Promptovi za implementaciju** -- priprema gotove promptove za Cursor, Claude i druge AI alate
+- **Deployment telemetrije** -- generiše Supabase migracije i šalje ih na upstream
+- **Validacija petlji** -- provjerava da li su zahtjevi growth loop-ova implementirani
+- **Interaktivni chat** -- postavljajte pitanja o svojoj kodnoj bazi direktno u terminalu
 
-Podržava OpenAI, Gemini, Claude, LM Studio, Ollama i bilo koji endpoint kompatibilan sa OpenAI. Besplatan lokalni audit dostupan bez potrebe za API ključem.
+Podržava OpenAI, Gemini, Claude, LM Studio, Ollama i bilo koji endpoint kompatibilan sa OpenAI. Dostupan je besplatan lokalni audit, bez potrebe za API ključem.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -71,7 +71,7 @@ Podržava OpenAI, Gemini, Claude, LM Studio, Ollama i bilo koji endpoint kompati
 
 ### Terminal UI (preporučeno)
 
-TUI je interaktivni čarobnjak koji vas vodi kroz cijeli radni tok. Bez preduvjeta — instalater se brine za sve.
+TUI je interaktivni čarobnjak koji vas vodi kroz cijeli radni tok. Bez preduvjeta — instalator se brine za sve.
 
 ```bash
 # Instalacija TUI-a
@@ -98,7 +98,7 @@ pip install skene
 
 Za detalje korištenja CLI-a, pogledajte [dokumentaciju](https://www.skene.ai/resources/docs/skene).
 
-## Struktura Monorepa
+## Struktura monorepoa
 
 | Direktorij | Opis | Jezik | Distribucija |
 |-----------|-------------|----------|-------------|

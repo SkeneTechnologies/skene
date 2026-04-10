@@ -34,18 +34,18 @@
 </p>
 
 
-Skene ist ein Codebase-Analyse-Toolkit für produktgetriebenes Wachstum. Es scannt Ihre Codebase, erkennt Wachstumschancen und erstellt umsetzbare Implementierungspläne.
+Skene ist ein Codebase-Analyse-Toolkit für produktgetriebenes Wachstum. Es scannt deine Codebase, deckt Wachstumschancen auf und erstellt konkrete Implementierungspläne.
 
 ## Schnellstart
 
-Installieren und starten Sie die interaktive Terminal-Oberfläche:
+Installiere und starte die interaktive Terminal-Oberfläche:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
 skene
 ```
 
-Der Assistent führt Sie durch die Anbieterauswahl, Authentifizierung und Analyse — keine vorherige Konfiguration erforderlich.
+Der Assistent führt dich durch Anbieterauswahl, Authentifizierung und Analyse — eine vorherige Konfiguration ist nicht nötig.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
@@ -53,17 +53,17 @@ Der Assistent führt Sie durch die Anbieterauswahl, Authentifizierung und Analys
 
 ## Was es kann
 
-- **Tech-Stack-Erkennung** -- identifiziert Frameworks, Datenbanken, Authentifizierung, Deployment
-- **Erkennung von Wachstumsfunktionen** -- findet bestehende Anmeldeflows, Sharing, Einladungen, Abrechnung
-- **Funktionsregister** -- verfolgt Funktionen über Analyseläufe hinweg, verknüpft sie mit Wachstumsloops
-- **Umsatzverlustanalyse** -- erkennt fehlende Monetarisierung und schwache Preisstufen
-- **Wachstumsplan-Generierung** -- erstellt priorisierte Wachstumsloops mit Implementierungs-Roadmaps
-- **Implementierungs-Prompts** -- erstellt gebrauchsfertige Prompts für Cursor, Claude oder andere KI-Tools
-- **Telemetrie-Deployment** -- generiert Supabase-Migrationen und pusht zum Upstream
-- **Loop-Validierung** -- überprüft, ob Wachstumsloop-Anforderungen implementiert sind
-- **Interaktiver Chat** -- stellen Sie Fragen zu Ihrer Codebase im Terminal
+- **Tech-Stack-Erkennung** -- identifiziert Frameworks, Datenbanken, Authentifizierung und Deployment
+- **Erkennung von Wachstumsfeatures** -- findet bestehende Anmeldeflows, Sharing, Einladungen und Abrechnung
+- **Feature-Register** -- verfolgt Features über mehrere Analyseläufe hinweg und verknüpft sie mit Growth Loops
+- **Umsatzverlust-Analyse** -- spürt fehlende Monetarisierung und schwache Preisstufen auf
+- **Generierung von Wachstumsplänen** -- erstellt priorisierte Growth Loops mit konkreten Roadmaps
+- **Implementierungs-Prompts** -- erstellt einsatzbereite Prompts für Cursor, Claude oder andere KI-Tools
+- **Telemetrie-Deployment** -- generiert Supabase-Migrationen und pusht sie zum Upstream
+- **Loop-Validierung** -- prüft, ob die Anforderungen der Growth Loops umgesetzt wurden
+- **Interaktiver Chat** -- stelle Fragen zu deiner Codebase direkt im Terminal
 
-Unterstützt OpenAI, Gemini, Claude, LM Studio, Ollama und jeden OpenAI-kompatiblen Endpoint. Kostenlose lokale Prüfung ohne API-Schlüssel verfügbar.
+Unterstützt OpenAI, Gemini, Claude, LM Studio, Ollama und jeden OpenAI-kompatiblen Endpoint. Ein kostenloser lokaler Audit ist auch ohne API-Key verfügbar.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -71,7 +71,7 @@ Unterstützt OpenAI, Gemini, Claude, LM Studio, Ollama und jeden OpenAI-kompatib
 
 ### Terminal-Oberfläche (empfohlen)
 
-Die TUI ist ein interaktiver Assistent, der Sie durch den gesamten Workflow führt. Keine Voraussetzungen — das Installationsprogramm kümmert sich um alles.
+Die TUI ist ein interaktiver Assistent, der dich durch den gesamten Workflow führt. Keine Voraussetzungen — der Installer kümmert sich um alles.
 
 ```bash
 # TUI installieren
@@ -83,7 +83,7 @@ skene
 
 ### Python CLI
 
-Wenn Sie die Kommandozeile bevorzugen, können Sie Skene direkt mit `uvx` ausführen (keine Installation nötig) oder global installieren:
+Wenn du lieber die Kommandozeile nutzt, kannst du Skene direkt mit `uvx` ausführen (ohne Installation) oder global installieren:
 
 ```bash
 # uv installieren (falls nicht vorhanden)
@@ -96,7 +96,7 @@ uvx skene
 pip install skene
 ```
 
-Für Details zur CLI-Nutzung siehe die [Dokumentation](https://www.skene.ai/resources/docs/skene).
+Details zur CLI-Nutzung findest du in der [Dokumentation](https://www.skene.ai/resources/docs/skene).
 
 ## Monorepo-Struktur
 
@@ -106,11 +106,11 @@ Für Details zur CLI-Nutzung siehe die [Dokumentation](https://www.skene.ai/reso
 | `tui/` | Interaktiver Terminal-UI-Assistent | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Cursor IDE-Plugin | — | — |
 
-Die TUI (`tui/`) ist eine Bubble Tea-App, die ein interaktives Assistenten-Erlebnis bietet und die Python CLI über `uvx` orchestriert. Jedes Paket hat unabhängige CI/CD-Pipelines.
+Die TUI (`tui/`) ist eine Bubble Tea-App, die ein interaktives Assistenten-Erlebnis bietet und die Python CLI über `uvx` orchestriert. Jedes Paket hat eigene CI/CD-Pipelines.
 
 ## Mitwirken
 
-Beiträge sind willkommen. Bitte [erstellen Sie ein Issue](https://github.com/SkeneTechnologies/skene/issues) oder reichen Sie einen [Pull Request](https://github.com/SkeneTechnologies/skene/pulls) ein.
+Beiträge sind willkommen. [Erstelle ein Issue](https://github.com/SkeneTechnologies/skene/issues) oder reiche einen [Pull Request](https://github.com/SkeneTechnologies/skene/pulls) ein.
 
 ## Lizenz
 

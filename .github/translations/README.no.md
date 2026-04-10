@@ -34,7 +34,7 @@
 </p>
 
 
-Skene er et analyseverktøy for kodebase rettet mot produktledet vekst. Det skanner kodebasen din, oppdager vekstmuligheter og genererer handlingsrettede implementeringsplaner.
+Skene er et analyseverktøy for kodebaser rettet mot produktledet vekst. Det skanner kodebasen din, finner vekstmuligheter og genererer konkrete implementeringsplaner.
 
 ## Hurtigstart
 
@@ -53,17 +53,17 @@ Veiviseren guider deg gjennom valg av leverandør, autentisering og analyse — 
 
 ## Hva den gjør
 
-- **Tech-stack-deteksjon** -- identifiserer rammeverk, databaser, autentisering, distribusjon
-- **Oppdagelse av vekstfunksjoner** -- finner eksisterende registreringsflyter, deling, invitasjoner, fakturering
-- **Funksjonsregister** -- sporer funksjoner på tvers av analysekjøringer og kobler dem til vekstløkker
-- **Analyse av inntektslekkasje** -- finner manglende monetarisering og svake prisnivåer
-- **Generering av vekstplaner** -- produserer prioriterte vekstløkker med implementeringsveikart
-- **Implementeringsprompter** -- bygger klare-til-bruk prompter for Cursor, Claude eller andre AI-verktøy
-- **Telemetri-distribusjon** -- genererer Supabase-migreringer og pusher til oppstrøms
-- **Validering av løkker** -- verifiserer at krav til vekstløkker er implementert
-- **Interaktiv chat** -- still spørsmål om kodebasen din i terminalen
+- **Deteksjon av tech stack** -- identifiserer rammeverk, databaser, autentisering og deployment
+- **Oppdagelse av vekstfunksjoner** -- finner eksisterende registreringsflyter, deling, invitasjoner og fakturering
+- **Funksjonsregister** -- sporer funksjoner på tvers av analysekjøringer og kobler dem til growth loops
+- **Analyse av inntektslekkasje** -- avdekker manglende monetarisering og svake prisnivåer
+- **Generering av vekstplaner** -- produserer prioriterte growth loops med konkrete implementeringsplaner
+- **Implementeringsprompter** -- bygger klar-til-bruk prompter for Cursor, Claude og andre AI-verktøy
+- **Telemetri-deployment** -- genererer Supabase-migreringer og pusher dem til upstream
+- **Loop-validering** -- bekrefter at kravene til growth loops er implementert
+- **Interaktiv chat** -- still spørsmål om kodebasen din direkte i terminalen
 
-Støtter OpenAI, Gemini, Claude, LM Studio, Ollama og ethvert OpenAI-kompatibelt endepunkt. Gratis lokal revisjon tilgjengelig uten API-nøkkel.
+Støtter OpenAI, Gemini, Claude, LM Studio, Ollama og ethvert OpenAI-kompatibelt endepunkt. En gratis lokal audit er tilgjengelig uten API-nøkkel.
 
 <img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
 
@@ -110,7 +110,7 @@ TUI (`tui/`) er en Bubble Tea-app som gir en interaktiv veiviseropplevelse og or
 
 ## Bidra
 
-Bidrag er velkomne. Vennligst [åpne et issue](https://github.com/SkeneTechnologies/skene/issues) eller send inn en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Bidrag er velkomne. [Åpne et issue](https://github.com/SkeneTechnologies/skene/issues) eller send inn en [pull request](https://github.com/SkeneTechnologies/skene/pulls).
 
 ## Lisens
 
