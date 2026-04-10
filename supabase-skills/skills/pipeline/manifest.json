@@ -1,0 +1,8 @@
+{
+  "name": "pipeline",
+  "version": "1.0.0",
+  "description": "Deals, stages, and stage history",
+  "depends_on": ["crm"],
+  "tables": ["pipelines", "pipeline_stages", "deals", "deal_stage_history"],
+  "author": "SkeneTechnologies"
+}

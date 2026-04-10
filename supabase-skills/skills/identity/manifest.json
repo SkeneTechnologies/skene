@@ -1,0 +1,8 @@
+{
+  "name": "identity",
+  "version": "1.0.0",
+  "description": "Organizations, users, teams, roles, and permissions",
+  "depends_on": [],
+  "tables": ["organizations", "users", "teams", "memberships", "roles", "permissions"],
+  "author": "SkeneTechnologies"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "automations",
+  "version": "1.0.0",
+  "description": "Triggers, actions, and execution logs",
+  "depends_on": ["identity"],
+  "tables": ["automations", "automation_actions", "automation_runs"],
+  "author": "SkeneTechnologies"
+}

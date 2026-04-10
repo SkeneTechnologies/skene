@@ -1,0 +1,8 @@
+{
+  "name": "billing",
+  "version": "1.0.0",
+  "description": "Products, prices, subscriptions, invoices, and payments",
+  "depends_on": ["crm"],
+  "tables": ["products", "prices", "subscriptions", "invoices", "payments"],
+  "author": "SkeneTechnologies"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "comms",
+  "version": "1.0.0",
+  "description": "Unified messages and threads",
+  "depends_on": ["crm"],
+  "tables": ["threads", "messages"],
+  "author": "SkeneTechnologies"
+}
