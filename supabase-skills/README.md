@@ -1,138 +1,141 @@
-# Supabase Skills
+<div align="center">
 
-Ready-made Supabase schemas for business apps. Pick the skills you need, run the SQL, start building.
+# ⚡ Supabase Skills
 
-```
-npx supabase db reset
-psql $DATABASE_URL -f skills/identity/migration.sql
-psql $DATABASE_URL -f skills/crm/migration.sql
-psql $DATABASE_URL -f skills/pipeline/migration.sql
-# ... or just run ./scripts/install.sh all
-```
+### Stop writing the same migrations. Start building your app.
 
-## Why
+**37 tables. 11 skills. One `psql` command. Production-ready.**
 
-Every SaaS app needs the same tables: users, contacts, deals, tickets, subscriptions. You end up writing the same migrations, the same RLS policies, the same seed data -- over and over.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Ready-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![GitHub Stars](https://img.shields.io/github/stars/SkeneTechnologies/skene?style=flat&label=Stars)](https://github.com/SkeneTechnologies/skene)
 
-Supabase Skills gives you production-ready schemas so you can skip the boilerplate and start building features on day one.
+[Getting Started](#getting-started) · [Available Skills](#available-skills) · [Build Your Own](#build-your-own) · [Schema Design](#schema-design)
 
-## What is a skill
+</div>
 
-A skill is a self-contained backend capability. Each skill is a directory with four files:
-
-```
-skills/crm/
-├── manifest.json    # metadata and dependencies
-├── migration.sql    # tables, enums, indexes, RLS policies
-├── seed.sql         # demo data for development
-└── SKILL.md         # documentation and example queries
-```
-
-Skills declare their dependencies in `manifest.json`. When you install a skill, its dependencies are resolved and installed first.
-
-## Available Skills
-
-| Skill | Tables | Description |
-|-------|--------|-------------|
-| [identity](skills/identity/SKILL.md) | 6 | Organizations, users, teams, memberships, roles, permissions |
-| [crm](skills/crm/SKILL.md) | 3 | Contacts, companies, and relationships |
-| [pipeline](skills/pipeline/SKILL.md) | 4 | Pipelines, stages, deals, and stage history |
-| [tasks](skills/tasks/SKILL.md) | 3 | Projects, tasks, and dependencies |
-| [support](skills/support/SKILL.md) | 1 | Tickets with priority, status, and channel tracking |
-| [comms](skills/comms/SKILL.md) | 2 | Threads and messages for any entity |
-| [content](skills/content/SKILL.md) | 3 | Folders, documents, and comments |
-| [billing](skills/billing/SKILL.md) | 5 | Products, prices, subscriptions, invoices, payments |
-| [calendar](skills/calendar/SKILL.md) | 2 | Events and attendees |
-| [automations](skills/automations/SKILL.md) | 3 | Triggers, actions, and execution logs |
-| [analytics](skills/analytics/SKILL.md) | 5 | Tags, custom fields, and activity log |
-
-**37 tables** across **11 skills**.
-
-## What You Can Build
-
-- **CRM** -- identity + crm + pipeline + comms + analytics
-- **Project management tool** -- identity + tasks + content + calendar
-- **Help desk** -- identity + crm + support + comms + analytics
-- **Subscription billing platform** -- identity + crm + billing
-- **All of the above** -- install everything with `./scripts/install.sh all`
-
-Mix and match. Each combination gives you a working multi-tenant backend with RLS out of the box.
-
-## How It Works
-
-### Install
+---
 
 ```bash
-# Clone the repo
+./scripts/install.sh --seed all
+# That's it. 37 tables, RLS policies, seed data. Done.
+```
+
+---
+
+## The Problem
+
+You're building a SaaS app. You need users, orgs, contacts, deals, tickets, subscriptions. So you write migrations. Then RLS policies. Then seed data. Then you do it again on the next project.
+
+**Supabase Skills gives you the backend so you can build the frontend.**
+
+Each skill is a self-contained, composable piece of infrastructure -- install what you need, skip what you don't.
+
+## Getting Started
+
+```bash
 git clone https://github.com/SkeneTechnologies/skene.git
 cd skene/supabase-skills
 
-# Set your database URL
 export DATABASE_URL="postgresql://postgres:password@localhost:54322/postgres"
 
-# Install specific skills (dependencies resolved automatically)
+# Install just what you need (dependencies resolve automatically)
 ./scripts/install.sh crm
 
-# Or install everything
-./scripts/install.sh all
-
-# Install with seed data
+# Or go all-in
 ./scripts/install.sh --seed all
 ```
 
-### Reset
+That's it. Your database now has tables, indexes, RLS policies, and demo data.
 
-```bash
-# Drop all tables and reinstall
-./scripts/reset.sh
+## Available Skills
 
-# Drop, reinstall, and re-seed
-./scripts/reset.sh --seed
+<table>
+<tr>
+<td width="50%">
+
+### 🔐 [identity](skills/identity/SKILL.md)
+Organizations, users, teams, memberships, roles, permissions
+<br><sub>6 tables · 2 enums · Foundation for everything</sub>
+
+### 👥 [crm](skills/crm/SKILL.md)
+Contacts, companies, and many-to-many relationships
+<br><sub>3 tables · 1 enum · Depends on identity</sub>
+
+### 📊 [pipeline](skills/pipeline/SKILL.md)
+Pipelines, stages, deals, and full stage transition history
+<br><sub>4 tables · 1 enum · Depends on crm</sub>
+
+### ✅ [tasks](skills/tasks/SKILL.md)
+Projects, tasks, and dependency tracking
+<br><sub>3 tables · 2 enums · Depends on identity</sub>
+
+### 🎫 [support](skills/support/SKILL.md)
+Tickets with priority, status, channel, and SLA tracking
+<br><sub>1 table · 3 enums · Depends on identity</sub>
+
+### 💬 [comms](skills/comms/SKILL.md)
+Threaded messages attachable to any entity
+<br><sub>2 tables · 2 enums · Depends on crm</sub>
+
+</td>
+<td width="50%">
+
+### 📄 [content](skills/content/SKILL.md)
+Folders, documents, and nested comments
+<br><sub>3 tables · 1 enum · Depends on identity</sub>
+
+### 💳 [billing](skills/billing/SKILL.md)
+Products, prices, subscriptions, invoices, payments
+<br><sub>5 tables · 4 enums · Stripe-ready · Depends on crm</sub>
+
+### 📅 [calendar](skills/calendar/SKILL.md)
+Events and attendees with optional CRM links
+<br><sub>2 tables · 2 enums · Depends on identity</sub>
+
+### 🤖 [automations](skills/automations/SKILL.md)
+Triggers, action sequences, and execution logs
+<br><sub>3 tables · 3 enums · Depends on identity</sub>
+
+### 📈 [analytics](skills/analytics/SKILL.md)
+Tags, custom fields, and activity log for any entity
+<br><sub>5 tables · 2 enums · Depends on identity</sub>
+
+<br>
+
+> **37 tables · 22 enums · 11 skills**
+> <br>All with Row-Level Security. All multi-tenant.
+
+</td>
+</tr>
+</table>
+
+## What You Can Build
+
+| App | Skills | You get |
+|-----|--------|---------|
+| **CRM** | identity + crm + pipeline + comms + analytics | Contact management, deal tracking, communication history, activity feeds |
+| **Project Management** | identity + tasks + content + calendar | Projects, task boards, docs, team calendars |
+| **Help Desk** | identity + crm + support + comms + analytics | Ticket queues, customer threads, SLA tracking |
+| **Billing Platform** | identity + crm + billing | Subscriptions, invoices, payments, Stripe integration |
+| **Everything** | `./scripts/install.sh all` | All 37 tables, full business backend |
+
+Mix and match. Every combination gives you a working multi-tenant backend with RLS out of the box.
+
+## What's in a Skill
+
+Each skill is a directory with four files:
+
+```
+skills/crm/
+├── manifest.json    # Dependencies and metadata
+├── migration.sql    # Tables, enums, indexes, triggers, RLS policies
+├── seed.sql         # Realistic demo data
+└── SKILL.md         # Full docs with example queries
 ```
 
-### Manual install
-
-If you prefer to run migrations directly:
-
-```bash
-# Identity must come first
-psql $DATABASE_URL -f skills/identity/migration.sql
-
-# Then any skills that depend on identity
-psql $DATABASE_URL -f skills/crm/migration.sql
-psql $DATABASE_URL -f skills/pipeline/migration.sql
-
-# Seed data (optional)
-psql $DATABASE_URL -f skills/identity/seed.sql
-psql $DATABASE_URL -f skills/crm/seed.sql
-psql $DATABASE_URL -f skills/pipeline/seed.sql
-```
-
-## Schema Design
-
-Every table follows the same conventions:
-
-- **Multi-tenant by default** -- every table has `org_id` scoped to an organization
-- **RLS on every table** -- row-level security policies enforce tenant isolation
-- **UUIDs everywhere** -- `gen_random_uuid()` as default primary keys
-- **Timestamps** -- `created_at` and `updated_at` on every table, with an automatic trigger
-- **Soft extensibility** -- `metadata jsonb DEFAULT '{}'` on every table for app-specific fields
-- **Enums for status fields** -- PostgreSQL enums instead of unconstrained text
-- **Integer cents for money** -- `value` and `amount` columns store cents, not dollars
-- **Polymorphic references** -- `entity_type` + `entity_id` pairs for comments, tags, activities
-
-### RLS Functions
-
-The `identity` skill defines four helper functions used by all RLS policies:
-
-| Function | Returns | Purpose |
-|----------|---------|---------|
-| `get_user_org_id()` | uuid | Current user's organization ID |
-| `get_user_role()` | membership_role | Current user's role in their org |
-| `is_admin()` | boolean | Whether current user is an admin or owner |
-| `set_updated_at()` | trigger | Automatically sets `updated_at` on row update |
-
-### Dependency Graph
+Skills declare dependencies. The install script resolves them automatically:
 
 ```
 identity
@@ -148,61 +151,109 @@ identity
 └── analytics
 ```
 
-See [docs/dependencies.md](docs/dependencies.md) for the full dependency table.
+## Schema Design
+
+Every table follows the same conventions. No exceptions.
+
+| Convention | What it means |
+|-----------|---------------|
+| **Multi-tenant** | Every table has `org_id`. Every query is scoped. |
+| **RLS everywhere** | Row-level security on every table. Tenant isolation enforced at the database layer. |
+| **UUIDs** | `gen_random_uuid()` primary keys. No serial IDs leaking row counts. |
+| **Timestamps** | `created_at` and `updated_at` on every table with an automatic trigger. |
+| **JSONB escape hatch** | `metadata jsonb DEFAULT '{}'` on every table for app-specific fields, embeddings, whatever you need. |
+| **Enums** | PostgreSQL enums for status fields. No unconstrained strings. |
+| **Cents, not dollars** | Money stored as integer cents. No floating point math. |
+| **Polymorphic refs** | `entity_type` + `entity_id` for comments, tags, activities. Attach anything to anything. |
+
+### RLS Functions
+
+The `identity` skill defines four helper functions every other skill uses:
+
+```sql
+get_user_org_id()   -- Returns the current user's organization ID
+get_user_role()     -- Returns the current user's role (owner, admin, member)
+is_admin()          -- Returns true if the user is an admin or owner
+set_updated_at()    -- Trigger function for automatic updated_at
+```
 
 ## AI-Ready
 
-The schema is designed to work well with AI-powered development tools. Every table has:
+Point your AI coding assistant at any `SKILL.md` and it has everything it needs:
 
-- Descriptive column names that read like natural language
-- `COMMENT ON` annotations for each table and column
-- Consistent naming conventions across all skills
-- A `metadata` JSONB column for storing embeddings, AI-generated fields, or any structured data
+- Table definitions with every column and type
+- Enum values with descriptions
+- RLS policy rules
+- 5+ working SQL queries per skill
+- `COMMENT ON` annotations on every table and column
 
-Point your AI coding assistant at a SKILL.md file and it has everything it needs: table definitions, enum values, RLS rules, and working SQL examples.
+The `metadata` JSONB column is there for embeddings, AI-generated fields, or any structured data your LLM pipeline produces.
 
 ## Build Your Own
 
-Want to add a skill? See [docs/build-a-skill.md](docs/build-a-skill.md) for a step-by-step guide.
+```
+skills/notes/
+├── manifest.json
+├── migration.sql
+├── seed.sql
+└── SKILL.md
+```
 
-The short version:
+Four files. Follow the conventions. Declare your dependencies. That's a skill.
 
-1. Create a directory under `skills/` with four files: `manifest.json`, `migration.sql`, `seed.sql`, `SKILL.md`
-2. Follow the schema conventions (org_id, metadata, timestamps, RLS)
-3. Declare dependencies in `manifest.json`
-4. Add example queries to your SKILL.md
+See [docs/build-a-skill.md](docs/build-a-skill.md) for the full guide.
 
 ## FAQ
 
-**Do I need all 11 skills?**
-No. Install only what you need. The minimum is `identity`, which gives you multi-tenant users and orgs.
+<details>
+<summary><b>Do I need all 11 skills?</b></summary>
+<br>
+No. Install only what you need. The minimum is <code>identity</code>, which gives you multi-tenant users and orgs. Everything else is optional.
+</details>
 
-**Can I modify the migrations?**
-Yes. These are plain SQL files. Fork the repo, change what you need, run them against your database.
+<details>
+<summary><b>Can I modify the migrations?</b></summary>
+<br>
+Yes. These are plain SQL files. Fork the repo, change what you need, run them against your database. There is no ORM, no code generation, no lock-in.
+</details>
 
-**Does this work with Supabase hosted?**
-Yes. Set `DATABASE_URL` to your Supabase project's connection string and run the install script.
+<details>
+<summary><b>Does this work with Supabase hosted?</b></summary>
+<br>
+Yes. Set <code>DATABASE_URL</code> to your Supabase project's connection string and run the install script.
+</details>
 
-**What about Supabase Auth?**
-The `identity` skill's `users` table has an `auth_id` column that references `auth.users(id)`. RLS policies use `auth.uid()` to identify the current user. Connect Supabase Auth and it works automatically.
+<details>
+<summary><b>What about Supabase Auth?</b></summary>
+<br>
+The <code>identity</code> skill's <code>users</code> table has an <code>auth_id</code> column that references <code>auth.users(id)</code>. RLS policies use <code>auth.uid()</code> to identify the current user. Connect Supabase Auth and it works automatically.
+</details>
 
-**How do I handle the `channel_type` enum shared between support and comms?**
-Both skills use a `CREATE TYPE IF NOT EXISTS` guard, so they work in any install order. If you install both, the enum is created once and shared.
+<details>
+<summary><b>Can I use this without Supabase?</b></summary>
+<br>
+The SQL is standard PostgreSQL. You need <code>pgcrypto</code> (for <code>gen_random_uuid()</code>) and either Supabase Auth or your own implementation of <code>auth.uid()</code>.
+</details>
 
-**Can I use this without Supabase?**
-The SQL is standard PostgreSQL. You need the `pgcrypto` extension (for `gen_random_uuid()`) and either Supabase Auth or your own implementation of `auth.uid()`.
+<details>
+<summary><b>What about the shared <code>channel_type</code> enum?</b></summary>
+<br>
+Both <code>support</code> and <code>comms</code> use a <code>CREATE TYPE IF NOT EXISTS</code> guard. Install them in any order. The enum is created once and shared.
+</details>
 
 ## Contributing
 
 1. Fork the repo
 2. Create a feature branch
-3. Add or modify a skill following the conventions in [docs/build-a-skill.md](docs/build-a-skill.md)
+3. Add or modify a skill following [docs/build-a-skill.md](docs/build-a-skill.md)
 4. Open a pull request
 
-## Built by Skene
+---
 
-Supabase Skills is built and maintained by [Skene Technologies](https://github.com/SkeneTechnologies). We use these schemas in production to power our own products.
+<div align="center">
 
-## License
+Built by [Skene Technologies](https://github.com/SkeneTechnologies)
 
-[MIT](LICENSE)
+[MIT License](LICENSE)
+
+</div>
