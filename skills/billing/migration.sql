@@ -160,6 +160,12 @@ CREATE TRIGGER trg_payments_updated_at BEFORE UPDATE ON public.payments
 -- 5. Comments
 -- =============================================================================
 
+COMMENT ON TABLE public.products IS 'Catalog of products or services offered by an organization.';
+COMMENT ON TABLE public.prices IS 'Pricing tiers for products — supports recurring and one-time billing.';
+COMMENT ON TABLE public.subscriptions IS 'Active, trialing, or canceled subscriptions linking contacts to prices.';
+COMMENT ON TABLE public.invoices IS 'Invoices generated from subscriptions or ad-hoc charges.';
+COMMENT ON TABLE public.payments IS 'Payment records against invoices — tracks status and method.';
+
 COMMENT ON COLUMN public.products.stripe_product_id IS 'NULL if not using Stripe.';
 COMMENT ON COLUMN public.prices.amount IS 'In smallest currency unit (e.g. cents for USD).';
 COMMENT ON COLUMN public.prices.interval_count IS 'For multi-interval billing, e.g. 3 months for quarterly.';
