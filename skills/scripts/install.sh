@@ -51,10 +51,10 @@ resolve_deps() {
   local deps
   deps=$(python3 -c "
 import json, sys
-m = json.load(open('$manifest'))
+m = json.load(open(sys.argv[1]))
 for d in m.get('depends_on', []):
     print(d)
-" 2>/dev/null || true)
+" "$manifest")
 
   for dep in $deps; do
     resolve_deps "$dep"

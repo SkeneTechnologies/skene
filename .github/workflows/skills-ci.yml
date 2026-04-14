@@ -1,0 +1,93 @@
+name: Skills CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/**'
+
+permissions:
+  contents: read
+
+jobs:
+  sql-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install sqlfluff
+        run: pip install sqlfluff
+
+      - name: Lint migration files
+        run: sqlfluff lint skills/*/migration.sql --dialect postgres
+
+  install-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skene_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install all skills
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skene_test
+        run: |
+          # Create a minimal auth schema stub (Supabase provides this in production)
+          psql "$DATABASE_URL" -c "CREATE SCHEMA IF NOT EXISTS auth;"
+          psql "$DATABASE_URL" -c "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid AS \$\$ SELECT '00000000-0000-0000-0000-000000000000'::uuid; \$\$ LANGUAGE sql;"
+
+          # Run install
+          chmod +x skills/scripts/install.sh
+          skills/scripts/install.sh all
+
+      - name: Verify RLS enabled on all tables
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skene_test
+        run: |
+          UNPROTECTED=$(psql "$DATABASE_URL" -t -c "
+            SELECT tablename FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename NOT LIKE 'pg_%'
+              AND NOT rowsecurity
+          " | sed '/^\s*$/d' | wc -l | tr -d ' ')
+
+          if [[ "$UNPROTECTED" -gt 0 ]]; then
+            echo "ERROR: Found tables without RLS enabled:"
+            psql "$DATABASE_URL" -c "
+              SELECT tablename FROM pg_tables
+              WHERE schemaname = 'public'
+                AND tablename NOT LIKE 'pg_%'
+                AND NOT rowsecurity
+            "
+            exit 1
+          fi
+          echo "All tables have RLS enabled."
+
+      - name: Seed all skills
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skene_test
+        run: |
+          chmod +x skills/scripts/install.sh
+          skills/scripts/install.sh --seed all

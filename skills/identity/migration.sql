@@ -2,7 +2,14 @@
 -- Foundation schema for multi-tenant Supabase apps with RLS.
 
 -- =============================================================================
--- 1. Trigger function
+-- 1. Enums (must precede functions that reference them)
+-- =============================================================================
+
+CREATE TYPE public.membership_role AS ENUM ('owner', 'admin', 'member', 'guest');
+CREATE TYPE public.membership_status AS ENUM ('active', 'invited', 'suspended');
+
+-- =============================================================================
+-- 2. Trigger function
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -14,7 +21,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
--- 2. RLS helper functions
+-- 3. RLS helper functions
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_user_org_id()
@@ -36,13 +43,6 @@ CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
   SELECT public.get_user_role() IN ('admin', 'owner');
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
-
--- =============================================================================
--- 3. Enums
--- =============================================================================
-
-CREATE TYPE public.membership_role AS ENUM ('owner', 'admin', 'member', 'guest');
-CREATE TYPE public.membership_status AS ENUM ('active', 'invited', 'suspended');
 
 -- =============================================================================
 -- 4. Tables

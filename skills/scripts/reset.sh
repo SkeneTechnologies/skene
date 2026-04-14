@@ -30,38 +30,43 @@ for skill in "${REVERSE_SKILLS[@]}"; do
   fi
 
   tables=$(python3 -c "
-import json
-m = json.load(open('$manifest'))
+import json, sys
+m = json.load(open(sys.argv[1]))
 for t in reversed(m.get('tables', [])):
     print(t)
-" 2>/dev/null || true)
+" "$manifest")
 
   for table in $tables; do
     echo "  DROP TABLE IF EXISTS $table"
-    psql "$DB_URL" -c "DROP TABLE IF EXISTS public.$table CASCADE;" --set ON_ERROR_STOP=1 2>/dev/null || true
+    psql "$DB_URL" -c "DROP TABLE IF EXISTS public.$table CASCADE;" --set ON_ERROR_STOP=1
   done
 done
 
-# Drop enums
-echo "Dropping enums..."
-psql "$DB_URL" --set ON_ERROR_STOP=1 -c "
-DO \$\$ DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN SELECT typname FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e' LOOP
-    EXECUTE 'DROP TYPE IF EXISTS public.' || r.typname || ' CASCADE';
-  END LOOP;
-END \$\$;
-" 2>/dev/null || true
+# Drop only enums created by skills (extracted from migration.sql files)
+echo "Dropping skill enums..."
+SKILL_ENUMS=()
+for skill in "${REVERSE_SKILLS[@]}"; do
+  migration="$SKILLS_DIR/$skill/migration.sql"
+  if [[ -f "$migration" ]]; then
+    while IFS= read -r enum_name; do
+      SKILL_ENUMS+=("$enum_name")
+    done < <(grep -oP '(?<=CREATE TYPE public\.)\w+' "$migration" 2>/dev/null || true)
+  fi
+done
 
-# Drop helper functions
+for enum in "${SKILL_ENUMS[@]}"; do
+  echo "  DROP TYPE IF EXISTS $enum"
+  psql "$DB_URL" -c "DROP TYPE IF EXISTS public.$enum CASCADE;" --set ON_ERROR_STOP=1
+done
+
+# Drop helper functions defined by the identity skill
 echo "Dropping functions..."
 psql "$DB_URL" --set ON_ERROR_STOP=1 -c "
 DROP FUNCTION IF EXISTS public.set_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS public.get_user_org_id() CASCADE;
 DROP FUNCTION IF EXISTS public.get_user_role() CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
-" 2>/dev/null || true
+"
 
 echo ""
 echo "Re-installing..."
