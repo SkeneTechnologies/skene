@@ -11,85 +11,104 @@
   <a href="https://www.reddit.com/r/plgbuilders/"><img width="153" height="42" alt="reddit" src="https://github.com/user-attachments/assets/b420ea50-26e3-40fe-ab34-ac179f748357"></a>
 </p>
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-ready-3ECF8E?logo=supabase&logoColor=white" alt="Supabase Ready" /></a>
+  <a href="https://skills.sh"><img src="https://img.shields.io/badge/skills.sh-compatible-000000" alt="skills.sh" /></a>
+</p>
 
-Skene is a codebase analysis toolkit for product-led growth. It scan your codebase, detect growth opportunities, and generate actionable implementation plans.
+---
+
+Install backend Skills into your Supabase project. CRM, billing, helpdesk, project management, calendar, and more. Each Skill adds tables, enums, RLS policies, and seed data. Pick what you need.
+
+```bash
+npx skills add SkeneTechnologies/skene
+```
+
+The same data model that powers Salesforce, HubSpot, Jira, Zendesk, and Stripe. Except you own it.
+
+---
 
 ## Quick Start
 
-Install and launch the interactive terminal UI:
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
-skene
+# Install all skills
+npx skills add SkeneTechnologies/skene
+
+# Or pick specific ones
+npx skills add SkeneTechnologies/skene -s crm
+npx skills add SkeneTechnologies/skene -s billing
 ```
 
-The wizard walks you through provider selection, authentication, and analysis — no configuration needed upfront.
+Skills install to `.claude/skills/`. Your AI agent reads the SKILL.md files, understands the schema, and applies the migrations to your Supabase project.
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/49dcd0c4-2bad-4fd3-b29e-89ba2b85c669" width="100%" height="auto"/>
-<p>
-
-## What It Does
-
-- **Tech stack detection** -- identifies frameworks, databases, auth, deployment
-- **Growth feature discovery** -- finds existing signup flows, sharing, invites, billing
-- **Feature registry** -- tracks features across analysis runs, links them to growth loops
-- **Revenue leakage analysis** -- spots missing monetization and weak pricing tiers
-- **Growth plan generation** -- produces prioritized growth loops with implementation roadmaps
-- **Implementation prompts** -- builds ready-to-use prompts for Cursor, Claude, or other AI tools
-- **Telemetry deployment** -- generates Supabase migrations and pushes to upstream
-- **Loop validation** -- verifies that growth loop requirements are implemented
-- **Interactive chat** -- ask questions about your codebase in the terminal
-
-Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible endpoint. Free local audit available with no API key required.
-
-<img width="1662" height="393" alt="ide_git" src="https://github.com/user-attachments/assets/0b9de3f8-9083-4dc8-b68e-105abc7ea0b4" />
-
-## Installation
-
-### Terminal UI (recommended)
-
-The TUI is an interactive wizard that guides you through the entire workflow. No prerequisites — the installer handles everything.
+Or apply SQL directly -- no agent needed:
 
 ```bash
-# Install the TUI
-curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | bash
-
-# Launch it
-skene
+psql "$DATABASE_URL" -f identity/migration.sql
+psql "$DATABASE_URL" -f crm/migration.sql
 ```
 
-### Python CLI
+## Available Skills
 
-If you prefer the command line, you can run Skene directly with `uvx` (no install needed) or install it globally:
+| Skill | What it adds | Depends on |
+|-------|-------------|------------|
+| `identity` | Organizations, users, teams, roles, permissions | -- |
+| `crm` | Contacts, companies, relationships | identity |
+| `pipeline` | Deals, stages, stage history | crm |
+| `tasks` | Projects, tasks, dependencies | identity |
+| `support` | Tickets with priorities, SLAs, channels | crm |
+| `comms` | Threads and messages for any entity | crm |
+| `content` | Folders, documents, comments | identity |
+| `billing` | Products, prices, subscriptions, invoices, payments | crm |
+| `calendar` | Events and attendees | identity |
+| `automations` | Triggers, actions, execution logs | identity |
+| `analytics` | Tags, custom fields, activity log | identity |
+| `forms` | Form definitions, fields, submissions, file uploads | identity |
+| `notifications` | Templates, delivery log, preferences, push tokens | identity |
+| `campaigns` | Email campaigns, segments, lists, engagement tracking | crm |
+| `commerce` | Orders, carts, shipping, fulfillment | billing |
+| `knowledge` | Articles, categories, publish status | content |
+| `approvals` | Approval chains, requests, decisions, delegation | identity |
+| `integrations` | Connected apps, OAuth tokens, webhooks, sync logs | identity |
+| `compliance` | Consent records, deletion requests, retention policies | identity |
 
-```bash
-# Install uv (if you don't have it)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+**19 Skills. ~72 tables. All with RLS. All multi-tenant.**
 
-# Run directly (no install needed)
-uvx skene
+## What You Can Build
 
-# Or install globally
-pip install skene
+```
+CRM            = identity + crm + pipeline + comms + analytics
+Project tool   = identity + tasks + content + analytics
+Helpdesk       = identity + crm + support + comms + knowledge + analytics
+Billing app    = identity + crm + billing + commerce + analytics
+Marketing      = identity + crm + campaigns + forms + analytics
+Internal wiki  = identity + content + knowledge
+Full business  = install all 19 skills
 ```
 
-For CLI usage details, see the [documentation](https://www.skene.ai/resources/docs/skene).
+## Why This Exists
 
-## Monorepo Structure
+AI can build a frontend in minutes. Cursor, Claude Code, v0, Bolt -- they generate UI fast. But every project still starts with an empty Postgres instance and a blank migration file.
 
-| Directory | Description | Language | Distribution |
-|-----------|-------------|----------|-------------|
-| `src/skene/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene/) |
-| `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
-| `cursor-plugin/` | Cursor IDE plugin | — | — |
-| `skills/` | Skene Skills -- composable backend schemas for Supabase | SQL | `skene install <skill>` |
+Every founder using AI to build a SaaS product hits the same wall in the first hour. What tables do I need? How do I handle multi-tenancy? What should my RLS look like?
 
-The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
+These are solved problems. Skene Skills are the starting line so you skip them.
+
+## Monorepo
+
+| Directory | What | Distribution |
+|-----------|------|-------------|
+| [`skills/`](skills/) | Composable backend schemas for Supabase | [`npx skills add`](https://skills.sh) |
+| `src/skene/` | PLG analysis CLI | [PyPI](https://pypi.org/project/skene/) |
+| `tui/` | Interactive terminal UI | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
+| `cursor-plugin/` | Cursor IDE plugin | -- |
+
+See [`skills/README.md`](skills/README.md) for full documentation -- schema design principles, AI agent integration, Skene Cloud, and more.
 
 ## Contributing
 
-Contributions are welcome. Please [open an issue](https://github.com/SkeneTechnologies/skene/issues) or submit a [pull request](https://github.com/SkeneTechnologies/skene/pulls).
+Contributions welcome. Please [open an issue](https://github.com/SkeneTechnologies/skene/issues) or submit a [pull request](https://github.com/SkeneTechnologies/skene/pulls). See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
 
 ## License
 
