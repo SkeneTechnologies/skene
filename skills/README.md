@@ -73,14 +73,13 @@ Skene Skills deploy directly into your Supabase Postgres instance. No per-seat p
 
 ## Quick start
 
-### One command (recommended)
+### One command
 
 ```bash
-npm install @skene/database-skills
 npx @skene/database-skills crm --db $DATABASE_URL --seed
 ```
 
-Pick a preset, point at your Supabase database, done. Dependencies resolve automatically, migrations run in order, demo data loads.
+One command. Installs the package, resolves dependencies, applies migrations, loads demo data. No separate install step.
 
 **Presets:**
 
@@ -391,11 +390,10 @@ crm/
 ### Setup script (recommended)
 
 ```bash
-npm install @skene/database-skills
 npx @skene/database-skills crm --db $DATABASE_URL --seed
 ```
 
-Pass a preset or comma-separated skill names. Dependencies resolve automatically, migrations run in order. Run without args for interactive prompts. No `psql` required.
+One command — installs the package, resolves dependencies, applies migrations. Run without args for interactive prompts. No `psql` required.
 
 ### Via skills.sh
 

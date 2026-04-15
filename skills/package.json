@@ -1,6 +1,6 @@
 {
   "name": "@skene/database-skills",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "type": "module",
   "description": "Backend skills for your Supabase — CRM, billing, support, and more. 19 composable schemas with RLS, multi-tenancy, and seed data.",
   "license": "MIT",

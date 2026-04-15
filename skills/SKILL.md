@@ -99,7 +99,7 @@ npx @skene/database-skills <preset> --db <url> --seed
 
 Or with comma-separated skills: `npx @skene/database-skills crm,pipeline,support --db <url>`
 
-The script resolves dependencies automatically.
+One command — installs the package into the project, resolves dependencies, and applies migrations. No separate `npm install` step needed.
 
 ### Step 4 — Show what they got
 

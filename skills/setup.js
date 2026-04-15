@@ -136,9 +136,32 @@ function detectSupabase() {
   return null;
 }
 
+// ── Self-install into project ───────────────────────────────────
+
+function ensureInstalled() {
+  try {
+    const cwd = process.env.INIT_CWD || process.cwd();
+    const pkgPath = join(cwd, 'package.json');
+    if (!existsSync(pkgPath)) return;
+
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    if (deps['@skene/database-skills']) return;
+
+    console.log('Adding @skene/database-skills to project...');
+    execSync('npm install @skene/database-skills --save', {
+      cwd,
+      stdio: 'inherit',
+      timeout: 30_000,
+    });
+  } catch {}
+}
+
 // ── Main ────────────────────────────────────────────────────────
 
 async function main() {
+  ensureInstalled();
+
   const manifests = loadManifests();
   const allSkills = [...manifests.keys()];
 
