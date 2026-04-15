@@ -1,5 +1,5 @@
 ---
-name: skene-skills
+name: "@skene/database-skills"
 description: Backend skills for Supabase
 ---
 

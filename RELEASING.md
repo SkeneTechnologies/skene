@@ -1,11 +1,12 @@
 # Releasing
 
-This monorepo contains two independently released packages. Each has its own CI/CD pipeline, versioning, and distribution channel.
+This monorepo contains three independently released packages. Each has its own CI/CD pipeline, versioning, and distribution channel.
 
 | Package | Directory | Distribution | Tag pattern |
 |--------|-----------|-------------|-------------|
 | Python CLI | `src/skene/` | [PyPI](https://pypi.org/project/skene/) | `v*` (e.g. `v0.3.0`) |
 | TUI | `tui/` | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) | `tui-v*` (e.g. `tui-v0.3.0`) |
+| Skills | `skills/` | [npm](https://www.npmjs.com/package/@skene/database-skills) | `skills-v*` (e.g. `skills-v0.3.1`) |
 
 ## Pre-release versions
 
@@ -105,14 +106,46 @@ git push origin tui-vX.Y.Za1
 
 ## CI pipelines
 
-Both packages have CI that runs on push/PR to `main`:
+All packages have CI that runs on push/PR to `main`:
 
 | Workflow | File | Triggers on |
 |----------|------|-------------|
-| Python CI | `.github/workflows/ci.yml` | Push/PR, ignores `tui/**` changes |
+| Python CI | `.github/workflows/ci.yml` | Push/PR, ignores `tui/**` and `skills/**` changes |
 | TUI CI | `.github/workflows/tui-ci.yml` | Push/PR affecting `tui/**` only |
+| Skills CI | `.github/workflows/skills-ci.yml` | Push/PR affecting `skills/**` only |
 
-The CI pipelines run independently — Python changes don't trigger Go CI and vice versa.
+The CI pipelines run independently — Python changes don't trigger Go or Skills CI and vice versa.
+
+---
+
+## Skills (npm)
+
+### Files to update
+
+1. **`skills/package.json`** — `"version": "X.Y.Z"`
+
+### Steps
+
+```bash
+# 1. Update version in skills/package.json
+
+# 2. Commit the version bump
+git add skills/package.json
+git commit -m "Bump skills version to X.Y.Z"
+git push origin main
+
+# 3. Create a GitHub Release (this triggers npm publishing)
+gh release create skills-vX.Y.Z --title "Skills vX.Y.Z" --generate-notes
+
+# For pre-releases:
+gh release create skills-vX.Y.Zrc1 --prerelease --title "Skills vX.Y.Zrc1" --generate-notes
+```
+
+### What happens
+
+1. Creating the GitHub Release triggers `.github/workflows/skills-publish.yml`
+2. The workflow runs `npm publish --access public` from the `skills/` directory
+3. Users can install with `npm install @skene/database-skills` or via `npx skills add SkeneTechnologies/skene`
 
 ---
 
@@ -135,3 +168,9 @@ The CI pipelines run independently — Python changes don't trigger Go CI and vi
 ### TUI pre-release
 - [ ] Tag created and pushed (`git tag tui-vX.Y.Za1 && git push origin tui-vX.Y.Za1`)
 - [ ] Verify on [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases)
+
+### Skills release
+- [ ] Version bumped in `skills/package.json`
+- [ ] Changes committed and pushed to `main`
+- [ ] GitHub Release created (`gh release create skills-vX.Y.Z`)
+- [ ] Verify on [npm](https://www.npmjs.com/package/@skene/database-skills)
