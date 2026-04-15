@@ -1,6 +1,6 @@
 {
   "name": "@skene/database-skills",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Backend skills for your Supabase — CRM, billing, support, and more. 19 composable schemas with RLS, multi-tenancy, and seed data.",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,9 @@
     "directory": "skills"
   },
   "homepage": "https://github.com/SkeneTechnologies/skene/tree/main/skills",
+  "bin": {
+    "skene-skills": "./setup.mjs"
+  },
   "keywords": [
     "supabase",
     "postgres",
@@ -21,6 +24,9 @@
     "agent-skills",
     "database"
   ],
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
   "files": [
     "*/migration.sql",
     "*/seed.sql",
@@ -28,6 +34,7 @@
     "*/SKILL.md",
     "scripts/",
     "docs/",
+    "setup.mjs",
     "SKILL.md",
     "README.md"
   ]

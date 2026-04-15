@@ -73,11 +73,45 @@ Skene Skills deploy directly into your Supabase Postgres instance. No per-seat p
 
 ## Quick start
 
-### Install via npm
+### One command (recommended)
 
 ```bash
 npm install @skene/database-skills
+npx @skene/database-skills crm --db $DATABASE_URL --seed
 ```
+
+Pick a preset, point at your Supabase database, done. Dependencies resolve automatically, migrations run in order, demo data loads.
+
+**Presets:**
+
+| Preset | Skills |
+|--------|--------|
+| `crm` | identity, crm, pipeline, comms, analytics |
+| `helpdesk` | identity, crm, support, comms, content, knowledge, analytics |
+| `billing` | identity, crm, billing, commerce, analytics |
+| `project` | identity, tasks, content, calendar, analytics |
+| `marketing` | identity, crm, campaigns, forms, analytics |
+| `full` | all 19 skills |
+
+Or pass comma-separated skill names: `npx @skene/database-skills crm,pipeline,support`
+
+No `psql` needed. The script connects directly to your database.
+
+### Works in AI agents
+
+Tell your AI agent what you're building. It reads the SKILL.md files, detects your Supabase connection, and applies the schema automatically.
+
+```
+You: "Set up a CRM backend in my Supabase project"
+```
+
+The agent detects Supabase in this order:
+
+1. **Supabase MCP tools** — if connected, applies migrations directly. Zero config.
+2. **Environment variables** — uses `DATABASE_URL` or `SUPABASE_DB_URL` with the setup script.
+3. **Asks you** — only if nothing is detected.
+
+Works in Claude Code, Cursor, and any agent that reads SKILL.md files.
 
 ### Or via skills.sh
 
@@ -354,11 +388,14 @@ crm/
 └── manifest.json     # Metadata and dependency declarations
 ```
 
-### Via npm (recommended)
+### Setup script (recommended)
 
 ```bash
 npm install @skene/database-skills
+npx @skene/database-skills crm --db $DATABASE_URL --seed
 ```
+
+Pass a preset or comma-separated skill names. Dependencies resolve automatically, migrations run in order. Run without args for interactive prompts. No `psql` required.
 
 ### Via skills.sh
 
@@ -459,7 +496,10 @@ CREATE TRIGGER on_auth_user_created
 Skills are composable backend capabilities that follow the [Agent Skills](https://agentskills.io) open standard. Each skill is a self-contained set of tables, enums, RLS policies, and seed data packaged with a SKILL.md that any AI agent can read. Install via [skills.sh](https://skills.sh) or apply the SQL directly.
 
 **Do I need a CLI?**
-No. Install via `npm install @skene/database-skills`, `npx skills add` (the skills.sh standard), or run the `migration.sql` files directly with `psql`. No build step, no runtime.
+No. Install via `npm install @skene/database-skills` and run `npx @skene/database-skills` for the interactive setup wizard. Or use `npx skills add` (the skills.sh standard), or run the `migration.sql` files directly with `psql`. No build step, no runtime.
+
+**Do I need psql?**
+No. The setup wizard (`npx @skene/database-skills`) connects directly to your database using Node.js. `psql` is only needed if you prefer to run migration files manually.
 
 **Can I install just one skill?**
 Yes. Only `identity` is required as a base. Everything else is optional. Dependencies are declared in each skill's `manifest.json`.
