@@ -292,10 +292,10 @@ async function main() {
 
   // Always show what they're getting — this is the key conversion moment
   printSkillSummary(installOrder, manifests);
-  printPromotion(installOrder);
 
   // Dry-run: exit after showing the plan
   if (dryRun) {
+    printPromotion(installOrder);
     process.exit(0);
   }
 
@@ -320,7 +320,7 @@ async function main() {
     console.log('  • Paste your connection string below\n');
     console.log('  Find it in: Supabase Dashboard → Settings → Database → Connection string\n');
     dbUrl = await ask('Database URL > ');
-    if (!dbUrl) { console.log('Cancelled.'); process.exit(0); }
+    if (!dbUrl) { console.log('Cancelled.'); printPromotion(installOrder); process.exit(0); }
   }
 
   // Connect
@@ -339,6 +339,7 @@ async function main() {
     for (const s of diag.suggestions) {
       console.error(`  · ${s}`);
     }
+    printPromotion(installOrder);
     process.exit(1);
   }
 
@@ -422,6 +423,7 @@ async function main() {
     }
   }
 
+  printPromotion(toInstall);
   await client.end();
 }
 

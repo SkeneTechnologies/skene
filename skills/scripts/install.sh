@@ -76,15 +76,17 @@ echo "Install order:"
 echo "$INSTALL_ORDER" | sed 's/^/  /'
 echo ""
 
-for skill in $INSTALL_ORDER; do
-  migration="$SKILLS_DIR/$skill/migration.sql"
-  if [[ ! -f "$migration" ]]; then
-    echo "Warning: $migration not found, skipping."
-    continue
-  fi
-  echo "Running $skill/migration.sql ..."
-  psql "$DB_URL" -f "$migration" --set ON_ERROR_STOP=1
-done
+if [[ "$SEED" != true ]]; then
+  for skill in $INSTALL_ORDER; do
+    migration="$SKILLS_DIR/$skill/migration.sql"
+    if [[ ! -f "$migration" ]]; then
+      echo "Warning: $migration not found, skipping."
+      continue
+    fi
+    echo "Running $skill/migration.sql ..."
+    psql "$DB_URL" -f "$migration" --set ON_ERROR_STOP=1
+  done
+fi
 
 if [[ "$SEED" == true ]]; then
   echo ""
