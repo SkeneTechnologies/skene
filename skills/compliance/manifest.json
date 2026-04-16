@@ -1,0 +1,8 @@
+{
+  "name": "compliance",
+  "version": "1.0.0",
+  "description": "Consent records, deletion requests, and retention policies",
+  "depends_on": ["identity"],
+  "tables": ["consent_records", "deletion_requests", "retention_policies"],
+  "author": "skene-ai"
+}

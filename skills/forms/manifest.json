@@ -1,0 +1,8 @@
+{
+  "name": "forms",
+  "version": "1.0.0",
+  "description": "Form definitions, fields, submissions, and file uploads",
+  "depends_on": ["identity"],
+  "tables": ["form_definitions", "form_fields", "form_submissions", "form_uploads"],
+  "author": "skene-ai"
+}

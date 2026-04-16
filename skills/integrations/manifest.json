@@ -1,0 +1,8 @@
+{
+  "name": "integrations",
+  "version": "1.0.0",
+  "description": "Connected apps, OAuth tokens, webhooks, and sync logs",
+  "depends_on": ["identity"],
+  "tables": ["connected_apps", "oauth_tokens", "webhooks", "webhook_events", "sync_logs"],
+  "author": "skene-ai"
+}

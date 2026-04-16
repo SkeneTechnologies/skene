@@ -1,0 +1,8 @@
+{
+  "name": "notifications",
+  "version": "1.0.0",
+  "description": "Notification templates, deliveries, preferences, and push tokens",
+  "depends_on": ["identity"],
+  "tables": ["notification_templates", "notification_deliveries", "notification_preferences", "push_tokens"],
+  "author": "skene-ai"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "tasks",
+  "version": "1.0.0",
+  "description": "Projects, tasks, and dependencies",
+  "depends_on": ["identity"],
+  "tables": ["projects", "tasks", "task_dependencies"],
+  "author": "skene-ai"
+}

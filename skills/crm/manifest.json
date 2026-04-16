@@ -1,0 +1,8 @@
+{
+  "name": "crm",
+  "version": "1.0.0",
+  "description": "Contacts, companies, and relationships",
+  "depends_on": ["identity"],
+  "tables": ["contacts", "companies", "contact_companies"],
+  "author": "skene-ai"
+}

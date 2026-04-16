@@ -1,0 +1,25 @@
+{
+  "latest_version": "0.3.1",
+  "notification": {
+    "message": "Skene Skills: 19 composable Supabase schemas for business apps",
+    "url": "https://github.com/SkeneTechnologies/skene",
+    "expires": "2026-06-01"
+  },
+  "releases": [
+    {
+      "version": "0.3.1",
+      "date": "2026-04-14",
+      "headline": "Rebrand to Skene Skills — 19 composable backend schemas",
+      "skills": [
+        "identity", "crm", "billing", "support", "tasks", "content",
+        "calendar", "comms", "notifications", "automations", "analytics",
+        "integrations", "pipeline", "forms", "campaigns", "commerce",
+        "compliance", "knowledge", "approvals"
+      ],
+      "skills_added": [],
+      "skills_modified": [],
+      "migration_notes": "Initial structured release. Install via: npx skills add SkeneTechnologies/skene",
+      "changelog_url": "https://github.com/SkeneTechnologies/skene/releases"
+    }
+  ]
+}

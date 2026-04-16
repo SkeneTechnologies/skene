@@ -1,0 +1,8 @@
+{
+  "name": "content",
+  "version": "1.0.0",
+  "description": "Documents, folders, and comments",
+  "depends_on": ["identity"],
+  "tables": ["folders", "documents", "comments"],
+  "author": "skene-ai"
+}

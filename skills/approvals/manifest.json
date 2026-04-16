@@ -1,0 +1,8 @@
+{
+  "name": "approvals",
+  "version": "1.0.0",
+  "description": "Approval chains, steps, requests, decisions, and delegations",
+  "depends_on": ["identity"],
+  "tables": ["approval_chains", "approval_steps", "approval_requests", "approval_decisions", "approval_delegations"],
+  "author": "skene-ai"
+}

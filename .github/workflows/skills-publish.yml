@@ -1,0 +1,31 @@
+name: Publish Skills to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  npm-publish:
+    name: Publish @skene/database-skills to npm
+    if: startsWith(github.event.release.tag_name, 'skills-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skills
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

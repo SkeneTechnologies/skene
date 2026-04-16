@@ -1,0 +1,8 @@
+{
+  "name": "support",
+  "version": "1.0.0",
+  "description": "Tickets with priorities, SLAs, and channels",
+  "depends_on": ["crm"],
+  "tables": ["tickets"],
+  "author": "skene-ai"
+}

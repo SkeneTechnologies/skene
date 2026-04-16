@@ -1,0 +1,8 @@
+{
+  "name": "analytics",
+  "version": "1.0.0",
+  "description": "Tags, custom fields, and activity log",
+  "depends_on": ["identity"],
+  "tables": ["tags", "taggings", "custom_field_definitions", "custom_field_values", "activities"],
+  "author": "skene-ai"
+}

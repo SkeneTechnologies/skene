@@ -1,0 +1,8 @@
+{
+  "name": "calendar",
+  "version": "1.0.0",
+  "description": "Events, attendees, and recurrence",
+  "depends_on": ["identity"],
+  "tables": ["events", "event_attendees"],
+  "author": "skene-ai"
+}

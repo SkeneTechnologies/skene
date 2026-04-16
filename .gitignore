@@ -86,7 +86,7 @@ htmlcov/
 *.db
 *.sqlite3
 
-# Supabase
+# Supabase (user-generated migrations in project roots)
 supabase/
 
 # Jupyter Notebook
@@ -100,3 +100,4 @@ benchmarks/results/
 !benchmarks/results/.keep
 benchmarks/codebases/
 !benchmarks/codebases/README.md
+.gstack/

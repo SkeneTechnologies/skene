@@ -1,0 +1,8 @@
+{
+  "name": "knowledge",
+  "version": "1.0.0",
+  "description": "Knowledge base articles and categories",
+  "depends_on": ["content"],
+  "tables": ["articles", "article_categories", "article_category_links"],
+  "author": "skene-ai"
+}

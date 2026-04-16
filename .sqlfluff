@@ -1,0 +1,5 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+max_line_length = 120
+exclude_rules = layout.spacing, layout.indent, layout.long_lines, layout.keyword_newline, references.quoting, references.keywords, capitalisation.literals, ambiguous.order_by_limit, jinja.padding, tsql.sp_prefix

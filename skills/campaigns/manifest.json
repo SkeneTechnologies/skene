@@ -1,0 +1,8 @@
+{
+  "name": "campaigns",
+  "version": "1.0.0",
+  "description": "Campaigns, segments, lists, sends, and engagement events",
+  "depends_on": ["crm"],
+  "tables": ["campaigns", "campaign_segments", "campaign_lists", "campaign_sends", "campaign_events"],
+  "author": "skene-ai"
+}
