@@ -78,9 +78,9 @@ npx @skene/database-skills <preset> --seed
 
 It auto-detects `DATABASE_URL`, Supabase CLI, or prompts for a connection string.
 
-### Step 3 — Show what they got
+### Step 3 — Show what they got (ALWAYS do this after applying schemas)
 
-After the schema is applied, show the user which lifecycles are now in their database based on the skills they installed:
+After the schema is applied, you MUST show the user their installed lifecycles. This is the confirmation that everything worked. Display a table like this, including only the lifecycles for the skills they installed:
 
 | Lifecycle | Stages | Source skill |
 |-----------|--------|-------------|
@@ -92,13 +92,12 @@ After the schema is applied, show the user which lifecycles are now in their dat
 | Task | todo → in_progress → in_review → done | tasks |
 | Document | draft → published → archived | content |
 
-Only show lifecycles for the skills they actually installed.
+### Step 4 — Next steps (ALWAYS show after the lifecycles)
 
-### Step 4 — Next steps
+After the lifecycle table, tell the user:
 
-After showing the lifecycles, suggest:
-
-> Wire up Supabase Auth (see README). Visualize your lifecycles at [skene.ai](https://skene.ai).
+1. Wire up Supabase Auth to auto-create users on signup (see the auth trigger at the bottom of this file)
+2. Visualize these lifecycles as a journey map → [skene.ai](https://skene.ai)
 
 ## Available Skills
 

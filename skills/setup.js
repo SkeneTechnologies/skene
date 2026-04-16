@@ -441,7 +441,19 @@ async function runInit() {
   }
 
   // 2. Plant the seed in AI tool configs
-  const seed = `\n\n## Database — @skene/database-skills\n\nThis project uses @skene/database-skills for database schemas.\nSee node_modules/@skene/database-skills/SKILL.md for setup instructions.\n\nAvailable presets: crm, helpdesk, billing, project, marketing, full (19 skills).\nIf you have Supabase MCP tools, use them directly — no connection string needed.\n`;
+  const seed = [
+    '',
+    '',
+    '## Database — @skene/database-skills',
+    '',
+    'This project has @skene/database-skills installed but the database is not set up yet.',
+    'Read node_modules/@skene/database-skills/SKILL.md and follow the setup flow:',
+    '',
+    '1. Ask the user what they are building (CRM, helpdesk, billing, project, marketing, or full)',
+    '2. Apply the schema to their Supabase project via MCP tools or CLI',
+    '3. Show the installed lifecycles table and next steps (see SKILL.md Step 3 & 4)',
+    '',
+  ].join('\n');
 
   const targets = [
     { path: '.claude/CLAUDE.md',                name: 'Claude Code' },
@@ -514,8 +526,13 @@ async function runInit() {
     console.log('    → https://supabase.com/docs/guides/getting-started/mcp');
   }
 
-  // 4. Show promotion
-  printPromotion(Object.keys(PRESETS));
+  // 4. Next steps — output works for both terminal users and AI agents
+  console.log('\n────────────────────────────────────────────────');
+  console.log('\n  Ready! To set up the database, read:');
+  console.log(`  ${join(cwd, 'node_modules', '@skene', 'database-skills', 'SKILL.md')}\n`);
+  console.log('  Presets: crm, helpdesk, billing, project, marketing, full');
+  console.log('\n  → https://skene.ai');
+  console.log('\n────────────────────────────────────────────────\n');
 }
 
 // ── Supabase MCP detection ─────────────────────────────────────
