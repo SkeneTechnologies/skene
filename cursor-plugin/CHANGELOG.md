@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Docs and commands aligned with CLI: `skene build` writes `*_skene_triggers.sql`; `skene push` uploads artifacts (does not generate SQL). `skene status` Detail line shows latest matching migration plus `(+N)` for extra files.
+
 ## [0.1.0] - 2026-03-16
 
 ### Added

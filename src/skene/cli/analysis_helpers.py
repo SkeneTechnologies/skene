@@ -1,6 +1,5 @@
 """Analysis execution and summary utilities."""
 
-import asyncio
 import json
 from pathlib import Path
 from typing import Any, Optional
@@ -10,23 +9,38 @@ from rich.table import Table
 
 from skene.llm import LLMClient
 from skene.output import console, error, status, success, warning
+from skene.progress import run_with_progress
 
 
-async def _show_progress_indicator(stop_event: asyncio.Event) -> None:
-    """Show progress indicator with filled boxes every second."""
-    count = 0
-    while not stop_event.is_set():
-        count += 1
-        # Print filled box (█) every second
-        console.print("[cyan]█[/cyan]", end="")
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=1.0)
-            break
-        except asyncio.TimeoutError:
-            continue
-    # Print newline when done
-    if count > 0:
-        console.print()
+def _resolve_project_root(base_dir: Path) -> Path:
+    """Resolve project root from a context or project directory."""
+    if base_dir.name == "skene-context":
+        return base_dir.parent
+    return base_dir
+
+
+def _load_engine_context(project_root: Path) -> tuple[str, list[dict[str, str]]]:
+    """
+    Load engine.yaml context as (summary_text, feature_rows).
+
+    feature_rows format: key, name, source, linked_feature_id
+    """
+    from skene.engine import default_engine_path, format_engine_summary, load_engine_document
+    from skene.feature_registry import derive_feature_id
+
+    engine_doc = load_engine_document(default_engine_path(project_root), project_root=project_root)
+    summary = format_engine_summary(engine_doc)
+    rows: list[dict[str, str]] = []
+    for feature in engine_doc.features:
+        rows.append(
+            {
+                "key": feature.key,
+                "name": feature.name,
+                "source": feature.source,
+                "linked_feature_id": derive_feature_id(feature.key),
+            }
+        )
+    return summary, rows
 
 
 def json_serializer(obj: Any) -> str:
@@ -63,24 +77,21 @@ async def run_analysis(
             progress.update(task, description="Setting up codebase explorer...")
             codebase = CodebaseExplorer(path, exclude_folders=exclude_folders)
 
-            # Load existing growth loops from output directory
-            progress.update(task, description="Loading existing growth loops...")
-            from skene.growth_loops.storage import load_existing_growth_loops
-
-            # Determine base directory for loading existing loops
+            # Load existing engine context from project root
+            progress.update(task, description="Loading engine context...")
             base_dir = output.parent if output.parent.name == "skene-context" else output.parent
-            existing_loops = load_existing_growth_loops(base_dir)
-
-            if existing_loops:
-                progress.update(task, description=f"Found {len(existing_loops)} existing growth loop(s)...")
+            project_root = _resolve_project_root(base_dir)
+            engine_summary, engine_rows = _load_engine_context(project_root)
+            if engine_rows:
+                progress.update(task, description=f"Found {len(engine_rows)} existing engine feature(s)...")
 
             # Create analyzer
             progress.update(task, description="Creating analyzer...")
             if product_docs:
-                analyzer = DocsAnalyzer(existing_growth_loops=existing_loops)
+                analyzer = DocsAnalyzer(engine_summary=engine_summary)
                 request_msg = "Generate documentation for this project"
             else:
-                analyzer = ManifestAnalyzer(existing_growth_loops=existing_loops)
+                analyzer = ManifestAnalyzer(engine_summary=engine_summary)
                 request_msg = "Analyze this codebase for growth opportunities"
 
             # Define progress callback
@@ -109,7 +120,7 @@ async def run_analysis(
             progress.update(task, description="Merging feature registry...")
             from skene.feature_registry import merge_registry_and_enrich_manifest
 
-            merge_registry_and_enrich_manifest(manifest_data, existing_loops, output)
+            merge_registry_and_enrich_manifest(manifest_data, engine_rows, output)
 
             # Write manifest (current snapshot)
             progress.update(task, description="Saving manifest...")
@@ -140,12 +151,11 @@ async def run_features_analysis(
     Run growth features analysis only and create/update the feature registry.
 
     Uses GrowthFeaturesAnalyzer to detect features, then merges into
-    feature-registry.json and maps growth-loops.
+    feature-registry.json and maps engine features.
     """
     from skene.analyzers import GrowthFeaturesAnalyzer
     from skene.codebase import CodebaseExplorer
     from skene.feature_registry import merge_registry_and_enrich_manifest
-    from skene.growth_loops.storage import load_existing_growth_loops
 
     with Progress(
         SpinnerColumn("line"),
@@ -158,9 +168,10 @@ async def run_features_analysis(
             progress.update(task, description="Setting up codebase explorer...")
             codebase = CodebaseExplorer(path, exclude_folders=exclude_folders)
 
-            progress.update(task, description="Loading growth loops...")
+            progress.update(task, description="Loading engine context...")
             base_dir = output.parent if output.parent.name == "skene-context" else output.parent
-            existing_loops = load_existing_growth_loops(base_dir)
+            project_root = _resolve_project_root(base_dir)
+            _, engine_rows = _load_engine_context(project_root)
 
             progress.update(task, description="Analyzing growth features...")
             analyzer = GrowthFeaturesAnalyzer()
@@ -187,7 +198,7 @@ async def run_features_analysis(
             manifest_data = {"current_growth_features": features}
 
             progress.update(task, description="Updating feature registry...")
-            merge_registry_and_enrich_manifest(manifest_data, existing_loops, output)
+            merge_registry_and_enrich_manifest(manifest_data, engine_rows, output)
 
             progress.update(task, description="Complete!")
             return result, manifest_data
@@ -396,11 +407,10 @@ async def run_generate_plan(
             else:
                 template_data = {"lifecycles": []}
 
-            # Load growth-loops from skene-context/growth-loops folder
-            progress.update(task, description="Loading growth-loops...")
-            from skene.growth_loops.storage import load_existing_growth_loops
+            # Load engine context from project root
+            progress.update(task, description="Loading engine context...")
 
-            # Determine base directory for loading growth-loops
+            # Determine base directory for plan-steps and context resolution
             # Use context_dir if provided, otherwise infer from output_path or manifest_path
             if context_dir:
                 base_dir = context_dir
@@ -424,9 +434,10 @@ async def run_generate_plan(
                 # Fallback to current directory
                 base_dir = Path(".")
 
-            growth_loops = load_existing_growth_loops(base_dir)
-            if growth_loops:
-                progress.update(task, description=f"Found {len(growth_loops)} active growth loop(s)...")
+            project_root = _resolve_project_root(base_dir)
+            engine_summary, engine_rows = _load_engine_context(project_root)
+            if engine_rows:
+                progress.update(task, description=f"Found {len(engine_rows)} engine feature(s)...")
 
             # Connect to LLM
             progress.update(task, description="Connecting to LLM provider...")
@@ -448,27 +459,20 @@ async def run_generate_plan(
             growth_plan = None
             tokens_used: list[dict[str, int]] = []
             if activation:
-                # Activation memo: single LLM call with progress spinner
-                stop_event = asyncio.Event()
-                progress_task = asyncio.create_task(_show_progress_indicator(stop_event))
-                try:
-                    memo_content = await planner.generate_activation_memo(
+                # Activation memo: single LLM call with shared progress indicator
+                memo_content = await run_with_progress(
+                    planner.generate_activation_memo(
                         llm=llm,
                         manifest_data=manifest_data,
                         template_data=template_data,
-                        growth_loops=growth_loops,
+                        engine_summary=engine_summary,
                         user_prompt=user_prompt,
                     )
-                finally:
-                    stop_event.set()
-                    try:
-                        await progress_task
-                    except Exception:
-                        pass
+                )
                 output_path.write_text(memo_content)
             else:
                 # Growth plan: multi-step orchestration with incremental writes
-                # Use base_dir for plan-steps so we search the same directory as growth-loops
+                # Use base_dir for plan-steps lookup
                 from skene.planner import find_plan_steps_path
                 from skene.planner.steps import PlanStepsParseError
 
@@ -514,7 +518,7 @@ async def run_generate_plan(
                     llm=llm,
                     manifest_data=manifest_data,
                     template_data=template_data,
-                    growth_loops=growth_loops,
+                    engine_summary=engine_summary,
                     user_prompt=user_prompt,
                     plan_steps=plan_steps,
                     on_step=on_step,

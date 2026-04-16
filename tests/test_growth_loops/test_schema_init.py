@@ -56,13 +56,13 @@ class TestEventLogTriggers:
     def test_trigger_inserts_into_event_log(self) -> None:
         sql = _build_trigger_function_sql(
             loop_id="test_loop",
-            action_name="test_action",
+            schema="public",
             table="api_keys",
             operation="INSERT",
             properties=["id", "workspace_id"],
         )
         assert "INSERT INTO skene_growth.event_log" in sql
-        assert "api_keys.insert" in sql
+        assert "public.api_keys.insert" in sql
         assert "net.http_post" not in sql
         assert "pg_net" not in sql
 
@@ -77,9 +77,32 @@ class TestEventLogTriggers:
         ]
         migration = build_migration_sql(loops)
         assert "event_log" in migration
+        assert 'ON "public"."t"' in migration
         assert "CREATE EXTENSION IF NOT EXISTS pg_net" not in migration
         assert "skene_growth.actions" not in migration
         assert "skene.actions" not in migration
+
+    def test_migration_qualifies_non_public_schema(self) -> None:
+        """Non-public telemetry schema must not be forced onto public.<table>."""
+        loops = [
+            {
+                "loop_id": "auth_hook",
+                "requirements": {
+                    "telemetry": [
+                        {
+                            "type": "supabase",
+                            "schema": "auth",
+                            "table": "users",
+                            "operation": "INSERT",
+                            "properties": ["id"],
+                        }
+                    ],
+                },
+            }
+        ]
+        migration = build_migration_sql(loops)
+        assert 'ON "auth"."users"' in migration
+        assert "public.users" not in migration
 
 
 class TestNotifyEventLogOverride:

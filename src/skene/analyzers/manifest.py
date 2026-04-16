@@ -5,8 +5,6 @@ Combines tech stack and growth features analysis to produce
 a complete GrowthManifest.
 """
 
-from typing import Any
-
 from skene.analyzers.prompts import (
     INDUSTRY_PROMPT,
     REVENUE_LEAKAGE_PROMPT,
@@ -45,18 +43,11 @@ class ManifestAnalyzer(MultiStepStrategy):
         manifest = GrowthManifest.model_validate(result.data.get("output"))
     """
 
-    def __init__(self, existing_growth_loops: list[dict[str, Any]] | None = None):
+    def __init__(self, engine_summary: str = ""):
         """Initialize the manifest analyzer with all analysis steps."""
-        self.existing_growth_loops = existing_growth_loops or []
-
-        # Format existing loops for prompt inclusion
-        from skene.growth_loops.storage import format_growth_loops_summary
-
-        loops_summary = format_growth_loops_summary(self.existing_growth_loops)
-
-        # Build prompts with existing loops context
-        growth_features_prompt = build_growth_features_prompt(loops_summary)
-        manifest_prompt = build_manifest_prompt(loops_summary)
+        # Build prompts with existing engine context
+        growth_features_prompt = build_growth_features_prompt(engine_summary)
+        manifest_prompt = build_manifest_prompt(engine_summary)
 
         super().__init__(
             steps=[

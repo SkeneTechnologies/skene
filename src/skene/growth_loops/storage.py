@@ -4,7 +4,6 @@ Storage utilities for persisting growth loop definitions.
 This module handles the generation and persistence of growth loop JSON files
 """
 
-import asyncio
 import json
 import re
 from datetime import datetime
@@ -13,24 +12,8 @@ from typing import Any, Literal
 
 from skene.feature_registry import derive_feature_id
 from skene.llm.base import LLMClient
-from skene.output import console, warning
-
-
-async def _show_progress_indicator(stop_event: asyncio.Event) -> None:
-    """Show progress indicator with filled boxes every second."""
-    count = 0
-    while not stop_event.is_set():
-        count += 1
-        # Print filled box (█) every second
-        console.print("[cyan]█[/cyan]", end="")
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=1.0)
-            break
-        except asyncio.TimeoutError:
-            continue
-    # Print newline when done
-    if count > 0:
-        console.print()
+from skene.output import warning
+from skene.progress import run_with_progress
 
 
 def derive_loop_name(technical_execution: dict[str, str]) -> str:
@@ -406,13 +389,8 @@ Analyze the technical execution context and generate a complete, actionable grow
 Return ONLY the JSON object, no markdown code fences, no explanations. The JSON must be valid and parseable."""
     )
 
-    # Start progress indicator for generation
-    stop_event = asyncio.Event()
-    progress_task = None
-
     try:
-        progress_task = asyncio.create_task(_show_progress_indicator(stop_event))
-        response = await llm.generate_content(prompt)
+        response = await run_with_progress(llm.generate_content(prompt))
 
         # Clean up response - remove markdown code fences if present
         response = response.strip()
@@ -519,14 +497,6 @@ Return ONLY the JSON object, no markdown code fences, no explanations. The JSON 
                 "success_criteria": [],
             },
         }
-    finally:
-        # Stop progress indicator
-        if progress_task is not None:
-            stop_event.set()
-            try:
-                await progress_task
-            except Exception:
-                pass
 
 
 def write_growth_loop_json(

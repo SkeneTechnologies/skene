@@ -162,15 +162,18 @@ Or set the token via environment variable:
 export SKENE_UPSTREAM_API_KEY="your-token"
 ```
 
-### "No growth loops with Supabase telemetry found"
+### "No trigger migration found" or missing engine artifacts
 
-The `push` command requires growth loops that include telemetry items with `type: "supabase"`. Make sure you have run `build` first:
+`push` now requires pre-generated artifacts from `build`. Make sure you have run:
 
 ```bash
 uvx skene build
 ```
 
-Growth loop files are stored in `skene-context/growth-loops/`. Check that at least one loop has a `requirements.telemetry` entry with `"type": "supabase"`.
+Then verify:
+
+- `skene/engine.yaml` exists
+- `supabase/migrations/*_skene_triggers.sql` exists (or a legacy `*skene_trigger*` / `*skene_telemetry*` migration that push can detect)
 
 ### Push authentication failed (401/403)
 
@@ -183,10 +186,10 @@ uvx skene login --upstream https://skene.ai/workspace/my-app
 
 ### Base schema migration missing
 
-`push` now checks and updates the base schema on every run. If you see schema-related errors:
+Schema + trigger migrations are generated during `build`. If you see schema-related errors:
 
-1. Ensure `supabase/migrations/` exists (or run `push` from a directory where it can be created).
-2. Run `skene push --init` to create or update the schema without building telemetry.
+1. Ensure `supabase/migrations/` exists (or run `build` from project root).
+2. Run `uvx skene build` to regenerate schema + trigger migrations.
 3. Apply migrations with `supabase db push`.
 
 ## Debug mode

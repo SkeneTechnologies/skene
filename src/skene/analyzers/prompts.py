@@ -52,8 +52,8 @@ Return an empty array for services if none are detected.
 
 
 # Current Growth Features Detection Prompt
-def build_growth_features_prompt(existing_loops_summary: str = "") -> str:
-    """Build growth features prompt with optional existing loops context."""
+def build_growth_features_prompt(existing_engine_summary: str = "") -> str:
+    """Build growth features prompt with optional existing engine context."""
     base_prompt = """
 Analyze the provided source files and identify current features with growth potential.
 
@@ -65,8 +65,8 @@ A "current growth feature" is an existing feature in the codebase that:
 - Enables data-driven decisions (analytics, dashboards, reporting)
 """
 
-    if existing_loops_summary:
-        base_prompt += f"\n{existing_loops_summary}\n"
+    if existing_engine_summary:
+        base_prompt += f"\n{existing_engine_summary}\n"
 
     base_prompt += """
 For each growth feature you identify, provide:
@@ -114,8 +114,8 @@ Focus on actionable issues that could realistically impact revenue.
 
 
 # Manifest Generation Prompt
-def build_manifest_prompt(existing_loops_summary: str = "") -> str:
-    """Build manifest generation prompt with optional existing loops context."""
+def build_manifest_prompt(existing_engine_summary: str = "") -> str:
+    """Build manifest generation prompt with optional existing engine context."""
     base_prompt = """
 Generate a complete growth manifest by combining the analysis results.
 
@@ -126,8 +126,8 @@ You have been provided with:
 - Industry classification (market vertical and business model tags)
 """
 
-    if existing_loops_summary:
-        base_prompt += f"\n{existing_loops_summary}\n"
+    if existing_engine_summary:
+        base_prompt += f"\n{existing_engine_summary}\n"
 
     base_prompt += """
 Your task is to:
@@ -138,10 +138,10 @@ Your task is to:
 5. Identify growth opportunities - missing features that could drive growth
 """
 
-    if existing_loops_summary:
+    if existing_engine_summary:
         base_prompt += """
-**IMPORTANT:** When identifying growth opportunities, DO NOT duplicate or overlap with the existing growth loops listed above.
-Focus on complementary opportunities that build on or extend the existing loops, or address entirely different growth areas.
+**IMPORTANT:** When identifying growth opportunities, DO NOT duplicate or overlap with existing engine-defined features listed above.
+Focus on complementary opportunities that extend those features or address entirely different growth areas.
 """  # noqa: E501
 
     base_prompt += """
@@ -293,8 +293,8 @@ Prioritize the most important 5-10 features. Quality over quantity.
 
 
 # Documentation Manifest Generation Prompt
-def build_docs_manifest_prompt(existing_loops_summary: str = "") -> str:
-    """Build documentation manifest prompt with optional existing loops context."""
+def build_docs_manifest_prompt(existing_engine_summary: str = "") -> str:
+    """Build documentation manifest prompt with optional existing engine context."""
     base_prompt = """
 Generate a complete documentation manifest by combining all analysis results.
 
@@ -306,8 +306,8 @@ You have been provided with:
 - Current growth features analysis (existing features with growth potential)
 """
 
-    if existing_loops_summary:
-        base_prompt += f"\n{existing_loops_summary}\n"
+    if existing_engine_summary:
+        base_prompt += f"\n{existing_engine_summary}\n"
 
     base_prompt += """
 Your task is to:
@@ -318,10 +318,10 @@ Your task is to:
 5. Identify growth opportunities - missing features that could drive growth
 """
 
-    if existing_loops_summary:
+    if existing_engine_summary:
         base_prompt += """
-**IMPORTANT:** When identifying growth opportunities, DO NOT duplicate or overlap with the existing growth loops listed above.
-Focus on complementary opportunities that build on or extend the existing loops, or address entirely different growth areas.
+**IMPORTANT:** When identifying growth opportunities, DO NOT duplicate or overlap with existing engine-defined features listed above.
+Focus on complementary opportunities that build on or extend those features, or address entirely different growth areas.
 """  # noqa: E501
 
     base_prompt += """

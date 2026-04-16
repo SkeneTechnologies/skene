@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from skene.engine import EngineDocument
 from skene.feature_registry import (
     FEATURE_REGISTRY_FILENAME,
     compute_loop_ids_by_feature,
@@ -13,6 +14,8 @@ from skene.feature_registry import (
     load_features_for_build,
     merge_features_into_registry,
     merge_registry_and_enrich_manifest,
+    registry_path_for_project,
+    upsert_registry_from_engine,
     write_feature_registry,
 )
 
@@ -190,21 +193,26 @@ class TestMergeRegistryAndEnrichManifest:
                 },
             ],
         }
-        loops = [
-            {"loop_id": "test_loop", "linked_feature_id": "test_feature", "linked_feature": "Test Feature"},
+        engine_rows = [
+            {
+                "key": "test_feature",
+                "name": "Test Feature",
+                "source": "public.tests.insert",
+                "linked_feature_id": "test_feature",
+            },
         ]
-        merge_registry_and_enrich_manifest(manifest_data, loops, output_path)
+        merge_registry_and_enrich_manifest(manifest_data, engine_rows, output_path)
         registry_path = output_path.parent / FEATURE_REGISTRY_FILENAME
         assert registry_path.exists()
         mf = manifest_data["current_growth_features"][0]
-        assert mf["loop_ids"] == ["test_loop"]
+        assert mf["loop_ids"] == ["test_feature"]
         reg = json.loads(registry_path.read_text())
-        assert "growth_loops" in reg
-        assert len(reg["growth_loops"]) == 1
-        assert reg["growth_loops"][0]["loop_id"] == "test_loop"
-        assert reg["growth_loops"][0]["linked_feature_id"] == "test_feature"
+        assert "engine_features" in reg
+        assert len(reg["engine_features"]) == 1
+        assert reg["engine_features"][0]["key"] == "test_feature"
+        assert reg["engine_features"][0]["linked_feature_id"] == "test_feature"
 
-    def test_infers_loop_feature_from_file_path(self, tmp_path):
+    def test_maps_feature_using_engine_rows(self, tmp_path):
         output_path = tmp_path / "skene-context" / "growth-manifest.json"
         output_path.parent.mkdir(parents=True)
         manifest_data = {
@@ -212,27 +220,63 @@ class TestMergeRegistryAndEnrichManifest:
                 {
                     "feature_name": "Push Engine",
                     "file_path": "src/skene/growth_loops/push.py",
-                    "detected_intent": "Pushes telemetry",
+                    "detected_intent": "Pushes trigger artifacts",
                     "confidence_score": 0.9,
                     "entry_point": "skene push",
                     "growth_potential": [],
                 },
             ],
         }
-        loops = [
+        engine_rows = [
             {
-                "loop_id": "guard_ci",
-                "name": "Guard CI",
-                "requirements": {
-                    "files": [{"path": "src/skene/growth_loops/push.py", "purpose": "push"}],
-                },
-            },
+                "key": "push_engine",
+                "name": "Push Engine",
+                "source": "public.events.insert",
+                "linked_feature_id": "push_engine",
+            }
         ]
-        merge_registry_and_enrich_manifest(manifest_data, loops, output_path)
+        merge_registry_and_enrich_manifest(manifest_data, engine_rows, output_path)
         reg = json.loads((output_path.parent / FEATURE_REGISTRY_FILENAME).read_text())
         f = next(x for x in reg["features"] if x["feature_id"] == "push_engine")
-        assert "guard_ci" in f["loop_ids"]
-        assert any(g["loop_id"] == "guard_ci" and g["linked_feature_id"] == "push_engine" for g in reg["growth_loops"])
+        assert "push_engine" in f["loop_ids"]
+        assert any(
+            g["key"] == "push_engine" and g["linked_feature_id"] == "push_engine" for g in reg["engine_features"]
+        )
+
+
+class TestUpsertRegistryFromEngine:
+    def test_upserts_engine_features(self, tmp_path):
+        engine_doc = EngineDocument.model_validate(
+            {
+                "version": 1,
+                "subjects": [{"key": "user", "table": "auth.users", "kind": "actor"}],
+                "features": [
+                    {
+                        "key": "new_document_email",
+                        "name": "New Document Email",
+                        "source": "public.documents.insert",
+                        "how_it_works": "Email users when a document is created",
+                        "match_intent": "documents -> owner_id",
+                        "subject_state_analysis": {
+                            "lifecycle_subject": "document",
+                            "subject_id_path": "id",
+                            "action_target_path": "owner_id",
+                            "state": None,
+                            "record_predicates": [],
+                            "analysis_notes": "Owner receives email.",
+                        },
+                        "action": {"use": "email", "config": {"template": "new_document_notification"}},
+                    }
+                ],
+            }
+        )
+        registry_path = tmp_path / FEATURE_REGISTRY_FILENAME
+
+        registry = upsert_registry_from_engine(engine_doc, registry_path)
+        assert registry_path.exists()
+        assert registry["features"][0]["feature_id"] == "new_document_email"
+        assert registry["features"][0]["engine_feature_key"] == "new_document_email"
+        assert registry["engine_features"][0]["key"] == "new_document_email"
 
 
 class TestLoadFeaturesForBuild:
@@ -295,3 +339,14 @@ class TestExportRegistryToFormat:
     def test_unknown_format_raises(self):
         with pytest.raises(ValueError, match="Unknown format"):
             export_registry_to_format({}, "unknown")
+
+
+class TestRegistryPathForProject:
+    def test_default_output_dir(self, tmp_path):
+        p = registry_path_for_project(tmp_path, "./skene-context")
+        assert p == tmp_path / "skene-context" / FEATURE_REGISTRY_FILENAME
+
+    def test_absolute_output_dir(self, tmp_path):
+        abs_ctx = (tmp_path / "ctx").resolve()
+        p = registry_path_for_project(tmp_path, str(abs_ctx))
+        assert p == abs_ctx / FEATURE_REGISTRY_FILENAME

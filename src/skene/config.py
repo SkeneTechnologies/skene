@@ -38,6 +38,7 @@ class Config:
 
     def __init__(self):
         self._values: dict[str, Any] = {}
+        self._base_url_from_skene_env = False
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a config value."""
@@ -103,6 +104,11 @@ class Config:
     def base_url(self) -> str | None:
         """Get base URL for OpenAI-compatible providers."""
         return self.get("base_url")
+
+    @property
+    def base_url_from_skene_env(self) -> bool:
+        """Return True when SKENE_BASE_URL populated this config."""
+        return self._base_url_from_skene_env
 
     @property
     def upstream(self) -> str | None:
@@ -290,6 +296,7 @@ def load_config() -> Config:
         config.set("provider", provider)
     if base_url := os.environ.get("SKENE_BASE_URL"):
         config.set("base_url", base_url)
+        config._base_url_from_skene_env = True
     if os.environ.get("SKENE_DEBUG", "").lower() in ("1", "true", "yes"):
         config.set("debug", True)
     if api_key := os.environ.get("SKENE_UPSTREAM_API_KEY"):

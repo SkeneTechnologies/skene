@@ -5,8 +5,6 @@ Extends growth manifest analysis to include real product documentation
 fields like product_overview and features.
 """
 
-from typing import Any
-
 from skene.analyzers.prompts import (
     FEATURES_PROMPT,
     INDUSTRY_PROMPT,
@@ -53,18 +51,11 @@ class DocsAnalyzer(MultiStepStrategy):
         manifest = DocsManifest.model_validate(result.data.get("output"))
     """
 
-    def __init__(self, existing_growth_loops: list[dict[str, Any]] | None = None):
+    def __init__(self, engine_summary: str = ""):
         """Initialize the docs analyzer with all analysis steps."""
-        self.existing_growth_loops = existing_growth_loops or []
-
-        # Format existing loops for prompt inclusion
-        from skene.growth_loops.storage import format_growth_loops_summary
-
-        loops_summary = format_growth_loops_summary(self.existing_growth_loops)
-
-        # Build prompts with existing loops context
-        growth_features_prompt = build_growth_features_prompt(loops_summary)
-        docs_manifest_prompt = build_docs_manifest_prompt(loops_summary)
+        # Build prompts with existing engine context
+        growth_features_prompt = build_growth_features_prompt(engine_summary)
+        docs_manifest_prompt = build_docs_manifest_prompt(engine_summary)
 
         super().__init__(
             steps=[

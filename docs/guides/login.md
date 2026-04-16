@@ -1,6 +1,6 @@
 # Login Command
 
-The `login` and `logout` commands manage authentication with Skene Cloud upstream, which is required for pushing growth loops and telemetry via the `push` command.
+The `login` and `logout` commands manage authentication with Skene Cloud upstream, which is required for pushing engine and trigger artifacts via the `push` command.
 
 ## Prerequisites
 
@@ -57,5 +57,5 @@ When commands need an upstream token, it is resolved in this order:
 
 ## Next steps
 
-- [Push](push.md) -- Push growth loops and telemetry to upstream
+- [Push](push.md) -- Push engine and trigger artifacts to upstream
 - [Configuration](configuration.md) -- Config files, env vars, and priority

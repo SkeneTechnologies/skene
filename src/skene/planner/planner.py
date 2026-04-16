@@ -57,7 +57,7 @@ class Planner:
         llm: LLMClient,
         manifest_data: dict[str, Any],
         template_data: dict[str, Any] | None = None,
-        growth_loops: list[dict[str, Any]] | None = None,
+        engine_summary: str | None = None,
         user_prompt: str | None = None,
         plan_steps: list[PlanStepDefinition] | None = None,
         on_step: Callable[[int, str, str, dict[str, int] | None], None] | None = None,
@@ -74,7 +74,7 @@ class Planner:
             llm: LLM client for generation
             manifest_data: Project manifest data
             template_data: Growth template data with lifecycle stages (optional)
-            growth_loops: List of active growth loop definitions (optional)
+            engine_summary: Summary of current engine subjects/features (optional)
             user_prompt: Additional user context (optional)
             plan_steps: Step definitions for middle sections; defaults to DEFAULT_PLAN_STEPS
             on_step: Callback invoked after each section with (step_number, title, markdown, usage)
@@ -90,7 +90,7 @@ class Planner:
         shared_context = self._build_shared_context(
             manifest_data=manifest_data,
             template_data=template_data,
-            growth_loops=growth_loops,
+            engine_summary=engine_summary,
             user_prompt=user_prompt,
             current_time_str=current_time_str,
         )
@@ -234,7 +234,7 @@ class Planner:
         self,
         manifest_data: dict[str, Any],
         template_data: dict[str, Any] | None,
-        growth_loops: list[dict[str, Any]] | None,
+        engine_summary: str | None,
         user_prompt: str | None,
         current_time_str: str,
     ) -> str:
@@ -247,14 +247,10 @@ class Planner:
             template_summary = self._format_template_summary(template_data)
             template_section = f"\n### Growth Journey (Lifecycle Template)\n{template_summary}\n"
 
-        growth_loops_section = ""
-        if growth_loops:
-            debug(f"Including {len(growth_loops)} growth loop(s) as context")
-            from skene.growth_loops.storage import format_growth_loops_summary
-
-            growth_loops_summary = format_growth_loops_summary(growth_loops)
-            if growth_loops_summary:
-                growth_loops_section = f"\n{growth_loops_summary}\n"
+        engine_section = ""
+        if engine_summary:
+            debug("Including engine context in planner prompts")
+            engine_section = f"\n{engine_summary}\n"
 
         user_context_section = ""
         if user_prompt:
@@ -266,7 +262,7 @@ class Planner:
             f"**Current Date/Time:** {current_time_str}\n\n"
             f"### Project Manifest (Current State)\n{manifest_summary}\n"
             f"{template_section}"
-            f"{growth_loops_section}"
+            f"{engine_section}"
             f"{user_context_section}"
             f"\n### Five-Point Thinking Framework\n{mechanics_section}"
         )
@@ -276,7 +272,7 @@ class Planner:
         llm: LLMClient,
         manifest_data: dict[str, Any],
         template_data: dict[str, Any] | None = None,
-        growth_loops: list[dict[str, Any]] | None = None,
+        engine_summary: str | None = None,
         user_prompt: str | None = None,
     ) -> str:
         """
@@ -290,7 +286,7 @@ class Planner:
             llm: LLM client for generation
             manifest_data: Project manifest data
             template_data: Growth template data with lifecycle stages (optional)
-            growth_loops: List of active growth loop definitions (optional)
+            engine_summary: Summary of current engine subjects/features (optional)
             user_prompt: Additional user context (optional)
 
         Returns:
@@ -306,14 +302,10 @@ class Planner:
             template_summary = self._format_template_summary(template_data)
             template_section = f"\n### Growth Journey (Lifecycle Template)\n{template_summary}\n"
 
-        growth_loops_section = ""
-        if growth_loops:
-            debug(f"Including {len(growth_loops)} growth loop(s) as context")
-            from skene.growth_loops.storage import format_growth_loops_summary
-
-            growth_loops_summary = format_growth_loops_summary(growth_loops)
-            if growth_loops_summary:
-                growth_loops_section = f"\n{growth_loops_summary}\n"
+        engine_section = ""
+        if engine_summary:
+            debug("Including engine context in activation memo prompt")
+            engine_section = f"\n{engine_summary}\n"
 
         # Get current machine time for date reference
         current_time = datetime.now()
@@ -419,7 +411,7 @@ product functionality producing real output.
 ### Project
 {manifest_summary}
 {template_section}
-{growth_loops_section}
+{engine_section}
 {user_context_section}
 """
 

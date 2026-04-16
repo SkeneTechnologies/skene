@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from skene.engine.storage import EngineDocument, default_engine_path, load_engine_document
+
 GROWTH_PILLARS = ("onboarding", "engagement", "retention")
 FEATURE_REGISTRY_FILENAME = "feature-registry.json"
 REGISTRY_VERSION = "1.0"
@@ -64,7 +66,7 @@ def _feature_to_registry_item(
     loop_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Convert manifest feature dict to registry item format."""
-    feature_id = derive_feature_id(f.get("feature_name", ""))
+    feature_id = f.get("feature_id") or derive_feature_id(f.get("feature_name", ""))
     return {
         "feature_name": f.get("feature_name", ""),
         "feature_id": feature_id,
@@ -72,6 +74,7 @@ def _feature_to_registry_item(
         "detected_intent": f.get("detected_intent", ""),
         "growth_pillars": list(f.get("growth_pillars", [])),
         "loop_ids": loop_ids or list(f.get("loop_ids", [])),
+        "engine_feature_key": f.get("engine_feature_key"),
         "confidence_score": float(f.get("confidence_score", 0.0)),
         "entry_point": f.get("entry_point"),
         "growth_potential": list(f.get("growth_potential", [])),
@@ -86,7 +89,12 @@ def _match_feature(
     existing: dict[str, Any],
 ) -> bool:
     """Match new feature to existing by feature_id or feature_name + file_path."""
-    new_id = derive_feature_id(new_f.get("feature_name", ""))
+    new_engine_key = (new_f.get("engine_feature_key") or "").strip()
+    existing_engine_key = (existing.get("engine_feature_key") or "").strip()
+    if new_engine_key and new_engine_key == existing_engine_key:
+        return True
+
+    new_id = new_f.get("feature_id") or derive_feature_id(new_f.get("feature_name", ""))
     if new_id and new_id == existing.get("feature_id"):
         return True
     name_match = new_f.get("feature_name", "").strip().lower() == existing.get("feature_name", "").strip().lower()
@@ -129,7 +137,7 @@ def merge_features_into_registry(
     merged: list[dict[str, Any]] = []
 
     for new_f in new_features:
-        feature_id = derive_feature_id(new_f.get("feature_name", ""))
+        feature_id = new_f.get("feature_id") or derive_feature_id(new_f.get("feature_name", ""))
         loop_ids = loop_ids_by_feature.get(feature_id, new_f.get("loop_ids", []))
 
         found = False
@@ -156,6 +164,74 @@ def merge_features_into_registry(
         "updated_at": now_str,
         "features": merged,
     }
+
+
+def _project_root_from_context(context_dir: Path) -> Path:
+    """Resolve project root from a context directory."""
+    if context_dir.name == "skene-context":
+        return context_dir.parent
+    return context_dir
+
+
+def _engine_summary_rows(engine_doc: EngineDocument) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for feature in engine_doc.features:
+        rows.append(
+            {
+                "key": feature.key,
+                "name": feature.name,
+                "source": feature.source,
+                "linked_feature_id": derive_feature_id(feature.key),
+            }
+        )
+    return rows
+
+
+def _loop_ids_from_engine(engine_doc: EngineDocument) -> dict[str, list[str]]:
+    """
+    Build reverse mapping from registry feature_id to engine feature keys.
+
+    We intentionally reuse loop_ids for compatibility in existing outputs.
+    """
+    mapping: dict[str, list[str]] = {}
+    for feature in engine_doc.features:
+        fid = derive_feature_id(feature.key)
+        mapping.setdefault(fid, []).append(feature.key)
+    return mapping
+
+
+def upsert_registry_from_engine(
+    engine_doc: EngineDocument,
+    registry_path: Path,
+) -> dict[str, Any]:
+    """Upsert feature-registry entries from engine.yaml features."""
+    existing_registry = load_feature_registry(registry_path)
+
+    new_features: list[dict[str, Any]] = []
+    for feature in engine_doc.features:
+        new_features.append(
+            {
+                "feature_name": feature.name,
+                "feature_id": derive_feature_id(feature.key),
+                "file_path": "skene/engine.yaml",
+                "detected_intent": feature.match_intent,
+                "growth_pillars": [],
+                "loop_ids": [feature.key],
+                "engine_feature_key": feature.key,
+                "confidence_score": 1.0,
+                "entry_point": feature.source,
+                "growth_potential": [feature.how_it_works] if feature.how_it_works else [],
+            }
+        )
+
+    merged_registry = merge_features_into_registry(
+        new_features,
+        existing_registry,
+        loop_ids_by_feature=_loop_ids_from_engine(engine_doc),
+    )
+    merged_registry["engine_features"] = _engine_summary_rows(engine_doc)
+    write_feature_registry(registry_path, merged_registry)
+    return merged_registry
 
 
 def _infer_loop_feature_link(
@@ -264,86 +340,59 @@ def get_registry_path_for_output(output_path: Path) -> Path:
     return output_path.parent / FEATURE_REGISTRY_FILENAME
 
 
+def registry_path_for_project(project_root: Path, output_dir: str) -> Path:
+    """
+    Absolute path to feature-registry.json for the project's configured Skene output directory.
+
+    Matches `build`: registry is a sibling of growth-manifest.json under that directory.
+    """
+    base = Path(output_dir).expanduser()
+    resolved_base = base.resolve() if base.is_absolute() else (project_root / base).resolve()
+    return get_registry_path_for_output(resolved_base / "growth-manifest.json")
+
+
 def merge_registry_and_enrich_manifest(
     manifest_data: dict[str, Any],
-    existing_loops: list[dict[str, Any]] | None,
+    existing_engine_features: list[dict[str, Any]] | None,
     output_path: Path,
 ) -> None:
     """
     Merge current_growth_features into registry, write registry, enrich manifest in-place.
 
-    Loads growth-loops from skene-context/growth-loops/ when existing_loops is None or
-    empty. Maps loops to features via linked_feature_id/linked_feature or inferred from
-    file paths/names. Includes growth_loops array in the registry.
-
-    Updates manifest_data["current_growth_features"] with loop_ids and growth_pillars
-    from the merged registry.
+    Loads engine.yaml when existing_engine_features is None or empty.
+    Stores `engine_features` summary and maps current features to engine feature keys.
     """
     registry_path = get_registry_path_for_output(output_path)
     context_dir = output_path.parent
 
-    if not existing_loops:
+    if existing_engine_features:
+        engine_rows = existing_engine_features
+    else:
+        engine_rows = []
         try:
-            from skene.growth_loops.storage import load_existing_growth_loops
-
-            existing_loops = load_existing_growth_loops(context_dir)
+            project_root = _project_root_from_context(context_dir)
+            engine_doc = load_engine_document(default_engine_path(project_root), project_root=project_root)
+            engine_rows = _engine_summary_rows(engine_doc)
         except Exception:
-            existing_loops = []
+            engine_rows = []
 
     existing_registry = load_feature_registry(registry_path)
     new_features = list(manifest_data.get("current_growth_features", []))
-    all_features = list(new_features)
-    if existing_registry and existing_registry.get("features"):
-        seen = {derive_feature_id(f.get("feature_name", "")) for f in new_features}
-        for ex in existing_registry["features"]:
-            if ex.get("feature_id") not in seen:
-                all_features.append(ex)
-                seen.add(ex.get("feature_id"))
 
-    loop_ids_by_feature = compute_loop_ids_by_feature(existing_loops, features=all_features)
-    mapped_loop_ids = {lid for ids in loop_ids_by_feature.values() for lid in ids}
-
-    now_str = datetime.now().isoformat()
-    orphan_loop_to_fid: dict[str, str] = {}
-    for loop in existing_loops:
-        loop_id = loop.get("loop_id")
-        if not loop_id or loop_id in mapped_loop_ids:
+    loop_ids_by_feature: dict[str, list[str]] = {}
+    for row in engine_rows:
+        fid = row.get("linked_feature_id") or derive_feature_id(row.get("key", ""))
+        key = row.get("key")
+        if not fid or not key:
             continue
-        orphan_feature = _feature_from_orphan_loop(loop, now_str)
-        fid = orphan_feature["feature_id"]
-        new_features.append(orphan_feature)
-        loop_ids_by_feature.setdefault(fid, []).append(loop_id)
-        mapped_loop_ids.add(loop_id)
-        orphan_loop_to_fid[loop_id] = fid
+        loop_ids_by_feature.setdefault(fid, []).append(key)
 
     merged_registry = merge_features_into_registry(
         new_features,
         existing_registry,
         loop_ids_by_feature=loop_ids_by_feature,
     )
-
-    growth_loops_summary = []
-    for loop in existing_loops:
-        loop_id = loop.get("loop_id")
-        if not loop_id:
-            continue
-        fid = orphan_loop_to_fid.get(loop_id)
-        if not fid:
-            fid = loop.get("linked_feature_id") or (
-                derive_feature_id(loop["linked_feature"]) if loop.get("linked_feature") else None
-            )
-        if (not fid or fid == "unknown_feature") and all_features:
-            fid = _infer_loop_feature_link(loop, all_features)
-        if not fid or fid == "unknown_feature":
-            fid = derive_feature_id(loop.get("name", loop_id)) or "orphan_loop"
-        growth_loops_summary.append(
-            {
-                "loop_id": loop_id,
-                "name": loop.get("name", ""),
-                "linked_feature_id": fid,
-            }
-        )
-    merged_registry["growth_loops"] = growth_loops_summary
+    merged_registry["engine_features"] = engine_rows
 
     write_feature_registry(registry_path, merged_registry)
 
@@ -353,6 +402,8 @@ def merge_registry_and_enrich_manifest(
         reg = registry_by_id.get(fid)
         if reg:
             mf["loop_ids"] = reg.get("loop_ids", [])
+            if reg.get("engine_feature_key"):
+                mf["engine_feature_key"] = reg.get("engine_feature_key")
             if not mf.get("growth_pillars") and reg.get("growth_pillars"):
                 mf["growth_pillars"] = reg.get("growth_pillars", [])
 

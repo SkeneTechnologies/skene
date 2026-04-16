@@ -33,6 +33,7 @@ class _MockAsyncClient:
 
 
 def test_factory_creates_skene_client():
+    """Factory returns a skene client with the requested model."""
     client = create_llm_client(
         provider="skene",
         api_key=SecretStr("test-key"),
@@ -45,6 +46,7 @@ def test_factory_creates_skene_client():
 
 
 def test_factory_creates_skene_client_with_base_url():
+    """Factory preserves a caller-provided skene-compatible base URL."""
     client = create_llm_client(
         provider="skene",
         api_key=SecretStr("test-key"),
@@ -55,7 +57,28 @@ def test_factory_creates_skene_client_with_base_url():
     assert client._endpoint == "http://localhost:3000/api/v1/chat/completions"
 
 
+def test_skene_client_normalizes_production_root_base_url():
+    """Normalizes root skene URLs to the chat completions endpoint."""
+    client = SkeneClient(
+        api_key=SecretStr("secret"),
+        model_name="auto",
+        base_url="https://www.skene.ai",
+    )
+    assert client._endpoint == "https://www.skene.ai/api/v1/chat/completions"
+
+
+def test_skene_client_normalizes_workspace_base_url():
+    """Normalizes workspace URLs to the same production endpoint."""
+    client = SkeneClient(
+        api_key=SecretStr("secret"),
+        model_name="auto",
+        base_url="https://www.skene.ai/workspace/my-app",
+    )
+    assert client._endpoint == "https://www.skene.ai/api/v1/chat/completions"
+
+
 async def test_skene_client_uses_production_endpoint(monkeypatch):
+    """Uses the production endpoint when no base_url override is set."""
     from skene.llm.providers import skene as skene_module
 
     monkeypatch.setattr(skene_module.httpx, "AsyncClient", _MockAsyncClient)
@@ -75,6 +98,7 @@ async def test_skene_client_uses_production_endpoint(monkeypatch):
 
 
 async def test_skene_client_uses_local_endpoint_when_base_url_set(monkeypatch):
+    """Uses the configured local endpoint when base_url is provided."""
     from skene.llm.providers import skene as skene_module
 
     monkeypatch.setattr(skene_module.httpx, "AsyncClient", _MockAsyncClient)

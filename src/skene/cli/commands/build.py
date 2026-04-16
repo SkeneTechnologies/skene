@@ -1,7 +1,6 @@
 """Build an AI prompt from your growth plan using LLM."""
 
 import asyncio
-from datetime import datetime
 from pathlib import Path
 
 import typer
@@ -87,15 +86,22 @@ def build(
         "-f",
         help="Bias toward this feature name when linking the loop",
     ),
+    skip_migrations: bool = typer.Option(
+        False,
+        "--skip-migrations",
+        help="Skip writing Supabase trigger migrations from engine.yaml features",
+    ),
 ):
     """
     Build an AI prompt from your growth plan using LLM, then choose where to send it.
 
     Workflow:
     1. Extracts Technical Execution from growth plan
-    2. Builds and saves growth loop definition (Supabase telemetry)
-    3. Asks where to send: Cursor, Claude, or Show
-    4. Generates implementation prompt with LLM and executes
+    2. Builds and merges skene/engine.yaml
+    3. Updates skene-context/feature-registry.json from engine features
+    4. Builds Supabase migrations from actionable engine features
+    5. Asks where to send: Cursor, Claude, or Show
+    6. Generates implementation prompt with LLM and executes
 
     Use --target to skip the interactive menu (useful for scripting):
 
@@ -140,7 +146,7 @@ def build(
         raise typer.Exit(1)
 
     # Run async logic
-    asyncio.run(_build_async(rc, plan, context, target, no_fallback, feature))
+    asyncio.run(_build_async(rc, plan, context, target, no_fallback, feature, skip_migrations))
 
 
 async def _build_async(
@@ -150,6 +156,7 @@ async def _build_async(
     target: str | None = None,
     no_fallback: bool | None = False,
     bias_feature: str | None = None,
+    skip_migrations: bool = False,
 ):
     """Async implementation of build command."""
     # Validate LLM configuration
@@ -245,21 +252,23 @@ async def _build_async(
             )
         )
 
-    # Run loop in: always Supabase for now (Skene Cloud option disabled)
-    run_target = "supabase"
-
-    # 2. Loop build
+    # 2. Engine build
     try:
-        from skene.growth_loops.storage import (
-            derive_loop_id,
-            derive_loop_name,
-            generate_loop_definition_with_llm,
-            generate_timestamped_filename,
-            write_growth_loop_json,
+        from skene.engine import (
+            default_engine_path,
+            engine_features_to_loop_definitions,
+            ensure_engine_dir,
+            generate_engine_delta_with_llm,
+            load_engine_document,
+            merge_engine_documents,
+            write_engine_document,
         )
-
-        loop_name = derive_loop_name(technical_execution)
-        loop_id = derive_loop_id(loop_name)
+        from skene.feature_registry import (
+            get_registry_path_for_output,
+            load_features_for_build,
+            upsert_registry_from_engine,
+        )
+        from skene.growth_loops.push import build_loops_to_supabase, ensure_base_schema_migration
 
         # Determine base output directory
         if context and context.exists():
@@ -267,44 +276,48 @@ async def _build_async(
         else:
             base_output_dir = Path(rc.config.output_dir)
 
-        from skene.feature_registry import load_features_for_build
+        project_root = Path.cwd()
+        if context and context.exists() and context.resolve().name == "skene-context":
+            project_root = context.resolve().parent
+
+        ensure_engine_dir(project_root)
+        engine_path = default_engine_path(project_root)
+        existing_engine = load_engine_document(engine_path, project_root=project_root)
 
         features = load_features_for_build(base_output_dir)
-
-        output_status("Generating growth loop definition")
-        loop_definition = await generate_loop_definition_with_llm(
+        output_status("Generating engine delta")
+        engine_delta = await generate_engine_delta_with_llm(
             llm=llm,
             technical_execution=technical_execution,
             plan_path=plan.resolve(),
-            codebase_path=Path.cwd(),
-            run_target=run_target,
-            features=features if features else None,
+            codebase_path=project_root,
+            existing_engine=existing_engine,
+            registry_features=features if features else None,
             bias_feature_name=bias_feature,
         )
+        merged_engine = merge_engine_documents(existing_engine, engine_delta)
+        write_engine_document(engine_path, merged_engine, project_root=project_root)
+        output_status(f"Updated engine file: {engine_path}")
 
-        # Extract loop_id and name from generated definition (in case LLM changed them)
-        loop_id = loop_definition.get("loop_id", loop_id)
+        registry_output_path = base_output_dir / "growth-manifest.json"
+        registry_path = get_registry_path_for_output(registry_output_path)
+        upsert_registry_from_engine(merged_engine, registry_path)
+        output_status(f"Updated feature registry: {registry_path}")
 
-        timestamped_filename = generate_timestamped_filename(loop_id)
+        if not skip_migrations:
+            schema_path = ensure_base_schema_migration(project_root)
+            output_status(f"Schema migration: {schema_path}")
 
-        loop_definition["run_target"] = run_target
-        loop_definition["_metadata"] = {
-            "source_plan_path": str(plan.resolve()),
-            "saved_at": datetime.now().isoformat(),
-            "run_target": run_target,
-        }
-
-        saved_path = write_growth_loop_json(
-            base_dir=base_output_dir,
-            filename=timestamped_filename,
-            payload=loop_definition,
-        )
-
-        output_status(f"Saved growth loop to: {saved_path}")
+            loop_defs = engine_features_to_loop_definitions(merged_engine)
+            if loop_defs:
+                migration_path = build_loops_to_supabase(loop_defs, project_root)
+                output_status(f"Trigger migration: {migration_path}")
+            else:
+                warning("No engine features with `action` were found; trigger migration was not generated.")
 
     except Exception as e:
         # Don't fail the whole build if storage fails
-        warning(f"Failed to save growth loop: {e}")
+        warning(f"Failed to update engine artifacts: {e}")
         if rc.debug:
             import traceback
 
@@ -320,7 +333,7 @@ async def _build_async(
                 questionary.Choice("Cursor (open via deep link)", value="cursor"),
                 questionary.Choice("Claude (open in terminal)", value="claude"),
                 questionary.Choice("Show full prompt", value="show"),
-                questionary.Choice("Cancel", value="cancel"),
+                questionary.Choice("I build it myself", value="cancel"),
             ]
             selection = questionary.select(
                 "",
@@ -331,7 +344,7 @@ async def _build_async(
             ).ask()
 
             if selection == "cancel" or selection is None:
-                console.print("\n[dim]Cancelled.[/dim]")
+                console.print("\n[dim]Skipping prompt delivery — you'll implement this yourself.[/dim]")
                 return
             target = selection
         except ImportError:
@@ -339,12 +352,12 @@ async def _build_async(
                 "1. Cursor (open via deep link)",
                 "2. Claude (open in terminal)",
                 "3. Show full prompt",
-                "4. Cancel",
+                "4. I build it myself",
             ]
             for choice in choices:
                 console.print(f"  {choice}")
             console.print()
-            selection = Prompt.ask("Select option", choices=["1", "2", "3", "4"], default="1")
+            selection = Prompt.ask("Choose 1-4", choices=["1", "2", "3", "4"], default="1")
             if selection == "1":
                 target = "cursor"
             elif selection == "2":
@@ -352,7 +365,7 @@ async def _build_async(
             elif selection == "3":
                 target = "show"
             elif selection == "4":
-                console.print("[dim]Cancelled.[/dim]")
+                console.print("[dim]Skipping prompt delivery — you'll implement this yourself.[/dim]")
                 return
             else:
                 target = "cursor"
