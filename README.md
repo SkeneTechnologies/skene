@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="4000" height="800" alt="Skene_git" src="https://github.com/user-attachments/assets/2be11c04-6b98-4e26-8905-bf3250c4addb" />
+  <img alt="Skene_git" src="https://github.com/user-attachments/assets/2be11c04-6b98-4e26-8905-bf3250c4addb" width="100%" height="auto" />
 </p>
 
 
@@ -92,4 +92,4 @@ Contributions are welcome. Please [open an issue](https://github.com/SkeneTechno
 
 [MIT](https://opensource.org/licenses/MIT)
 
-<img width="4000" height="800" alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" />
+<img alt="Skene_end_git" src="https://github.com/user-attachments/assets/04119cd1-ee00-4902-9075-5fc3e1e5ec48" width="100%" height="auto" />
