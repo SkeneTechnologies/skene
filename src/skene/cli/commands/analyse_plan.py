@@ -97,6 +97,8 @@ def analyse_plan_cmd(
     asks the LLM to turn the top ``--count`` (default 3) growth opportunities
     into fully-specified features — ``source``, ``subject_state_analysis`` and
     an optional ``action`` — and merges them into ``skene/engine.yaml`` by key.
+    The same run writes ``new-features.yaml`` beside the engine file: a JSON
+    array of only the features planned in that invocation.
 
     Examples:
 
@@ -198,11 +200,14 @@ def analyse_plan_cmd(
 
         added = len(state.delta.features) if state.delta else 0
         total = len(state.merged.features) if state.merged else 0
+        sidecar = resolved_output.parent / "new-features.yaml"
         if added == 0:
             warning("No new features were produced; engine.yaml left unchanged.")
         success(
             f"engine.yaml saved to: {resolved_output} "
             f"({added} feature(s) planned, {total} total after merge)"
         )
+        if state.delta is not None:
+            success(f"Latest plan snapshot: {sidecar}")
 
     asyncio.run(execute())

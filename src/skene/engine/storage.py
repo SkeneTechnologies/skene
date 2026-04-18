@@ -169,6 +169,26 @@ def write_engine_document(engine_path: Path, doc: EngineDocument, *, project_roo
     return engine_path
 
 
+def write_new_features_sidecar(
+    engine_path: Path,
+    features: list[EngineFeature],
+    *,
+    project_root: Path | None = None,
+) -> Path:
+    """
+    Write ``new-features.yaml`` beside ``engine_path``.
+
+    The file body is a pretty-printed JSON array of feature objects (JSON is
+    valid YAML 1.2) listing the latest planned features from a single run.
+    """
+    out = engine_path.parent / "new-features.yaml"
+    _assert_within_project_root(out, project_root)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload = [f.model_dump(mode="json") for f in features]
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
 def merge_engine_documents(existing: EngineDocument, delta: EngineDocument) -> EngineDocument:
     """Merge delta subjects/features into an existing engine document by key."""
     subjects_by_key = {item.key: item for item in existing.subjects}

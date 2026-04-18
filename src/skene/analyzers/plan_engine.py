@@ -13,6 +13,8 @@ Pipeline:
 3. Ask the LLM to emit an engine delta (subjects + features) that implements
    those opportunities against the real schema.
 4. Merge the delta into any existing ``engine.yaml`` by key and persist.
+5. Write ``new-features.yaml`` next to ``engine.yaml`` with a JSON array of
+   the features from this planning run only.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from skene.engine.storage import (
     merge_engine_documents,
     parse_engine_delta_response,
     write_engine_document,
+    write_new_features_sidecar,
 )
 from skene.llm import LLMClient
 from skene.output import status, warning
@@ -277,7 +280,9 @@ async def plan_engine_from_manifest(
     Promote top growth opportunities into engine.yaml features via the LLM.
 
     Writes ``engine_path`` even on partial failure (the existing document is
-    preserved if the LLM call fails).
+    preserved if the LLM call fails). On a successful LLM parse and merge,
+    also writes ``new-features.yaml`` beside ``engine_path`` (JSON array of
+    this run's planned features).
     """
     state = PlanState()
     state.manifest = _load_manifest(manifest_path)
@@ -341,10 +346,15 @@ async def plan_engine_from_manifest(
 
     state.merged = merge_engine_documents(state.existing_engine, state.delta)
     write_engine_document(engine_path, state.merged, project_root=project_root)
+    write_new_features_sidecar(
+        engine_path,
+        state.delta.features,
+        project_root=project_root,
+    )
 
     new_feature_keys = [f.key for f in state.delta.features]
     status(
-        f"Updated engine.yaml with the feature(s) "
+        f"Updated engine.yaml and new-features.yaml with the feature(s) "
         f"(added/updated: {', '.join(new_feature_keys) or 'none'})"
     )
 
