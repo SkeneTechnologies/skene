@@ -110,12 +110,6 @@ _STAGE_LABEL = {
     Stage.PLAN: "Engine plan",
 }
 
-_STAGE_ARTIFACT = {
-    Stage.SCHEMA: "schema.yaml",
-    Stage.GROWTH: "growth-manifest.json",
-    Stage.PLAN: "engine.yaml",
-}
-
 _STATUS_STYLE = {
     StageStatus.SUCCESS: ("[green]✓[/green]", "green"),
     StageStatus.SKIPPED: ("[yellow]○[/yellow]", "yellow"),
