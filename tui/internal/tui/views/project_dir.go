@@ -42,6 +42,10 @@ type ProjectDirView struct {
 	existingAnalysis      ExistingAnalysisChoice
 	existingButtonGroup   *components.ButtonGroup
 	hasSkeneContext        bool
+
+	// Next steps modal (shown over the existing analysis prompt)
+	showNextSteps bool
+	nextStepsView *NextStepsView
 }
 
 // NewProjectDirView creates a new project directory view
@@ -353,6 +357,28 @@ func (v *ProjectDirView) DismissExistingChoice() {
 	v.buttonGroup.SetActiveIndex(0)
 }
 
+// ShowNextSteps opens the next-steps modal overlay.
+func (v *ProjectDirView) ShowNextSteps(outputDir string) {
+	v.showNextSteps = true
+	v.nextStepsView = NewNextStepsViewWithContext(outputDir)
+	v.nextStepsView.SetSize(v.width, v.height)
+}
+
+// HideNextSteps closes the next-steps modal overlay.
+func (v *ProjectDirView) HideNextSteps() {
+	v.showNextSteps = false
+}
+
+// IsShowingNextSteps returns whether the next-steps modal is visible.
+func (v *ProjectDirView) IsShowingNextSteps() bool {
+	return v.showNextSteps
+}
+
+// GetNextStepsView returns the embedded next-steps view.
+func (v *ProjectDirView) GetNextStepsView() *NextStepsView {
+	return v.nextStepsView
+}
+
 // HasExistingAnalysis returns true if the skene output directory was detected
 func (v *ProjectDirView) HasExistingAnalysis() bool {
 	return v.hasSkeneContext
@@ -465,7 +491,11 @@ func (v *ProjectDirView) Render() string {
 
 	// Existing analysis choice view
 	if v.existingAnalysis == ChoiceAsking {
-		return v.renderExistingAnalysisChoice(wizHeader, sectionWidth)
+		rendered := v.renderExistingAnalysisChoice(wizHeader, sectionWidth)
+		if v.showNextSteps {
+			rendered = v.renderNextStepsModal()
+		}
+		return rendered
 	}
 
 	// Directory selection section
@@ -536,6 +566,7 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelect},
 			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}, v.width))
@@ -560,6 +591,18 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 	)
 
 	return centered + "\n" + footer
+}
+
+func (v *ProjectDirView) renderNextStepsModal() string {
+	modalWidth := 60
+	if v.width < 70 {
+		modalWidth = v.width - 10
+	}
+	if modalWidth < 45 {
+		modalWidth = 45
+	}
+	modalContent := v.nextStepsView.RenderModal(modalWidth)
+	return lipgloss.Place(v.width, v.height, lipgloss.Center, lipgloss.Center, modalContent)
 }
 
 func (v *ProjectDirView) renderDirSection(width int) string {

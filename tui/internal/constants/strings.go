@@ -9,32 +9,34 @@ const (
 	StepNameProjectDir       = "Project Directory"
 	StepNameProjectSetup     = "Project Setup"
 	StepNameAnalysisConfig   = "Analysis Configuration"
-	StepNameAnalyzing        = "Running Skene Growth Analysis"
+	StepNameAnalyzing        = "Analysing Growth Opportunities"
+	StepNameJourneyAnalysis  = "Analysing User Journey"
+	StepNameCodebaseAnalysis = "Analysing Growth Opportunities"
 	StepNameAnalysingStepper = "Analysing"
 	StepNameResults          = "Analysis Results"
-	StepNameNextSteps        = "Next Steps"
+	StepNameNextSteps        = "Actions"
 	StepCounterFormat        = "Step %d of %d"
 )
 
 // Dashboard view
 const (
-	DashboardTitle       = "Skene Analysis"
-	DashboardSubtitle    = "Your codebase, analyzed."
-	DashboardFilesHeader = "Context files"
-	DashboardFilesDesc   = "Persisted outputs from the last analysis run. Press n to see how to regenerate any file."
+	DashboardTitle        = "Skene Analysis"
+	DashboardSubtitle     = "Your codebase, analyzed."
+	DashboardFilesHeader  = "Context files"
+	DashboardFilesDesc    = "Persisted outputs from the last analysis run. Press n to see how to regenerate any file."
 	DashboardMissingLabel = "Missing"
-	DashboardBackLabel   = "Dashboard"
+	DashboardBackLabel    = "Dashboard"
 )
 
 // Dashboard file descriptions
 const (
-	FileDescManifest       = "Detected tech stack, features, and growth opportunities."
-	FileDescTemplate       = "Actionable growth strategies for your stack."
-	FileDescPlan           = "Prioritized roadmap with implementation order."
-	FileDescSchema         = "Live schema introspected from your codebase."
-	FileDescEngine         = "User journey map and growth engine config."
-	FileDescNewFeatures    = "Feature backlog generated from the latest run."
-	FileDescCompiledYAML   = "Edge function state machine for Supabase backend."
+	FileDescManifest     = "Detected tech stack, features, and growth opportunities."
+	FileDescTemplate     = "Actionable growth strategies for your stack."
+	FileDescPlan         = "Prioritized roadmap with implementation order."
+	FileDescSchema       = "Live schema introspected from your codebase."
+	FileDescEngine       = "User journey map and growth engine config."
+	FileDescNewFeatures  = "Feature backlog generated from the latest run."
+	FileDescCompiledYAML = "Edge function state machine for Supabase backend."
 )
 
 // File detail view
@@ -56,60 +58,69 @@ const (
 
 // Next step action definitions
 type NextStepDef struct {
-	ID          string
-	Name        string
-	Description string
-	Command     string
+	ID           string
+	Name         string
+	Description  string
+	Command      string
+	RequiresFile string // Relative path inside outputDir; empty = always available.
+	RequiresDir  bool   // When true, RequiresFile is ignored and the outputDir itself must exist.
 }
 
 var NextStepActions = []NextStepDef{
 	{
-		ID:          "plan",
-		Name:        "Generate Growth Plan",
-		Description: "Create a prioritized growth plan with implementation roadmap",
-		Command:     "uvx skene plan",
-	},
-	{
-		ID:          "build",
-		Name:        "Build Implementation Prompt",
-		Description: "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
-		Command:     "uvx skene build",
-	},
-	{
-		ID:          "validate",
-		Name:        "Validate Manifest",
-		Description: "Validate the growth manifest against the schema",
-		Command:     "uvx skene validate",
-	},
-	{
 		ID:          "journey",
-		Name:        "Run Simple Analysis",
+		Name:        "Analyse User Journey",
 		Description: "Schema-driven feature detection and journey planning",
 		Command:     "uvx skene analyse-journey .",
 	},
 	{
 		ID:          "rerun",
-		Name:        "Re-run Advanced Analysis",
+		Name:        "Analyse Growth Opportunities",
 		Description: "Full growth analysis with tech stack, features, and monetisation",
 		Command:     "uvx skene analyze .",
 	},
 	{
+		ID:           "plan",
+		Name:         "Generate Growth Plan",
+		Description:  "Create a prioritized growth plan with implementation roadmap",
+		Command:      "uvx skene plan",
+		RequiresFile: GrowthManifestFile,
+	},
+	{
+		ID:           "build",
+		Name:         "Build Implementation Prompt",
+		Description:  "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
+		Command:      "uvx skene build",
+		RequiresFile: GrowthManifestFile,
+	},
+	{
+		ID:           "validate",
+		Name:         "Validate Manifest",
+		Description:  "Validate the growth manifest against the schema",
+		Command:      "uvx skene validate",
+		RequiresFile: GrowthManifestFile,
+	},
+	{
+		ID:          "view-files",
+		Name:        "View Files",
+		Description: "Browse analysis output files in the dashboard",
+		RequiresDir: true,
+	},
+	{
 		ID:          "open",
-		Name:        "Open Generated Files",
-		Description: "View the analysis output in ./skene-context/",
-		Command:     "",
+		Name:        "Open File Directory",
+		Description: "Open the skene-context folder in your file manager",
+		RequiresDir: true,
 	},
 	{
 		ID:          "config",
 		Name:        "Change Configuration",
 		Description: "Modify provider, model, or project settings",
-		Command:     "",
 	},
 	{
 		ID:          "exit",
-		Name:        "Exit",
+		Name:        "Quit Skene",
 		Description: "Close Skene",
-		Command:     "",
 	},
 }
 
@@ -177,9 +188,9 @@ const (
 	AnalysisConfigSummary   = "Analysis Summary"
 	AnalysisConfigRunButton = "Run Analysis"
 
-	AnalysisModeSimple      = "Simple Analysis"
-	AnalysisModeSimpleDesc  = "Schema-driven feature detection and journey planning"
-	AnalysisModeAdvanced    = "Advanced Analysis"
+	AnalysisModeSimple       = "Simple Analysis"
+	AnalysisModeSimpleDesc   = "Schema-driven feature detection and journey planning"
+	AnalysisModeAdvanced     = "Advanced Analysis"
 	AnalysisModeAdvancedDesc = "Full growth analysis with tech stack, features, and monetisation"
 )
 

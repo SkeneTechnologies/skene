@@ -124,7 +124,7 @@ func (v *ResultsView) IsShowingNextSteps() bool {
 // ShowNextSteps opens the next-steps modal overlay.
 func (v *ResultsView) ShowNextSteps() {
 	v.showNextSteps = true
-	v.nextStepsView = NewNextStepsView()
+	v.nextStepsView = NewNextStepsViewWithContext(v.outputDir)
 	v.nextStepsView.SetSize(v.width, v.height)
 }
 

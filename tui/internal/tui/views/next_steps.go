@@ -1,6 +1,8 @@
 package views
 
 import (
+	"os"
+	"path/filepath"
 	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -21,28 +23,65 @@ type NextStepsView struct {
 	width       int
 	height      int
 	actions     []NextStepAction
+	available   []bool
 	selectedIdx int
 	header      *components.WizardHeader
 }
 
-// NewNextStepsView creates a new next steps view
+// NewNextStepsView creates a next steps view without availability checks
+// (all actions enabled). Used by the results dashboard.
 func NewNextStepsView() *NextStepsView {
-	return &NextStepsView{
-		selectedIdx: 0,
-		header:      components.NewTitleHeader(constants.StepNameNextSteps),
-		actions: func() []NextStepAction {
-			var actions []NextStepAction
-			for _, def := range constants.NextStepActions {
-				actions = append(actions, NextStepAction{
-					ID:          def.ID,
-					Name:        def.Name,
-					Description: def.Description,
-					Command:     def.Command,
-				})
-			}
-			return actions
-		}(),
+	return NewNextStepsViewWithContext("")
+}
+
+// NewNextStepsViewWithContext creates a next steps view that checks file
+// availability relative to outputDir. Pass "" to enable all actions.
+func NewNextStepsViewWithContext(outputDir string) *NextStepsView {
+	var actions []NextStepAction
+	var available []bool
+
+	for _, def := range constants.NextStepActions {
+		actions = append(actions, NextStepAction{
+			ID:          def.ID,
+			Name:        def.Name,
+			Description: def.Description,
+			Command:     def.Command,
+		})
+		available = append(available, isActionAvailable(def, outputDir))
 	}
+
+	v := &NextStepsView{
+		actions:   actions,
+		available: available,
+		header:    components.NewTitleHeader(constants.StepNameNextSteps),
+	}
+	v.selectFirstAvailable()
+	return v
+}
+
+func isActionAvailable(def constants.NextStepDef, outputDir string) bool {
+	if outputDir == "" {
+		return true
+	}
+	if def.RequiresDir {
+		info, err := os.Stat(outputDir)
+		return err == nil && info.IsDir()
+	}
+	if def.RequiresFile != "" {
+		_, err := os.Stat(filepath.Join(outputDir, def.RequiresFile))
+		return err == nil
+	}
+	return true
+}
+
+func (v *NextStepsView) selectFirstAvailable() {
+	for i, ok := range v.available {
+		if ok {
+			v.selectedIdx = i
+			return
+		}
+	}
+	v.selectedIdx = 0
 }
 
 // SetSize updates dimensions
@@ -52,23 +91,29 @@ func (v *NextStepsView) SetSize(width, height int) {
 	v.header.SetWidth(width)
 }
 
-// HandleUp moves selection up
+// HandleUp moves selection up, skipping unavailable items.
 func (v *NextStepsView) HandleUp() {
-	if v.selectedIdx > 0 {
-		v.selectedIdx--
+	for i := v.selectedIdx - 1; i >= 0; i-- {
+		if v.available[i] {
+			v.selectedIdx = i
+			return
+		}
 	}
 }
 
-// HandleDown moves selection down
+// HandleDown moves selection down, skipping unavailable items.
 func (v *NextStepsView) HandleDown() {
-	if v.selectedIdx < len(v.actions)-1 {
-		v.selectedIdx++
+	for i := v.selectedIdx + 1; i < len(v.actions); i++ {
+		if v.available[i] {
+			v.selectedIdx = i
+			return
+		}
 	}
 }
 
-// GetSelectedAction returns the selected action
+// GetSelectedAction returns the selected action, or nil if unavailable.
 func (v *NextStepsView) GetSelectedAction() *NextStepAction {
-	if v.selectedIdx >= 0 && v.selectedIdx < len(v.actions) {
+	if v.selectedIdx >= 0 && v.selectedIdx < len(v.actions) && v.available[v.selectedIdx] {
 		return &v.actions[v.selectedIdx]
 	}
 	return nil
@@ -133,19 +178,27 @@ func (v *NextStepsView) renderActions(width int) string {
 	descWidth := width - 8
 	for i, action := range v.actions {
 		isSelected := i == v.selectedIdx
+		isAvailable := v.available[i]
 
 		var name string
-		if isSelected {
+		switch {
+		case !isAvailable:
+			name = styles.ListItemDimmed.Render(action.Name)
+		case isSelected:
 			name = styles.ListItemSelected.Render(action.Name)
-		} else {
+		default:
 			name = styles.ListItem.Render(action.Name)
 		}
-		desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(action.Description)
+
+		descText := action.Description
+		if !isAvailable {
+			descText += " — not available"
+		}
+		desc := lipgloss.NewStyle().Foreground(styles.MutedColor).PaddingLeft(2).Width(descWidth).Render(descText)
 
 		item := name + "\n" + desc
 		items = append(items, item)
 
-		// Add spacing between items (but not after last)
 		if i < len(v.actions)-1 {
 			items = append(items, "")
 		}
@@ -185,19 +238,27 @@ func (v *NextStepsView) RenderModal(width int) string {
 	var items []string
 	for i, action := range v.actions {
 		isSelected := i == v.selectedIdx
+		isAvailable := v.available[i]
 
 		var name string
-		if isSelected {
+		switch {
+		case !isAvailable:
+			name = styles.ListItemDimmed.Render(action.Name)
+		case isSelected:
 			name = styles.ListItemSelected.Render(action.Name)
-		} else {
+		default:
 			name = styles.ListItem.Render(action.Name)
 		}
 
+		descText := action.Description
+		if !isAvailable {
+			descText += " — not available"
+		}
 		desc := lipgloss.NewStyle().
 			Foreground(styles.MutedColor).
 			PaddingLeft(2).
 			Width(contentWidth).
-			Render(action.Description)
+			Render(descText)
 
 		items = append(items, name+"\n"+desc)
 

@@ -161,7 +161,8 @@ type App struct {
 
 	// Cancellation for running processes
 	cancelFunc      context.CancelFunc
-	analyzingOrigin AppState // state to return to when cancelling/failing
+	analyzingOrigin  AppState // state to return to when cancelling/failing
+	journeyAnalysis  bool     // true when running analyse-journey (auto-opens visualizer)
 
 	// Visualizer
 	visualizerServer *visualizer.Server
@@ -356,7 +357,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.resultsView = a.createResultsView()
 			a.resultsView.SetSize(a.width, a.height)
 			if a.state != StateGame && a.analyzingOrigin == StateProjectDir {
-				a.openEngineVisualizerIfExists()
+				if a.journeyAnalysis {
+					a.openEngineVisualizerIfExists()
+				}
 				a.returnToProjectDirWithExisting()
 			}
 		}
@@ -682,6 +685,9 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 
 	// Handle existing analysis choice prompt
 	if a.projectDirView.IsAskingExistingChoice() {
+		if a.projectDirView.IsShowingNextSteps() {
+			return a.handleProjectDirNextStepsKeys(key)
+		}
 		switch key {
 		case "left", "h":
 			a.projectDirView.HandleLeft()
@@ -696,6 +702,9 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			case constants.ProjectDirRerunAnalysis, constants.ProjectDirRunAnalysis:
 				return a.startJourneyAnalysis()
 			}
+		case "n":
+			outputDir := filepath.Join(a.projectDirView.GetProjectDir(), constants.OutputDirName)
+			a.projectDirView.ShowNextSteps(outputDir)
 		case "esc":
 			a.projectDirView.DismissExistingChoice()
 		}
@@ -784,6 +793,59 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 		case "esc":
 			a.navigateBackFromProjectDir()
 		}
+	}
+	return nil
+}
+
+func (a *App) handleProjectDirNextStepsKeys(key string) tea.Cmd {
+	nsv := a.projectDirView.GetNextStepsView()
+	switch key {
+	case "up", "k":
+		nsv.HandleUp()
+	case "down", "j":
+		nsv.HandleDown()
+	case "enter":
+		action := nsv.GetSelectedAction()
+		if action == nil {
+			return nil
+		}
+		a.projectDirView.HideNextSteps()
+		a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
+		switch action.ID {
+		case "exit":
+			return tea.Quit
+		case "journey":
+			return a.startJourneyAnalysis()
+		case "rerun":
+			cmd := a.startCodebaseAnalysis()
+			a.analyzingOrigin = StateProjectDir
+			return cmd
+		case "plan":
+			cmd := a.runEngineCommand("Generating Growth Plan", "plan")
+			a.analyzingOrigin = StateProjectDir
+			return cmd
+		case "build":
+			cmd := a.runEngineCommand("Building Implementation Prompt", "build")
+			a.analyzingOrigin = StateProjectDir
+			return cmd
+		case "validate":
+			cmd := a.runEngineCommand("Validating Manifest", "validate")
+			a.analyzingOrigin = StateProjectDir
+			return cmd
+		case "view-files":
+			a.transitionToResultsFromExisting()
+		case "open":
+			outputDir := filepath.Join(a.projectDirView.GetProjectDir(), constants.OutputDirName)
+			_ = browser.OpenURL(outputDir)
+		case "config":
+			a.configCheckView = nil
+			a.apiKeyView = nil
+			a.providerView = views.NewProviderView()
+			a.providerView.SetSize(a.width, a.height)
+			a.state = StateProviderSelect
+		}
+	case "esc":
+		a.projectDirView.HideNextSteps()
 	}
 	return nil
 }
@@ -886,6 +948,8 @@ func (a *App) handleResultsKeys(key string) tea.Cmd {
 		}
 	case "n":
 		a.resultsView.ShowNextSteps()
+	case "esc":
+		a.returnToProjectDirWithExisting()
 	}
 	return nil
 }
@@ -909,7 +973,7 @@ func (a *App) handleNextStepsModalKeys(key string) tea.Cmd {
 		case "journey":
 			return a.startSimpleAnalysis()
 		case "rerun":
-			return a.startSimpleAnalysis()
+			return a.startCodebaseAnalysis()
 		case "config":
 			a.configCheckView = nil
 			a.apiKeyView = nil
@@ -922,6 +986,8 @@ func (a *App) handleNextStepsModalKeys(key string) tea.Cmd {
 			return a.runEngineCommand("Building Implementation Prompt", "build")
 		case "validate":
 			return a.runEngineCommand("Validating Manifest", "validate")
+		case "view-files":
+			// Already on the dashboard — just close the modal.
 		case "open":
 			projectDir := a.configMgr.Config.ProjectDir
 			if projectDir == "" {
@@ -1037,7 +1103,9 @@ func (a *App) handleGameKeys(msg tea.KeyMsg) tea.Cmd {
 			a.game.ClearProgressInfo()
 		}
 		if a.prevState == StateAnalyzing && a.resultsView != nil && a.analyzingView != nil && a.analyzingView.IsDone() && !a.analyzingView.HasFailed() && a.analyzingOrigin == StateProjectDir {
-			a.openEngineVisualizerIfExists()
+			if a.journeyAnalysis {
+				a.openEngineVisualizerIfExists()
+			}
 			a.returnToProjectDirWithExisting()
 		} else {
 			a.state = a.prevState
@@ -1252,7 +1320,8 @@ func (a *App) navigateBackFromError() {
 
 func (a *App) startJourneyAnalysis() tea.Cmd {
 	a.applyJourneyConfig()
-	a.analyzingView = views.NewAnalyzingView()
+	a.journeyAnalysis = true
+	a.analyzingView = views.NewCommandView(constants.StepNameJourneyAnalysis)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.analyzingOrigin = StateProjectDir
@@ -1260,8 +1329,19 @@ func (a *App) startJourneyAnalysis() tea.Cmd {
 	return a.startSimpleAnalysisCmd(a.program)
 }
 
+func (a *App) startCodebaseAnalysis() tea.Cmd {
+	a.journeyAnalysis = false
+	a.analyzingView = views.NewCommandView(constants.StepNameCodebaseAnalysis)
+	a.analyzingView.SetSize(a.width, a.height)
+	a.analysisStartTime = time.Now()
+	a.analyzingOrigin = StateNextSteps
+	a.state = StateAnalyzing
+	return a.startRealAnalysisCmd(a.program)
+}
+
 func (a *App) startSimpleAnalysis() tea.Cmd {
-	a.analyzingView = views.NewAnalyzingView()
+	a.journeyAnalysis = true
+	a.analyzingView = views.NewCommandView(constants.StepNameJourneyAnalysis)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.analyzingOrigin = StateNextSteps
