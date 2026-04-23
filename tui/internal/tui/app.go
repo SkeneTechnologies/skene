@@ -358,7 +358,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.resultsView.SetSize(a.width, a.height)
 			if a.state != StateGame && a.analyzingOrigin == StateProjectDir {
 				if a.journeyAnalysis {
-					a.openEngineVisualizerIfExists()
+					if a.engineFileExists() {
+						a.projectDirView.SetNoSchemaDetected(false)
+						a.openEngineVisualizerIfExists()
+					} else {
+						a.projectDirView.SetNoSchemaDetected(true)
+					}
+				} else {
+					a.projectDirView.SetNoSchemaDetected(false)
 				}
 				a.returnToProjectDirWithExisting()
 			}
@@ -700,7 +707,13 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			case constants.ProjectDirViewAnalysis:
 				a.openEngineVisualizerIfExists()
 			case constants.ProjectDirRerunAnalysis, constants.ProjectDirRunAnalysis:
+				a.projectDirView.SetNoSchemaDetected(false)
 				return a.startJourneyAnalysis()
+			case constants.ProjectDirRunCodebaseAnalysis:
+				a.projectDirView.SetNoSchemaDetected(false)
+				cmd := a.startCodebaseAnalysis()
+				a.analyzingOrigin = StateProjectDir
+				return cmd
 			}
 		case "n":
 			outputDir := filepath.Join(a.projectDirView.GetProjectDir(), constants.OutputDirName)
@@ -815,8 +828,10 @@ func (a *App) handleProjectDirNextStepsKeys(key string) tea.Cmd {
 		case "exit":
 			return tea.Quit
 		case "journey":
+			a.projectDirView.SetNoSchemaDetected(false)
 			return a.startJourneyAnalysis()
 		case "rerun":
+			a.projectDirView.SetNoSchemaDetected(false)
 			cmd := a.startCodebaseAnalysis()
 			a.analyzingOrigin = StateProjectDir
 			return cmd
@@ -1012,6 +1027,12 @@ func (a *App) openEngineVisualizerIfExists() {
 	a.openYAMLVisualizer(engineDef)
 }
 
+// engineFileExists reports whether engine.yaml is present in the output dir.
+func (a *App) engineFileExists() bool {
+	_, err := os.Stat(filepath.Join(a.getOutputDir(), constants.EngineFile))
+	return err == nil
+}
+
 func (a *App) openYAMLVisualizer(def *constants.DashboardFile) {
 	filePath := filepath.Join(a.getOutputDir(), def.Filename)
 	if _, err := os.Stat(filePath); err != nil {
@@ -1098,7 +1119,14 @@ func (a *App) handleGameKeys(msg tea.KeyMsg) tea.Cmd {
 		}
 		if a.prevState == StateAnalyzing && a.resultsView != nil && a.analyzingView != nil && a.analyzingView.IsDone() && !a.analyzingView.HasFailed() && a.analyzingOrigin == StateProjectDir {
 			if a.journeyAnalysis {
-				a.openEngineVisualizerIfExists()
+				if a.engineFileExists() {
+					a.projectDirView.SetNoSchemaDetected(false)
+					a.openEngineVisualizerIfExists()
+				} else {
+					a.projectDirView.SetNoSchemaDetected(true)
+				}
+			} else {
+				a.projectDirView.SetNoSchemaDetected(false)
 			}
 			a.returnToProjectDirWithExisting()
 		} else {

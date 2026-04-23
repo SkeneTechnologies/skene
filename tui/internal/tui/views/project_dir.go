@@ -42,6 +42,7 @@ type ProjectDirView struct {
 	existingAnalysis      ExistingAnalysisChoice
 	existingButtonGroup   *components.ButtonGroup
 	hasSkeneContext        bool
+	noSchemaDetected       bool // true when the last analyse-journey run didn't produce engine.yaml
 
 	// Next steps modal (shown over the existing analysis prompt)
 	showNextSteps bool
@@ -307,13 +308,15 @@ func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 }
 
 // buildExistingButtons creates the button group based on which files exist.
-// "View Journey" only appears when engine.yaml is present.
+// "View Journey" only appears when engine.yaml is present. When engine.yaml
+// is missing, both "Analyse Journey" and "Analyse Codebase" are offered so
+// the user can fall back to the full analysis if schema detection failed.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
 	enginePath := filepath.Join(projectDir, constants.OutputDirName, constants.EngineFile)
 	if _, err := os.Stat(enginePath); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirRerunAnalysis)
 	}
-	return components.NewButtonGroup(constants.ProjectDirRunAnalysis)
+	return components.NewButtonGroup(constants.ProjectDirRunAnalysis, constants.ProjectDirRunCodebaseAnalysis)
 }
 
 // IsAskingExistingChoice returns true if prompting for existing analysis choice
@@ -382,6 +385,17 @@ func (v *ProjectDirView) GetNextStepsView() *NextStepsView {
 // HasExistingAnalysis returns true if the skene output directory was detected
 func (v *ProjectDirView) HasExistingAnalysis() bool {
 	return v.hasSkeneContext
+}
+
+// SetNoSchemaDetected marks that the last analyse-journey run did not produce
+// engine.yaml, so the prompt should explain the fallback.
+func (v *ProjectDirView) SetNoSchemaDetected(detected bool) {
+	v.noSchemaDetected = detected
+}
+
+// HasNoSchemaDetected returns the no-schema flag.
+func (v *ProjectDirView) HasNoSchemaDetected() bool {
+	return v.noSchemaDetected
 }
 
 func (v *ProjectDirView) validatePath() {
@@ -537,8 +551,15 @@ func (v *ProjectDirView) Render() string {
 }
 
 func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width int) string {
-	header := styles.SectionHeader.Render(constants.ProjectDirExistingHeader)
-	msg := styles.Body.Render(constants.ProjectDirExistingMsg)
+	headerText := constants.ProjectDirExistingHeader
+	msgText := constants.ProjectDirExistingMsg
+	if v.noSchemaDetected {
+		headerText = constants.ProjectDirNoSchemaHeader
+		msgText = constants.ProjectDirNoSchemaMsg
+	}
+
+	header := styles.SectionHeader.Render(headerText)
+	msg := lipgloss.NewStyle().Width(width - 8).Render(styles.Body.Render(msgText))
 	path := lipgloss.NewStyle().
 		Foreground(styles.MutedColor).Width(width-8).
 		Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")

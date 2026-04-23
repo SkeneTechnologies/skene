@@ -178,9 +178,13 @@ const (
 	ProjectDirExistingHeader = "Existing Analysis Detected"
 	ProjectDirExistingMsg    = "A previous Skene Growth analysis was found in this project."
 	ProjectDirExistingQ      = "What would you like to do?"
-	ProjectDirViewAnalysis   = "View Journey"
-	ProjectDirRerunAnalysis  = "Re-run Analysis"
-	ProjectDirRunAnalysis    = "Analyse Journey"
+	ProjectDirViewAnalysis       = "View Journey"
+	ProjectDirRerunAnalysis      = "Re-run Analysis"
+	ProjectDirRunAnalysis        = "Analyse Journey"
+	ProjectDirRunCodebaseAnalysis = "Analyse Codebase"
+
+	ProjectDirNoSchemaHeader = "No User Journey Detected"
+	ProjectDirNoSchemaMsg    = "Skene couldn't detect a user journey schema in your codebase. Try the full codebase analysis to get a broader picture of your product."
 )
 
 // Analysis config view
