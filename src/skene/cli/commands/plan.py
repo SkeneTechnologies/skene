@@ -32,7 +32,7 @@ def plan(
         help="Directory containing growth-manifest.json and growth-template.json (auto-detected if not specified)",
     ),
     output: Path = typer.Option(
-        "./skene-context/growth-plan.md",
+        "./skene/growth-plan.md",
         "-o",
         "--output",
         help="Output path for growth plan (markdown)",
@@ -92,7 +92,7 @@ def plan(
     Generate a growth plan using Council of Growth Engineers.
 
     Uses manifest and template when present (auto-detected from
-    ./skene-context/ or current dir) to generate a growth plan.
+    ./skene/, legacy ./skene-context/, or current dir) to generate a growth plan.
     None of these context files are required.
 
     Examples:
@@ -105,7 +105,7 @@ def plan(
         uvx skene plan --context ./my-context --api-key "your-key"
 
         # Override context file paths
-        uvx skene plan --manifest ./skene-context/growth-manifest.json --template ./skene-context/growth-template.json
+        uvx skene plan --manifest ./skene/growth-manifest.json --template ./skene/growth-template.json
 
         # Generate activation-focused plan
         uvx skene plan --activation --api-key "your-key"
@@ -131,17 +131,15 @@ def plan(
             error(f"Context path is not a directory: {context}")
             raise typer.Exit(1)
 
+    from skene.output_paths import bundle_dir_candidates
+
     # Auto-detect manifest (growth-manifest.json is the standard name from analyze)
     if manifest is None:
-        default_paths = []
+        default_paths: list[Path] = []
         if context:
             default_paths.append(context / "growth-manifest.json")
-        default_paths.extend(
-            [
-                Path("./skene-context/growth-manifest.json"),
-                Path("./growth-manifest.json"),
-            ]
-        )
+        default_paths.extend(d / "growth-manifest.json" for d in bundle_dir_candidates(Path(".")))
+        default_paths.append(Path("./growth-manifest.json"))
         for p in default_paths:
             if p.exists():
                 manifest = p
@@ -149,15 +147,11 @@ def plan(
 
     # Auto-detect template
     if template is None:
-        default_template_paths = []
+        default_template_paths: list[Path] = []
         if context:
             default_template_paths.append(context / "growth-template.json")
-        default_template_paths.extend(
-            [
-                Path("./skene-context/growth-template.json"),
-                Path("./growth-template.json"),
-            ]
-        )
+        default_template_paths.extend(d / "growth-template.json" for d in bundle_dir_candidates(Path(".")))
+        default_template_paths.append(Path("./growth-template.json"))
         for p in default_template_paths:
             if p.exists():
                 template = p
@@ -191,48 +185,39 @@ def plan(
 
     resolved_output = resolved_output.resolve()
 
+    from skene.output_paths import is_bundle_dir_name
+
     plan_type = "activation plan" if activation else "growth plan"
     base = context if context else Path(".")
-    default_manifest = (
-        (base / "skene-context" / "growth-manifest.json") if not context else (base / "growth-manifest.json")
-    )
-    default_template = (
-        (base / "skene-context" / "growth-template.json") if not context else (base / "growth-template.json")
-    )
+    default_bundle = bundle_dir_candidates(base)[0] if not context else base
+    default_manifest = default_bundle / "growth-manifest.json"
+    default_template = default_bundle / "growth-template.json"
     manifest_display = str(manifest.resolve()) if manifest else f"{default_manifest.resolve()} (not found)"
     template_display = str(template.resolve()) if template else f"{default_template.resolve()} (not found)"
+
+    def _bundle_from(ref_dir: Path) -> Path | None:
+        if is_bundle_dir_name(ref_dir.name):
+            return ref_dir
+        for candidate in bundle_dir_candidates(ref_dir):
+            if candidate.exists():
+                return candidate
+        return None
 
     # Determine context directory for growth-loops and plan-steps
     context_dir_for_loops = None
     if context:
         context_dir_for_loops = context
     elif manifest:
-        if manifest.parent.name == "skene-context":
-            context_dir_for_loops = manifest.parent
+        context_dir_for_loops = _bundle_from(manifest.parent)
     elif resolved_output:
-        if resolved_output.parent.name == "skene-context":
-            context_dir_for_loops = resolved_output.parent
-        else:
-            potential_context = resolved_output.parent / "skene-context"
-            if potential_context.exists():
-                context_dir_for_loops = potential_context
+        context_dir_for_loops = _bundle_from(resolved_output.parent)
 
     # Base dir for plan-steps (same logic as run_generate_plan)
     base_dir_for_steps = context_dir_for_loops
     if base_dir_for_steps is None and manifest:
-        mp = manifest.parent
-        skene_ctx = mp / "skene-context"
-        base_dir_for_steps = mp if mp.name == "skene-context" else (skene_ctx if skene_ctx.exists() else mp)
+        base_dir_for_steps = _bundle_from(manifest.parent) or manifest.parent
     elif base_dir_for_steps is None and resolved_output:
-        base_dir_for_steps = (
-            resolved_output.parent
-            if resolved_output.parent.name == "skene-context"
-            else (
-                resolved_output.parent / "skene-context"
-                if (resolved_output.parent / "skene-context").exists()
-                else resolved_output.parent
-            )
-        )
+        base_dir_for_steps = _bundle_from(resolved_output.parent) or resolved_output.parent
     elif base_dir_for_steps is None:
         base_dir_for_steps = Path(".")
 

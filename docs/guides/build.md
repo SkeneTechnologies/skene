@@ -17,7 +17,7 @@ Build a prompt using auto-detected plan and configured LLM settings:
 uvx skene build
 ```
 
-The command looks for `growth-plan.md` in `./skene-context/` first, then falls back to the current directory.
+The command looks for `growth-plan.md` in `./skene/` first, then `./skene-context/` (legacy), then falls back to the current directory.
 
 Override LLM settings:
 
@@ -42,7 +42,7 @@ uvx skene build --context ./my-context
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--plan PATH` | | Path to growth plan markdown file |
-| `--context PATH` | `-c` | Directory containing `growth-plan.md`. Auto-detected from `./skene-context/` if not specified. |
+| `--context PATH` | `-c` | Directory containing `growth-plan.md`. Auto-detected from `./skene/` (or legacy `./skene-context/`) if not specified. |
 | `--api-key TEXT` | | API key for LLM provider (or `SKENE_API_KEY` env var) |
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | Model name (uses provider default if not provided) |
@@ -63,8 +63,9 @@ The build command follows a six-step pipeline:
 The command auto-detects the plan file in this order:
 
 1. If `--context` is specified, looks for `growth-plan.md` inside that directory
-2. Checks `./skene-context/growth-plan.md`
-3. Checks `./growth-plan.md`
+2. Checks `./skene/growth-plan.md`
+3. Checks `./skene-context/growth-plan.md` (legacy)
+4. Checks `./growth-plan.md`
 
 You can override this with `--plan` to specify an exact path.
 
@@ -88,7 +89,7 @@ The extracted Technical Execution context is sent to your configured LLM to gene
 - Reads `skene/engine.yaml` if present (or starts from an empty engine doc)
 - Merges subjects/features by key
 - Writes updated `skene/engine.yaml`
-- Upserts `skene-context/feature-registry.json` from engine features
+- Upserts `skene/feature-registry.json` from engine features (legacy `skene-context/` location still honored)
 
 ### Step 4: Generate trigger migrations
 
@@ -141,7 +142,7 @@ In all cases, the prompt is saved to `.skene-build-prompt.md` in the plan's pare
 Every successful `build` run updates:
 
 - `skene/engine.yaml` (subjects + features, merged by key)
-- `skene-context/feature-registry.json` (upserted from engine features)
+- `skene/feature-registry.json` (upserted from engine features; legacy `skene-context/` location still honored)
 - `supabase/migrations/*_skene_triggers.sql` (from features that include `action`)
 
 Example engine feature shape:

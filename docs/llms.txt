@@ -69,7 +69,7 @@ Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_DEBU
 
 ## Output Files
 
-Default output directory: ./skene-context/
+Default output directory: ./skene/ (legacy ./skene-context/ still auto-detected for existing projects)
 
 growth-manifest.json — Structured analysis: tech_stack, current_growth_features, growth_opportunities, revenue_leakage, industry
 growth-template.json — Custom PLG template with lifecycle stages and metrics

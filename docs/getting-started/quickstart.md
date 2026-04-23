@@ -32,7 +32,7 @@ The interactive setup walks you through provider, model, and API key selection.
 uvx skene analyze .
 ```
 
-Scans your codebase and generates files in `./skene-context/`:
+Scans your codebase and generates files in `./skene/` (legacy projects using `./skene-context/` continue to work):
 
 - **`growth-manifest.json`** -- your tech stack, growth features, and opportunities
 - **`growth-template.json`** -- a growth template tailored to your business type
@@ -84,7 +84,7 @@ uvx skene push
 
 ## What you get
 
-Your `./skene-context/` directory contains:
+Your `./skene/` directory contains:
 
 | File | Description |
 |---|---|

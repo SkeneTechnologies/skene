@@ -512,7 +512,7 @@ def write_growth_loop_json(
     as pretty-printed JSON.
 
     Args:
-        base_dir: Base output directory (e.g., ./skene-context)
+        base_dir: Base output directory (e.g., ./skene)
         filename: Filename including .json extension
         payload: Complete loop definition dictionary
 
@@ -538,7 +538,7 @@ def load_existing_growth_loops(base_dir: Path) -> list[dict[str, Any]]:
     Load all existing growth loop definitions from growth-loops directory.
 
     Args:
-        base_dir: Base directory (e.g., ./skene-context)
+        base_dir: Base directory (e.g., ./skene)
 
     Returns:
         List of growth loop definition dictionaries, sorted by timestamp (newest first)

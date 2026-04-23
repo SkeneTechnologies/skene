@@ -144,14 +144,22 @@ class TestLoadPlanStepsFile:
         result = load_plan_steps_file(None)
         assert result is None
 
-    def test_reads_from_default_skene_context(self, tmp_path, monkeypatch):
+    def test_reads_from_default_skene_bundle(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        skene_context = tmp_path / "skene-context"
-        skene_context.mkdir()
-        plan_file = skene_context / "plan-steps.md"
+        bundle = tmp_path / "skene"
+        bundle.mkdir()
+        plan_file = bundle / "plan-steps.md"
         plan_file.write_text("# Default steps")
         result = load_plan_steps_file(None)
         assert result == "# Default steps"
+
+    def test_falls_back_to_legacy_skene_context(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        legacy = tmp_path / "skene-context"
+        legacy.mkdir()
+        (legacy / "plan-steps.md").write_text("# Legacy steps")
+        result = load_plan_steps_file(None)
+        assert result == "# Legacy steps"
 
 
 class TestLoadPlanSteps:

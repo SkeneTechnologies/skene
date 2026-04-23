@@ -62,7 +62,7 @@ Displays all current configuration values and their sources.
 | `provider` | string | `"openai"` | LLM provider name |
 | `model` | string | Per provider | LLM model name |
 | `base_url` | string | — | Base URL for OpenAI-compatible endpoints |
-| `output_dir` | string | `"./skene-context"` | Default output directory |
+| `output_dir` | string | `"./skene"` | Default output directory. The legacy default `"./skene-context"` is still auto-detected for existing projects. |
 | `debug` | boolean | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `exclude_folders` | list | `[]` | Folder names to exclude from analysis |
 | `upstream` | string | — | Upstream workspace URL for `push` command |
@@ -95,7 +95,7 @@ provider = "openai"
 # base_url = "https://your-api.com/v1"
 
 # Default output directory
-output_dir = "./skene-context"
+output_dir = "./skene"
 
 # Enable debug mode (shows diagnostic messages and logs LLM I/O to ~/.local/state/skene/debug/)
 debug = false

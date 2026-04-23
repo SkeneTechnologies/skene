@@ -50,7 +50,7 @@ If no API key is configured and you are not using a local provider, the command 
 
 ## Output files
 
-By default, output files are saved to `./skene-context/`. You can override this with the `-o` flag. If the `-o` path points to a directory or has no file extension, the tool appends `growth-manifest.json` automatically.
+By default, output files are saved to `./skene/`. You can override this with the `-o` flag or by setting `output_dir` in `.skene.config`. If the `-o` path points to a directory or has no file extension, the tool appends `growth-manifest.json` automatically. Existing projects using the legacy `./skene-context/` directory are still auto-detected by `plan`, `build`, and `push`.
 
 ### growth-manifest.json
 

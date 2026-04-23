@@ -15,7 +15,7 @@ The tool itself does **not** perform any analysis. It orchestrates `uvx skene` i
 - Step-by-step wizard — provider, model, authentication, project selection
 - Multiple AI providers — OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint
 - Authentication — Skene magic link, API key entry, local model auto-detection
-- Existing analysis detection — detects previous `skene-context/` output and offers to view or re-run
+- Existing analysis detection — detects previous `skene/` (or legacy `skene-context/`) output and offers to view or re-run
 - Live terminal output during analysis
 - Tabbed results dashboard — Growth Manifest, Growth Template, Growth Plan
 - Next steps menu — generate plans, build prompts, validate, or re-analyse
@@ -113,7 +113,7 @@ Example `.skene.config`:
   "provider": "gemini",
   "model": "gemini-3-flash-preview",
   "api_key": "your-api-key",
-  "output_dir": "./skene-context",
+  "output_dir": "./skene",
   "verbose": true,
   "use_growth": true
 }

@@ -73,6 +73,14 @@ pip install skene
 
 For CLI usage details, see the [documentation](https://www.skene.ai/resources/docs/skene).
 
+## Output Layout
+
+Both the Python CLI (including `analyse-journey`, `analyze`, `plan`, and `build`) and the interactive TUI write their artifacts to a single bundle directory in your project root. The directory is created automatically when it is missing.
+
+- **Default:** `./skene/` — holds `schema.yaml`, `engine.yaml`, `growth-manifest.json`, `growth-template.json`, `growth-plan.md`, `feature-registry.json`, and related assets.
+- **Legacy:** `./skene-context/` — the previous default. Existing projects continue to work: discovery commands (`plan`, `build`, `push`, `features export`, TUI detection) look for `./skene/` first and fall back to `./skene-context/` when only the legacy directory is present.
+- **Override:** set `output_dir` in `.skene.config` or pass `-o`/`--output` to a specific command to write elsewhere.
+
 ## Monorepo Structure
 
 | Directory | Description | Language | Distribution |

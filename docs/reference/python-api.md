@@ -121,7 +121,7 @@ config = load_config()
 config.api_key       # str | None
 config.provider      # str (default: "openai")
 config.model         # str (auto-determined if not set)
-config.output_dir    # str (default: "./skene-context")
+config.output_dir    # str (default: "./skene"; legacy "./skene-context" auto-detected)
 config.debug         # bool (default: False)
 config.exclude_folders  # list[str] (default: [])
 config.base_url      # str | None

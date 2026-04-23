@@ -23,7 +23,7 @@ def status(
         None,
         "--context",
         "-c",
-        help="Deprecated: if set to skene-context, parent folder is treated as project root",
+        help="Deprecated: if set to a Skene bundle directory (skene/ or skene-context/), parent folder is treated as project root",
     ),
     find_alternatives: bool = typer.Option(
         False,
@@ -76,8 +76,10 @@ def status(
         debug=debug,
     )
 
+    from skene.output_paths import is_bundle_dir_name
+
     project_root = path.resolve()
-    if context is not None and context.exists() and context.name == "skene-context":
+    if context is not None and context.exists() and is_bundle_dir_name(context.name):
         project_root = context.resolve().parent
 
     if find_alternatives:

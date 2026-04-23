@@ -24,7 +24,7 @@ class DocsGenerator:
     Example:
         generator = DocsGenerator()
         docs = generator.generate_context(manifest)
-        generator.write_to_file(docs, "skene-context/context.md")
+        generator.write_to_file(docs, "skene/context.md")
 
         # Or generate all docs at once
         generator.generate_all(manifest, output_dir="./skene-docs")

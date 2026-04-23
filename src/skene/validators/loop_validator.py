@@ -762,7 +762,7 @@ async def validate_all_loops(
     Load and validate every growth loop JSON in *context_dir*/growth-loops/.
 
     Args:
-        context_dir: Path to the skene-context directory.
+        context_dir: Path to the Skene bundle directory (``skene/`` or legacy ``skene-context/``).
         project_root: Root of the project codebase.
 
     Returns:

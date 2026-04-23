@@ -32,7 +32,7 @@ Run the Skene CLI to analyze the codebase. **The CLI does the analysis, not you.
    Tell the user: "Running analysis, this may take a few minutes."
 
 4. **Handle result**
-   - **Success**: Read results from `.skene/analysis/` or `skene-context/` and present them. Suggest `/skene-plan`.
+   - **Success**: Read results from `.skene/analysis/`, `skene/`, or legacy `skene-context/` and present them. Suggest `/skene-plan`.
    - **Failure**: Report the exact error, suggest a fix, **stop**. Do NOT generate your own analysis.
 
 ## Error handling

@@ -17,12 +17,12 @@ Generate a growth plan using auto-detected context files:
 uvx skene plan
 ```
 
-The command looks for `growth-manifest.json` and `growth-template.json` in `./skene-context/` (default output from `analyze`), then falls back to the current directory. Neither file is required — the command runs with whatever context it finds.
+The command looks for `growth-manifest.json` and `growth-template.json` in `./skene/` first, then the legacy `./skene-context/` directory, then falls back to the current directory. Neither file is required — the command runs with whatever context it finds.
 
 Specify context files explicitly:
 
 ```bash
-uvx skene plan --manifest ./skene-context/growth-manifest.json --template ./skene-context/growth-template.json
+uvx skene plan --manifest ./skene/growth-manifest.json --template ./skene/growth-template.json
 ```
 
 Point to a directory containing both files:
@@ -45,8 +45,8 @@ uvx skene plan --activation
 |------|-------|-------------|
 | `--manifest PATH` | | Path to `growth-manifest.json` |
 | `--template PATH` | | Path to `growth-template.json` |
-| `--context PATH` | `-c` | Directory containing manifest and template. Auto-detected from `./skene-context/` if not specified. |
-| `--output PATH` | `-o` | Output path for growth plan markdown. Default: `./skene-context/growth-plan.md` |
+| `--context PATH` | `-c` | Directory containing manifest and template. Auto-detected from `./skene/` (or legacy `./skene-context/`) if not specified. |
+| `--output PATH` | `-o` | Output path for growth plan markdown. Default: `./skene/growth-plan.md` |
 | `--api-key TEXT` | | API key for LLM provider (or `SKENE_API_KEY` env var) |
 | `--provider TEXT` | `-p` | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | Model name (e.g., `gemini-3-flash-preview`, `claude-sonnet-4-5`) |
@@ -73,7 +73,7 @@ You can shape the plan in three ways:
 
 ### 1. `plan-steps.md` — Define custom middle sections
 
-The middle sections (between Executive Summary and Technical Execution) are driven by a `plan-steps.md` file. Place it at `skene-context/plan-steps.md` or in the directory specified by `--context`.
+The middle sections (between Executive Summary and Technical Execution) are driven by a `plan-steps.md` file. Place it at `skene/plan-steps.md` (or legacy `skene-context/plan-steps.md`) or in the directory specified by `--context`.
 
 The file can be freeform markdown. The system sends it to the LLM, which interprets your intent and produces structured section definitions. You can use headings, bullet lists, or prose:
 
@@ -145,18 +145,21 @@ The activation memo follows a different structure (chapters, risks, scorecard) a
 The plan command auto-detects context files in this order:
 
 1. If `--context` is specified, looks inside that directory first
-2. Checks `./skene-context/` (default output directory from `analyze`)
-3. Checks the current directory
+2. Checks `./skene/` (default output directory from `analyze`)
+3. Checks `./skene-context/` (legacy default)
+4. Checks the current directory
 
 For the manifest:
 
 - `<context>/growth-manifest.json`
+- `./skene/growth-manifest.json`
 - `./skene-context/growth-manifest.json`
 - `./growth-manifest.json`
 
 For the template:
 
 - `<context>/growth-template.json`
+- `./skene/growth-template.json`
 - `./skene-context/growth-template.json`
 - `./growth-template.json`
 
@@ -164,7 +167,7 @@ The command also loads existing engine context from `<project-root>/skene/engine
 
 ## Output format
 
-The plan is saved as a Markdown file (default: `./skene-context/growth-plan.md`). If the `-o` path points to a directory or has no file extension, the tool appends `growth-plan.md` automatically.
+The plan is saved as a Markdown file (default: `./skene/growth-plan.md`). If the `-o` path points to a directory or has no file extension, the tool appends `growth-plan.md` automatically.
 
 A JSON version (`growth-plan.json`) is saved alongside the markdown for programmatic use. After generation, the terminal displays a summary (section count, todo count, token usage). The plan file is what the `build` command reads to generate implementation prompts.
 

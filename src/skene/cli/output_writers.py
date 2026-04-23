@@ -25,8 +25,8 @@ def write_product_docs(manifest_data: dict, manifest_path: Path) -> None:
         warning(f"Failed to parse manifest for product docs: {exc}")
         return
 
-    # Write to same directory as manifest (./skene-context/)
     output_dir = manifest_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
     product_docs_path = output_dir / "product-docs.md"
 
     try:
@@ -57,7 +57,10 @@ async def write_growth_template(llm, manifest_data: dict, manifest_path: Path | 
         if manifest_path:
             output_dir = manifest_path.parent
         else:
-            output_dir = Path("./skene-context")
+            from skene.output_paths import DEFAULT_OUTPUT_DIR
+
+            output_dir = Path(DEFAULT_OUTPUT_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
         json_path = write_growth_template_outputs(template_data, output_dir)
         success(f"Growth template saved to: {json_path}")
         return template_data

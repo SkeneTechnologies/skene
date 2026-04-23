@@ -21,7 +21,7 @@ Set up analytics infrastructure via the Skene CLI.
 
 2. **Verify prerequisites**
    - `skene/engine.yaml` must exist; trigger SQL lives under `supabase/migrations/` as `*_skene_triggers.sql` after `uvx skene build` (older projects may use legacy `*skene_trigger*` / `*skene_telemetry*` filenames).
-   - Feature registry: default `skene-context/feature-registry.json` (or `{output_dir}` from config). If missing, push still runs but omits the registry until `build` creates it.
+   - Feature registry: default `skene/feature-registry.json` (or `{output_dir}` from config; legacy `skene-context/feature-registry.json` auto-detected). If missing, push still runs but omits the registry until `build` creates it.
    - If engine or migrations are missing: tell the user to run `uvx skene build` first, then retry deploy.
    - `ls supabase/ 2>/dev/null` — if missing: "No Supabase directory. Set up Supabase first."
 

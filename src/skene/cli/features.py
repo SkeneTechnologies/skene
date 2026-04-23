@@ -11,6 +11,7 @@ from skene.feature_registry import (
     load_feature_registry,
 )
 from skene.output import console, error, success, warning
+from skene.output_paths import resolve_bundle_dir
 
 features_app = typer.Typer(help="Manage growth feature registry.")
 
@@ -21,11 +22,11 @@ def cmd_export(
         None,
         "--context",
         "-c",
-        help="Path to skene-context directory (auto-detected if omitted)",
+        help="Path to Skene bundle directory (auto-detected if omitted)",
     ),
     path: Path = typer.Argument(
         ".",
-        help="Project root (to locate skene-context)",
+        help="Project root (to locate the Skene bundle directory)",
         exists=True,
         file_okay=False,
         dir_okay=True,
@@ -47,12 +48,14 @@ def cmd_export(
     """
     Export the feature registry for use in other tools.
 
-    Reads skene-context/feature-registry.json and outputs in the requested format.
+    Reads ``<bundle>/feature-registry.json`` (``skene/`` preferred,
+    ``skene-context/`` legacy) and outputs in the requested format.
     Use for docs, dashboards, planning integrations (Linear, Notion, etc.).
     """
-    base_dir = context_dir if context_dir else path / "skene-context"
-    if not base_dir.exists():
-        base_dir = path
+    if context_dir:
+        base_dir = context_dir
+    else:
+        base_dir = resolve_bundle_dir(path) or path
     registry_path = base_dir / FEATURE_REGISTRY_FILENAME
     registry = load_feature_registry(registry_path)
 

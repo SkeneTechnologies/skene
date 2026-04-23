@@ -132,7 +132,7 @@ def save_config(config_path: Path, provider: str, model: str, api_key: str, base
     if "output_dir" not in existing_config:
         lines.append("")
         lines.append("# Default output directory")
-        lines.append('output_dir = "./skene-context"')
+        lines.append('output_dir = "./skene"')
 
     if "debug" not in existing_config:
         lines.append("")
@@ -348,7 +348,7 @@ def create_sample_config(config_path: Path) -> None:
 provider = "gemini"
 
 # Default output directory
-output_dir = "./skene-context"
+output_dir = "./skene"
 
 # Enable verbose output
 verbose = false

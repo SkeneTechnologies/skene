@@ -68,7 +68,7 @@ def build_package(
     project_root: Path,
     engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene-context",
+    output_dir: str = "./skene",
 ) -> dict[str, Any]:
     """
     Build a single package for upstream: engine YAML, feature registry JSON, trigger SQL.
@@ -107,7 +107,7 @@ def build_push_manifest(
     loops_count: int = 1,
     engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene-context",
+    output_dir: str = "./skene",
 ) -> dict[str, Any]:
     """Build push manifest with package checksum."""
     package = build_package(project_root, engine_path=engine_path, output_dir=output_dir)
@@ -130,7 +130,7 @@ def push_to_upstream(
     loops_count: int = 1,
     engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene-context",
+    output_dir: str = "./skene",
 ) -> dict[str, Any]:
     """
     Push a single package (engine.yaml, feature-registry.json, trigger.sql) to upstream API.

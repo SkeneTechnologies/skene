@@ -277,7 +277,7 @@ uvx skene analyze .
 uvx skene analyze . --product-docs
 ```
 
-By default, the manifest is written to `./skene-context/growth-manifest.json`. You can change the output path with the `--output` flag:
+By default, the manifest is written to `./skene/growth-manifest.json` (legacy `./skene-context/` continues to work when already present). You can change the output path with the `--output` flag:
 
 ```bash
 uvx skene analyze . --output ./my-manifest.json

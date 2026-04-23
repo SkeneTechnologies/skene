@@ -132,11 +132,13 @@ async def parse_plan_steps_with_llm(
 
 def find_plan_steps_path(context_dir: Path | None) -> Path | None:
     """Return path to plan-steps.md if found, else None."""
+    from skene.output_paths import bundle_dir_candidates
+
     candidates: list[Path] = []
     if context_dir is not None:
         candidates.append(context_dir / "plan-steps.md")
-        candidates.append(context_dir / "skene-context" / "plan-steps.md")
-    candidates.append(Path("skene-context") / "plan-steps.md")
+        candidates.extend(d / "plan-steps.md" for d in bundle_dir_candidates(context_dir))
+    candidates.extend(d / "plan-steps.md" for d in bundle_dir_candidates(Path(".")))
 
     for path in candidates:
         if path.exists() and path.is_file():
@@ -147,13 +149,15 @@ def find_plan_steps_path(context_dir: Path | None) -> Path | None:
 def load_plan_steps_file(context_dir: Path | None) -> str | None:
     """Find and read plan-steps.md content, or return None.
 
-    Searches:
-    1. context_dir/plan-steps.md if context_dir is provided (when it is skene-context)
-    2. context_dir/skene-context/plan-steps.md if context_dir is project root
-    3. ./skene-context/plan-steps.md as fallback (cwd-relative)
+    Searches, in order:
+    1. ``context_dir/plan-steps.md`` when ``context_dir`` is the bundle itself
+    2. ``context_dir/<bundle>/plan-steps.md`` when ``context_dir`` is the project root
+    3. ``./<bundle>/plan-steps.md`` as fallback (cwd-relative)
+
+    Where ``<bundle>`` is ``skene`` (preferred) or ``skene-context`` (legacy).
 
     Args:
-        context_dir: Optional explicit context directory (skene-context or project root)
+        context_dir: Optional explicit context directory (bundle dir or project root)
 
     Returns:
         File content string, or None if not found

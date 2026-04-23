@@ -109,11 +109,11 @@ export SKENE_BASE_URL="http://localhost:8000/v1"
 
 ### Manifest not found (plan/build commands)
 
-The `plan` and `build` commands look for files in `./skene-context/` by default. Make sure you've run `analyze` first:
+The `plan` and `build` commands look for files in `./skene/` by default (legacy `./skene-context/` is still auto-detected). Make sure you've run `analyze` first:
 
 ```bash
-uvx skene analyze .   # Creates ./skene-context/growth-manifest.json
-uvx skene plan        # Reads from ./skene-context/
+uvx skene analyze .   # Creates ./skene/growth-manifest.json
+uvx skene plan        # Reads from ./skene/
 ```
 
 Or specify paths explicitly:
@@ -126,8 +126,8 @@ uvx skene plan --context ./my-output-dir
 ### Growth plan not found (build command)
 
 ```bash
-uvx skene plan    # Creates ./skene-context/growth-plan.md
-uvx skene build   # Reads from ./skene-context/
+uvx skene plan    # Creates ./skene/growth-plan.md
+uvx skene build   # Reads from ./skene/
 
 # Or specify explicitly
 uvx skene build --plan ./path/to/growth-plan.md

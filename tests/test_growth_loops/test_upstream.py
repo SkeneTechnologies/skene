@@ -71,12 +71,22 @@ class TestBuildPackage:
     def test_package_includes_feature_registry_json(self, tmp_path: Path):
         (tmp_path / "skene").mkdir(parents=True)
         (tmp_path / "skene" / "engine.yaml").write_text("version: 1\n")
+        (tmp_path / "skene" / "feature-registry.json").write_text('{"features": []}\n')
+        (tmp_path / "supabase" / "migrations").mkdir(parents=True)
+        (tmp_path / "supabase" / "migrations" / "20260304151537_skene_triggers.sql").write_text("--")
+
+        package = build_package(tmp_path)
+        assert package["feature_registry_json"] == '{"features": []}\n'
+
+    def test_package_registry_falls_back_to_legacy_skene_context(self, tmp_path: Path):
+        (tmp_path / "skene").mkdir(parents=True)
+        (tmp_path / "skene" / "engine.yaml").write_text("version: 1\n")
         (tmp_path / "skene-context").mkdir(parents=True)
         (tmp_path / "skene-context" / "feature-registry.json").write_text('{"features": []}\n')
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
         (tmp_path / "supabase" / "migrations" / "20260304151537_skene_triggers.sql").write_text("--")
 
-        package = build_package(tmp_path, output_dir="./skene-context")
+        package = build_package(tmp_path)
         assert package["feature_registry_json"] == '{"features": []}\n'
 
 

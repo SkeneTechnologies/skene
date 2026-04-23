@@ -476,7 +476,17 @@ func (e *Engine) resolveOutputDir() string {
 		}
 		return filepath.Join(e.config.ProjectDir, e.config.OutputDir)
 	}
-	return filepath.Join(e.config.ProjectDir, constants.OutputDirName)
+	// Prefer the canonical `skene/` bundle; fall back to legacy `skene-context/`
+	// when only that exists so existing projects keep working.
+	primary := filepath.Join(e.config.ProjectDir, constants.OutputDirName)
+	if info, err := os.Stat(primary); err == nil && info.IsDir() {
+		return primary
+	}
+	legacy := filepath.Join(e.config.ProjectDir, constants.LegacyOutputDirName)
+	if info, err := os.Stat(legacy); err == nil && info.IsDir() {
+		return legacy
+	}
+	return primary
 }
 
 func (e *Engine) sendUpdate(phase AnalysisPhase, progress float64, message string) {

@@ -69,7 +69,9 @@ class Config:
     @property
     def output_dir(self) -> str:
         """Get default output directory."""
-        return self.get("output_dir", "./skene-context")
+        from skene.output_paths import DEFAULT_OUTPUT_DIR
+
+        return self.get("output_dir", DEFAULT_OUTPUT_DIR)
 
     @property
     def verbose(self) -> bool:

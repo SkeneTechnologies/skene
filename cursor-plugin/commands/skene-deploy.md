@@ -1,6 +1,6 @@
 ---
 name: skene-deploy
-description: Deploy telemetry upstream after build. Expects skene/engine.yaml, skene-context/feature-registry.json (or configured output_dir), and supabase/migrations/*_skene_triggers.sql; push uploads the package to Skene Cloud.
+description: Deploy telemetry upstream after build. Expects skene/engine.yaml, skene/feature-registry.json (or configured output_dir; legacy skene-context/feature-registry.json still works), and supabase/migrations/*_skene_triggers.sql; push uploads the package to Skene Cloud.
 ---
 
 # Deploy Telemetry

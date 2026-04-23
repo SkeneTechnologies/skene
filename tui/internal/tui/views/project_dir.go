@@ -287,14 +287,13 @@ func (v *ProjectDirView) HasWarning() bool {
 	return v.warningMsg != ""
 }
 
-// CheckForExistingAnalysis checks if the skene output directory exists in the selected directory
-// and transitions to the choice prompt if found
+// CheckForExistingAnalysis checks if a Skene bundle directory exists in the
+// selected directory (the new `skene/` name or the legacy `skene-context/`)
+// and transitions to the choice prompt if found.
 func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 	path := v.GetProjectDir()
-	contextDir := filepath.Join(path, constants.OutputDirName)
 
-	info, err := os.Stat(contextDir)
-	if err == nil && info.IsDir() {
+	if existingBundleDir(path) != "" {
 		v.hasSkeneContext = true
 		v.existingAnalysis = ChoiceAsking
 		v.existingButtonGroup = v.buildExistingButtons(path)
@@ -307,12 +306,28 @@ func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 	return false
 }
 
+// existingBundleDir returns the bundle directory name actually present under
+// projectDir, preferring the canonical `skene/` over the legacy `skene-context/`.
+// Returns "" when neither exists.
+func existingBundleDir(projectDir string) string {
+	for _, name := range []string{constants.OutputDirName, constants.LegacyOutputDirName} {
+		if info, err := os.Stat(filepath.Join(projectDir, name)); err == nil && info.IsDir() {
+			return name
+		}
+	}
+	return ""
+}
+
 // buildExistingButtons creates the button group based on which files exist.
 // "View Journey" only appears when engine.yaml is present. When engine.yaml
 // is missing, both "Analyse Journey" and "Analyse Codebase" are offered so
 // the user can fall back to the full analysis if schema detection failed.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
-	enginePath := filepath.Join(projectDir, constants.OutputDirName, constants.EngineFile)
+	bundle := existingBundleDir(projectDir)
+	if bundle == "" {
+		bundle = constants.OutputDirName
+	}
+	enginePath := filepath.Join(projectDir, bundle, constants.EngineFile)
 	if _, err := os.Stat(enginePath); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirRerunAnalysis)
 	}
@@ -342,7 +357,7 @@ func (v *ProjectDirView) SetExistingChoice(view bool) {
 }
 
 // ResetExistingChoice re-checks the output directory and re-triggers the
-// existing analysis prompt if `skene-context/` still exists.
+// existing analysis prompt if a Skene bundle directory still exists.
 func (v *ProjectDirView) ResetExistingChoice() {
 	if !v.CheckForExistingAnalysis() {
 		v.existingAnalysis = ChoiceNotAsked
@@ -421,9 +436,7 @@ func (v *ProjectDirView) validatePath() {
 	v.isValid = true
 	v.validMsg = ""
 
-	// Check for existing skene output directory
-	contextDir := filepath.Join(path, constants.OutputDirName)
-	if info, err := os.Stat(contextDir); err == nil && info.IsDir() {
+	if existingBundleDir(path) != "" {
 		v.hasSkeneContext = true
 	} else {
 		v.hasSkeneContext = false
@@ -560,9 +573,13 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 
 	header := styles.SectionHeader.Render(headerText)
 	msg := lipgloss.NewStyle().Width(width - 8).Render(styles.Body.Render(msgText))
+	bundle := existingBundleDir(v.GetProjectDir())
+	if bundle == "" {
+		bundle = constants.OutputDirName
+	}
 	path := lipgloss.NewStyle().
 		Foreground(styles.MutedColor).Width(width-8).
-		Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")
+		Render("Found: " + filepath.Join(v.GetProjectDir(), bundle) + "/")
 	question := styles.Accent.Render(constants.ProjectDirExistingQ)
 
 	buttons := lipgloss.NewStyle().

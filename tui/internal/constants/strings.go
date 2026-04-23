@@ -119,7 +119,7 @@ var NextStepActions = []NextStepDef{
 	{
 		ID:          "open",
 		Name:        "Open File Directory",
-		Description: "Open the skene-context folder in your file manager",
+		Description: "Open the skene output folder in your file manager",
 		RequiresDir: true,
 	},
 	{

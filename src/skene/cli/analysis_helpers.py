@@ -9,12 +9,13 @@ from rich.table import Table
 
 from skene.llm import LLMClient
 from skene.output import console, error, status, success, warning
+from skene.output_paths import is_bundle_dir_name
 from skene.progress import run_with_progress
 
 
 def _resolve_project_root(base_dir: Path) -> Path:
     """Resolve project root from a context or project directory."""
-    if base_dir.name == "skene-context":
+    if is_bundle_dir_name(base_dir.name):
         return base_dir.parent
     return base_dir
 
@@ -79,8 +80,7 @@ async def run_analysis(
 
             # Load existing engine context from project root
             progress.update(task, description="Loading engine context...")
-            base_dir = output.parent if output.parent.name == "skene-context" else output.parent
-            project_root = _resolve_project_root(base_dir)
+            project_root = _resolve_project_root(output.parent)
             engine_summary, engine_rows = _load_engine_context(project_root)
             if engine_rows:
                 progress.update(task, description=f"Found {len(engine_rows)} existing engine feature(s)...")
@@ -169,8 +169,7 @@ async def run_features_analysis(
             codebase = CodebaseExplorer(path, exclude_folders=exclude_folders)
 
             progress.update(task, description="Loading engine context...")
-            base_dir = output.parent if output.parent.name == "skene-context" else output.parent
-            project_root = _resolve_project_root(base_dir)
+            project_root = _resolve_project_root(output.parent)
             _, engine_rows = _load_engine_context(project_root)
 
             progress.update(task, description="Analyzing growth features...")
@@ -410,28 +409,25 @@ async def run_generate_plan(
             # Load engine context from project root
             progress.update(task, description="Loading engine context...")
 
-            # Determine base directory for plan-steps and context resolution
-            # Use context_dir if provided, otherwise infer from output_path or manifest_path
+            # Determine base directory for plan-steps and context resolution.
+            # Use context_dir if provided, otherwise infer from output_path or manifest_path.
+            from skene.output_paths import bundle_dir_candidates
+
+            def _infer_base_dir(ref: Path) -> Path:
+                if is_bundle_dir_name(ref.parent.name):
+                    return ref.parent
+                for candidate in bundle_dir_candidates(ref.parent):
+                    if candidate.exists():
+                        return candidate
+                return ref.parent
+
             if context_dir:
                 base_dir = context_dir
             elif manifest_path:
-                # If manifest is in skene-context, use that parent
-                if manifest_path.parent.name == "skene-context":
-                    base_dir = manifest_path.parent
-                else:
-                    # Check if skene-context exists in same directory as manifest
-                    potential_context = manifest_path.parent / "skene-context"
-                    base_dir = potential_context if potential_context.exists() else manifest_path.parent
+                base_dir = _infer_base_dir(manifest_path)
             elif output_path:
-                # If output is in skene-context, use that parent
-                if output_path.parent.name == "skene-context":
-                    base_dir = output_path.parent
-                else:
-                    # Check if skene-context exists in same directory as output
-                    potential_context = output_path.parent / "skene-context"
-                    base_dir = potential_context if potential_context.exists() else output_path.parent
+                base_dir = _infer_base_dir(output_path)
             else:
-                # Fallback to current directory
                 base_dir = Path(".")
 
             project_root = _resolve_project_root(base_dir)

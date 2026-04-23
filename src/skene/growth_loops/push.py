@@ -267,7 +267,7 @@ def push_to_upstream(
     trigger_events: list[str],
     features_count: int,
     *,
-    output_dir: str = "./skene-context",
+    output_dir: str = "./skene",
 ) -> dict[str, Any]:
     """
     Push package (engine.yaml, feature-registry.json, trigger.sql) to upstream.

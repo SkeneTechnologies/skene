@@ -343,10 +343,19 @@ class TestExportRegistryToFormat:
 
 class TestRegistryPathForProject:
     def test_default_output_dir(self, tmp_path):
-        p = registry_path_for_project(tmp_path, "./skene-context")
-        assert p == tmp_path / "skene-context" / FEATURE_REGISTRY_FILENAME
+        p = registry_path_for_project(tmp_path, "./skene")
+        assert p == tmp_path / "skene" / FEATURE_REGISTRY_FILENAME
 
     def test_absolute_output_dir(self, tmp_path):
         abs_ctx = (tmp_path / "ctx").resolve()
         p = registry_path_for_project(tmp_path, str(abs_ctx))
         assert p == abs_ctx / FEATURE_REGISTRY_FILENAME
+
+    def test_falls_back_to_legacy_bundle_when_present(self, tmp_path):
+        """When configured skene/ has no registry but legacy skene-context/ does,
+        registry_path_for_project discovers the legacy location."""
+        legacy_dir = tmp_path / "skene-context"
+        legacy_dir.mkdir()
+        (legacy_dir / FEATURE_REGISTRY_FILENAME).write_text('{"features": []}\n')
+        p = registry_path_for_project(tmp_path, "./skene")
+        assert p == legacy_dir / FEATURE_REGISTRY_FILENAME

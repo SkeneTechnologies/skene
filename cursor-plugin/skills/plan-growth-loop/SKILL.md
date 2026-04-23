@@ -19,7 +19,7 @@ Generate prioritized growth loops from the Skene CLI. **The CLI does the plannin
    Run `uvx skene plan --help` to see available flags. Use only flags that appear in the output.
 
 2. **Verify analysis exists**
-   `ls .skene/analysis/ 2>/dev/null || ls skene-context/ 2>/dev/null`
+   `ls .skene/analysis/ 2>/dev/null || ls skene/ 2>/dev/null || ls skene-context/ 2>/dev/null`
    If missing: "Run `/skene-analyze` first." Stop.
 
 3. **Generate growth plan**
@@ -27,7 +27,7 @@ Generate prioritized growth loops from the Skene CLI. **The CLI does the plannin
    If it fails, report error. Do NOT make up growth loops.
 
 4. **Present CLI output**
-   Read results from `.skene/plans/` or `skene-context/growth-loops/` and present loops by priority.
+   Read results from `.skene/plans/`, `skene/growth-loops/`, or `skene-context/growth-loops/` and present loops by priority.
 
 5. **Help user choose**
    Ask which loop to implement — this is the one genuine decision point.

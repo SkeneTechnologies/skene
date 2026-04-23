@@ -1,7 +1,7 @@
 """
 Feature registry: persistent storage for growth features.
 
-Stores features in skene-context/feature-registry.json with merge-update semantics.
+Stores features in skene/feature-registry.json with merge-update semantics.
 Features survive across analyze runs; analyze adds/updates but does not erase.
 """
 
@@ -168,7 +168,9 @@ def merge_features_into_registry(
 
 def _project_root_from_context(context_dir: Path) -> Path:
     """Resolve project root from a context directory."""
-    if context_dir.name == "skene-context":
+    from skene.output_paths import is_bundle_dir_name
+
+    if is_bundle_dir_name(context_dir.name):
         return context_dir.parent
     return context_dir
 
@@ -345,10 +347,24 @@ def registry_path_for_project(project_root: Path, output_dir: str) -> Path:
     Absolute path to feature-registry.json for the project's configured Skene output directory.
 
     Matches `build`: registry is a sibling of growth-manifest.json under that directory.
+    Falls back to the legacy ``skene-context/`` bundle if the configured directory
+    has no registry but the legacy one does.
     """
+    from skene.output_paths import LEGACY_OUTPUT_DIR_NAME
+
     base = Path(output_dir).expanduser()
     resolved_base = base.resolve() if base.is_absolute() else (project_root / base).resolve()
-    return get_registry_path_for_output(resolved_base / "growth-manifest.json")
+    primary = get_registry_path_for_output(resolved_base / "growth-manifest.json")
+    if primary.is_file():
+        return primary
+
+    legacy_base = (project_root / LEGACY_OUTPUT_DIR_NAME).resolve()
+    if legacy_base != resolved_base:
+        legacy = get_registry_path_for_output(legacy_base / "growth-manifest.json")
+        if legacy.is_file():
+            return legacy
+
+    return primary
 
 
 def merge_registry_and_enrich_manifest(

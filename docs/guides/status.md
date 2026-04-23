@@ -28,7 +28,7 @@ uvx skene status ./my-project
 Point to a context directory (deprecated compatibility behavior):
 
 ```bash
-uvx skene status --context ./my-project/skene-context
+uvx skene status --context ./my-project/skene
 ```
 
 The legacy `--find-alternatives` options are currently ignored for engine validation.
@@ -37,7 +37,7 @@ The legacy `--find-alternatives` options are currently ignored for engine valida
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--context PATH` | `-c` | Deprecated. If set to a `skene-context` directory, parent is treated as project root. |
+| `--context PATH` | `-c` | Deprecated. If set to a Skene bundle directory (`skene/` or legacy `skene-context/`), parent is treated as project root. |
 | `--find-alternatives` | | Deprecated for engine status checks; currently ignored. |
 | `--api-key TEXT` | | Deprecated for engine status checks; currently ignored. |
 | `--provider TEXT` | `-p` | Deprecated for engine status checks; currently ignored. |
@@ -49,7 +49,7 @@ The status command follows a three-step pipeline:
 
 ### Step 1: Load engine file
 
-The command loads `skene/engine.yaml` from project root. If `--context` points to `.../skene-context`, it uses the parent directory as project root.
+The command loads `skene/engine.yaml` from project root. If `--context` points to a Skene bundle directory (`.../skene` or `.../skene-context`), it uses the parent directory as project root.
 
 ### Step 2: Validate structure and source fields
 
