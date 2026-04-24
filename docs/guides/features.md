@@ -31,7 +31,7 @@ uvx skene features export --format csv -o features.csv
 | Flag | Short | Description |
 |------|-------|-------------|
 | `PATH` | | Project root (default: `.`) |
-| `--context PATH` | `-c` | Path to the Skene bundle directory (`skene/` or legacy `skene-context/`; auto-detected if omitted) |
+| `--context PATH` | `-c` | Path to the Skene bundle directory (`skene-context/` or legacy `skene/`; auto-detected if omitted) |
 | `--format TEXT` | `-f` | Output format: `json`, `csv`, `markdown` (default: `json`) |
 | `--output PATH` | `-o` | Output file path. Prints to stdout if omitted. |
 

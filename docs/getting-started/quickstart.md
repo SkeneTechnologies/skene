@@ -32,7 +32,7 @@ The interactive setup walks you through provider, model, and API key selection.
 uvx skene analyze .
 ```
 
-Scans your codebase and generates files in `./skene/` (legacy projects using `./skene-context/` continue to work):
+Scans your codebase and generates files in `./skene-context/` (legacy projects using `./skene/` continue to work):
 
 - **`growth-manifest.json`** -- your tech stack, growth features, and opportunities
 - **`growth-template.json`** -- a growth template tailored to your business type
@@ -56,7 +56,7 @@ uvx skene build
 
 Generates a focused implementation prompt from your growth plan and asks where to send it -- **Cursor**, **Claude**, or **Show** in terminal.
 
-Also updates `skene/engine.yaml` and writes trigger migration SQL to `supabase/migrations/` for action-enabled features.
+Also updates `skene-context/engine.yaml` and writes trigger migration SQL to `supabase/migrations/` for action-enabled features.
 
 > **Tip:** Use `--target file` to skip the interactive menu (useful for scripting).
 
@@ -70,7 +70,7 @@ After implementing your engine feature plan, verify engine/migration alignment:
 uvx skene status
 ```
 
-Checks `skene/engine.yaml` structure and verifies action-enabled features have matching migration triggers.
+Checks `skene-context/engine.yaml` structure and verifies action-enabled features have matching migration triggers.
 
 ### Push to Supabase and upstream
 
@@ -84,7 +84,7 @@ uvx skene push
 
 ## What you get
 
-Your `./skene/` directory contains:
+Your `./skene-context/` directory contains:
 
 | File | Description |
 |---|---|
@@ -93,7 +93,7 @@ Your `./skene/` directory contains:
 | `feature-registry.json` | Features tracked across analysis runs, linked to engine features |
 | `growth-plan.md` | Prioritized growth plan with technical execution details |
 | `implementation-prompt.md` | Ready-to-use prompt for your AI coding assistant |
-| `skene/engine.yaml` | Engine model (subjects + features), merged incrementally by `build` |
+| `engine.yaml` | Engine model (subjects + features), merged incrementally by `build` |
 
 ## Alternative: Quick one-liner
 

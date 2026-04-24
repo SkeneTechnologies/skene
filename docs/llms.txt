@@ -65,16 +65,16 @@ Priority: user config < project config < env vars < CLI flags
 
 Options: api_key, provider, model, base_url, output_dir, debug, exclude_folders, upstream
 
-Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_DEBUG, SKENE_UPSTREAM_API_KEY, LMSTUDIO_BASE_URL, OLLAMA_BASE_URL
+Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_OUTPUT_DIR, SKENE_DEBUG, SKENE_UPSTREAM_API_KEY, LMSTUDIO_BASE_URL, OLLAMA_BASE_URL
 
 ## Output Files
 
-Default output directory: ./skene/ (legacy ./skene-context/ still auto-detected for existing projects)
+Default output directory: ./skene-context/ (legacy ./skene/ still auto-detected for existing projects)
 
 growth-manifest.json — Structured analysis: tech_stack, current_growth_features, growth_opportunities, revenue_leakage, industry
 growth-template.json — Custom PLG template with lifecycle stages and metrics
 growth-plan.md — Actionable plan with 3-5 growth loops, implementation roadmap, metrics
-skene/engine.yaml — Engine model with subjects + features merged by key
+skene-context/engine.yaml — Engine model with subjects + features merged by key
 feature-registry.json — Persistent feature registry tracking features across analysis runs
 product-docs.md — User-facing feature documentation (with --product-docs flag)
 
