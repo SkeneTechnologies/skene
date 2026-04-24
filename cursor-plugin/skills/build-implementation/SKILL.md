@@ -19,7 +19,7 @@ Generate implementation prompts via the Skene CLI. **The CLI generates the plan,
    Run `uvx skene build --help` to see available flags and understand any interactive prompts.
 
 2. **Verify loop selection**
-   `ls .skene/active-loop.json 2>/dev/null || ls skene/growth-loops/ 2>/dev/null || ls skene-context/growth-loops/ 2>/dev/null`
+   `ls .skene/active-loop.json 2>/dev/null || ls skene-context/growth-loops/ 2>/dev/null || ls skene/growth-loops/ 2>/dev/null`
    If missing: "Run `/skene-plan` first." Stop.
 
 3. **Generate implementation prompt**
@@ -30,7 +30,7 @@ Generate implementation prompts via the Skene CLI. **The CLI generates the plan,
    If the menu options differ from expected, check --help output or the terminal output to pick the "show/print prompt" option.
 
 4. **Read the prompt**
-   The CLI saves output to `skene/growth-loops/` (legacy `skene-context/growth-loops/`). Read the full implementation prompt from the terminal output or that directory.
+   The CLI saves output to `skene-context/growth-loops/` (legacy `skene/growth-loops/`). Read the full implementation prompt from the terminal output or that directory.
 
 5. **Execute the prompt**
    Start implementing the steps from the CLI-generated prompt directly. Present a brief summary of what will be done, then execute. Break large implementations into logical chunks.

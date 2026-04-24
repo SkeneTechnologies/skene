@@ -1,6 +1,6 @@
 ---
 name: skene-status
-description: Check implementation status from skene/engine.yaml. Validates features, action vs code-only mode, and that trigger/function SQL exists in migrations; detail shows latest matching file and (+N) if duplicates.
+description: Check implementation status from skene-context/engine.yaml. Validates features, action vs code-only mode, and that trigger/function SQL exists in migrations; detail shows latest matching file and (+N) if duplicates.
 ---
 
 # Check Implementation Status

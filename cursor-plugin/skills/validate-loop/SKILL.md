@@ -19,7 +19,7 @@ Check implementation status via the Skene CLI.
    Run `uvx skene status --help` to see available flags. Use only flags that appear in the output.
 
 2. **Check for growth loops**
-   `ls .skene/active-loop.json 2>/dev/null || ls skene/growth-loops/ 2>/dev/null || ls skene-context/growth-loops/ 2>/dev/null`
+   `ls .skene/active-loop.json 2>/dev/null || ls skene-context/growth-loops/ 2>/dev/null || ls skene/growth-loops/ 2>/dev/null`
    If missing: "No growth loop found. Run `/skene-plan` first." Stop.
 
 3. **Run status check**
