@@ -20,6 +20,7 @@ from enum import Enum
 from pathlib import Path
 
 from skene.analyzers.growth_from_schema import GrowthState, analyse_growth_from_schema
+from skene.analyzers.journey_compiler import JourneyState, compile_user_journey
 from skene.analyzers.plan_engine import DEFAULT_FEATURE_COUNT, PlanState, plan_engine_from_manifest
 from skene.analyzers.schema_journey import SchemaState, analyse_journey
 from skene.llm import LLMClient
@@ -31,6 +32,7 @@ class Stage(str, Enum):
     SCHEMA = "schema"
     GROWTH = "growth"
     PLAN = "plan"
+    JOURNEY = "journey"
 
 
 class StageStatus(str, Enum):
@@ -59,6 +61,8 @@ class PipelinePaths:
     schema: Path
     growth: Path
     engine: Path
+    new_features: Path
+    journey: Path
 
 
 @dataclass
@@ -69,6 +73,7 @@ class PipelineResult:
     schema: SchemaState | None = None
     growth: GrowthState | None = None
     plan: PlanState | None = None
+    journey: JourneyState | None = None
 
     @property
     def failed(self) -> bool:
@@ -172,6 +177,7 @@ async def _run_plan_stage(
     manifest_path: Path,
     schema_path: Path,
     output_path: Path,
+    new_features_path: Path,
     feature_count: int,
     result: PipelineResult,
 ) -> bool:
@@ -182,6 +188,7 @@ async def _run_plan_stage(
             schema_path=schema_path,
             llm=llm,
             engine_path=output_path,
+            new_features_path=new_features_path,
             project_root=path,
             feature_count=feature_count,
         )
@@ -198,13 +205,57 @@ async def _run_plan_stage(
 
     result.plan = state
     added = len(state.delta.features) if state.delta else 0
-    total = len(state.merged.features) if state.merged else 0
     result.outcomes.append(
         StageOutcome(
             stage=Stage.PLAN,
             status=StageStatus.SUCCESS,
+            artifact=new_features_path,
+            summary=f"{added} planned",
+        )
+    )
+    return True
+
+
+async def _run_journey_stage(
+    *,
+    path: Path,
+    llm: LLMClient,
+    schema_path: Path,
+    manifest_path: Path,
+    engine_path: Path,
+    output_path: Path,
+    result: PipelineResult,
+) -> bool:
+    """Run stage 4 (user-journey compiler). Returns True on success."""
+    try:
+        state = await compile_user_journey(
+            schema_path=schema_path,
+            manifest_path=manifest_path,
+            engine_path=engine_path,
+            output_path=output_path,
+            llm=llm,
+            project_root=path,
+        )
+    except Exception as e:
+        result.outcomes.append(
+            StageOutcome(
+                stage=Stage.JOURNEY,
+                status=StageStatus.FAILED,
+                artifact=output_path if output_path.exists() else None,
+                error=str(e),
+            )
+        )
+        return False
+
+    result.journey = state
+    feature_count = len(state.compiled_features)
+    subject_count = len(state.schema_analysis.get("ttv_journey_by_subject") or [])
+    result.outcomes.append(
+        StageOutcome(
+            stage=Stage.JOURNEY,
+            status=StageStatus.SUCCESS,
             artifact=output_path,
-            summary=f"{added} planned, {total} total",
+            summary=f"{feature_count} feature(s), {subject_count} subject journey(s)",
         )
     )
     return True
@@ -244,7 +295,7 @@ async def run_pipeline(
     stage headers.
     """
     result = PipelineResult()
-    ordered: list[Stage] = [s for s in (Stage.SCHEMA, Stage.GROWTH, Stage.PLAN) if s in stages]
+    ordered: list[Stage] = [s for s in (Stage.SCHEMA, Stage.GROWTH, Stage.PLAN, Stage.JOURNEY) if s in stages]
     total = len(ordered)
 
     def _announce(stage: Stage) -> None:
@@ -313,7 +364,37 @@ async def run_pipeline(
             manifest_path=paths.growth,
             schema_path=paths.schema,
             output_path=paths.engine,
+            new_features_path=paths.new_features,
             feature_count=plan_feature_count,
+            result=result,
+        )
+
+    if Stage.JOURNEY in stages:
+        _announce(Stage.JOURNEY)
+        missing = [
+            ("schema", paths.schema),
+            ("growth manifest", paths.growth),
+            ("engine", paths.engine),
+        ]
+        absent = [(label, p) for label, p in missing if not p.exists()]
+        if absent:
+            labels = ", ".join(f"{label}: {p}" for label, p in absent)
+            result.outcomes.append(
+                StageOutcome(
+                    stage=Stage.JOURNEY,
+                    status=StageStatus.SKIPPED,
+                    summary=f"upstream artifact(s) missing — {labels}",
+                )
+            )
+            return result
+
+        await _run_journey_stage(
+            path=path,
+            llm=llm,
+            schema_path=paths.schema,
+            manifest_path=paths.growth,
+            engine_path=paths.engine,
+            output_path=paths.journey,
             result=result,
         )
 

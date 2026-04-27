@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skene — Engine Visualizer</title>
+  <title>Skene — User Journey Visualizer</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -51,6 +51,15 @@
     }
     .badge-actor  { background: #1f3a2d; color: #56d364; }
     .badge-entity { background: #1c2a41; color: #79c0ff; }
+    .badge-ui     { background: #2d1f3a; color: #d2a8ff; }
+    .badge-milestone { background: #1f3a2d; color: #56d364; }
+    .badge-value  { background: #3d2a1f; color: #f0883e; }
+
+    .badge-stage-signup       { background: #1c2a41; color: #79c0ff; }
+    .badge-stage-activation   { background: #1f3a2d; color: #56d364; }
+    .badge-stage-engagement   { background: #2d1f3a; color: #d2a8ff; }
+    .badge-stage-monetization { background: #3d2a1f; color: #f0883e; }
+    .badge-stage-retention    { background: #3a1f2a; color: #ff7b72; }
 
     /* Feature card */
     .node-feature {
@@ -176,184 +185,165 @@
 
     const h = React.createElement;
 
+    function stageBadgeClass(stageId) {
+      const key = (stageId || '').replace(/^stage_/, '');
+      return `badge badge-stage-${key || 'signup'}`;
+    }
+
     function SubjectNode({ data }) {
-      const kindClass = data.kind === 'actor' ? 'badge-actor' : 'badge-entity';
       return h('div', { className: 'node-subject' },
         h(Handle, { type: 'source', position: Position.Right }),
         h('div', { className: 'node-header' },
           h('span', { className: 'node-title' }, data.label),
-          h('span', { className: `badge ${kindClass}` }, data.kind),
+          h('span', { className: 'badge badge-entity' }, 'subject'),
         ),
-        h('div', { className: 'node-meta' }, data.table),
+        data.table ? h('div', { className: 'node-meta' }, data.table) : null,
       );
     }
 
-    function FeatureNode({ data }) {
+    function StepNode({ data }) {
       const tags = [];
-      if (data.source_table) tags.push(data.source_table);
-      if (data.operation) tags.push(data.operation);
+      if (data.tableRef) tags.push(data.tableRef);
+      if (data.eventType) tags.push(data.eventType);
+      if (data.route) tags.push(data.route);
+
+      const kindBadge = data.kind === 'ui_step' ? 'badge badge-ui' : 'badge badge-milestone';
+      const kindLabel = data.kind === 'ui_step' ? 'UI' : 'milestone';
 
       return h('div', { className: 'node-feature' },
         h(Handle, { type: 'target', position: Position.Left }),
         h(Handle, { type: 'source', position: Position.Right }),
+        h(Handle, { type: 'source', position: Position.Bottom, id: 'value' }),
         h('div', { className: 'node-header' },
           h('span', { className: 'node-title' }, data.label),
-          data.lifecycle ? h('span', { className: 'badge badge-lifecycle' }, data.lifecycle) : null,
+          h('span', { className: kindBadge }, kindLabel),
         ),
+        data.stageLabel ? h('div', { style: { marginBottom: 8 } },
+          h('span', { className: stageBadgeClass(data.stageId) }, data.stageLabel),
+        ) : null,
         data.description ? h('div', { className: 'node-desc' }, data.description) : null,
-        data.sourceLabel ? h('div', { className: 'node-source' }, data.sourceLabel) : null,
+        data.component ? h('div', { className: 'node-source' }, data.component) : null,
         tags.length > 0 ? h('div', { className: 'node-tags' },
           ...tags.map((t, i) => h('span', { key: i, className: 'tag' }, t)),
         ) : null,
       );
     }
 
-    function ActionNode({ data }) {
+    function ValueNode({ data }) {
       return h('div', { className: 'node-action' },
-        h(Handle, { type: 'target', position: Position.Left }),
+        h(Handle, { type: 'target', position: Position.Top, id: 'value' }),
         h('div', { className: 'node-header' },
-          h('span', { className: 'node-title' }, data.actionType),
-          h('span', { className: 'badge badge-action' }, 'Action'),
+          h('span', { className: 'node-title' }, data.label),
+          h('span', { className: 'badge badge-value' }, data.valueType || 'value'),
         ),
-        data.detail ? h('div', { className: 'node-meta' }, data.detail) : null,
+        data.timeToValue ? h('div', { className: 'node-meta' }, data.timeToValue) : null,
+        data.description ? h('div', { className: 'node-desc', style: { marginTop: 6 } }, data.description) : null,
       );
     }
 
-    const nodeTypes = { subject: SubjectNode, feature: FeatureNode, action: ActionNode };
+    const nodeTypes = { subject: SubjectNode, step: StepNode, value: ValueNode };
 
-    function buildGraph(engine) {
+    // user-journey.yaml shape:
+    //   schema_analysis.ttv_journey_by_subject[].{subject_id, subject_label, subject_table,
+    //     ordered_nodes[], value_nodes[], ordered_edges[]}
+    function buildGraph(doc) {
       const nodes = [];
       const edges = [];
-      const subjects = engine.subjects || [];
-      const features = engine.features || [];
-
-      const featuresBySubject = {};
-      const unlinked = [];
-      features.forEach(f => {
-        const key = f.subject_state_analysis?.lifecycle_subject;
-        if (key && subjects.find(s => s.key === key)) {
-          (featuresBySubject[key] ??= []).push(f);
-        } else {
-          unlinked.push(f);
-        }
-      });
+      const journeys = doc?.schema_analysis?.ttv_journey_by_subject || [];
 
       const COL_SUBJECT = 0;
-      const COL_FEATURE = 380;
-      const COL_ACTION = 780;
-      const FEATURE_GAP = 220;
-      const GROUP_GAP = 60;
-      let y = 0;
+      const COL_STEP_BASE = 340;
+      const COL_STEP_GAP = 320;
+      const STEP_Y = 0;
+      const VALUE_Y_OFFSET = 220;
+      const ROW_HEIGHT = 480;
 
-      subjects.forEach(s => {
-        const group = featuresBySubject[s.key] || [];
-        const groupHeight = Math.max(1, group.length) * FEATURE_GAP;
-        const mid = y + (groupHeight - FEATURE_GAP) / 2;
+      journeys.forEach((journey, journeyIdx) => {
+        const subjectId = journey.subject_id;
+        const yBase = journeyIdx * ROW_HEIGHT;
+        const ns = (id) => (id === subjectId ? subjectId : `${subjectId}__${id}`);
 
         nodes.push({
-          id: `s-${s.key}`,
+          id: subjectId,
           type: 'subject',
-          position: { x: COL_SUBJECT, y: mid },
+          position: { x: COL_SUBJECT, y: yBase + STEP_Y },
           data: {
-            label: s.key,
-            kind: s.kind,
-            table: s.table,
+            label: journey.subject_label || subjectId,
+            table: journey.subject_table || '',
           },
         });
 
-        group.forEach((f, i) => {
-          const fid = `f-${f.key}`;
-          const dl = f.data_logic || {};
-          const src = dl.source || {};
-          const ssa = f.subject_state_analysis || {};
-
+        const stepXById = {};
+        (journey.ordered_nodes || []).forEach((node, i) => {
+          const nodeId = ns(node.id);
+          const x = COL_STEP_BASE + i * COL_STEP_GAP;
+          stepXById[node.id] = x;
+          const tableRef = node.is_ui_only
+            ? ''
+            : [node.schema, node.table].filter(Boolean).join('.');
           nodes.push({
-            id: fid,
-            type: 'feature',
-            position: { x: COL_FEATURE, y: y + i * FEATURE_GAP },
+            id: nodeId,
+            type: 'step',
+            position: { x, y: yBase + STEP_Y },
             data: {
-              label: f.name || f.key,
-              description: f.how_it_works || '',
-              sourceLabel: f.source || '',
-              source_table: src.table || '',
-              operation: src.operation || '',
-              lifecycle: ssa.lifecycle_subject || '',
+              label: node.label || node.id,
+              kind: node.kind || 'milestone',
+              description: node.description || '',
+              stageId: node.lifecycle_stage_id || node.lifecycle?.stage_id || '',
+              stageLabel: node.lifecycle?.label || node.category || '',
+              tableRef,
+              eventType: node.event_type || '',
+              route: node.route || '',
+              component: node.component || '',
             },
           });
+        });
 
-          edges.push({
-            id: `e-${s.key}-${f.key}`,
-            source: `s-${s.key}`,
-            target: fid,
-            type: 'smoothstep',
-            animated: true,
-            style: { stroke: '#30a14e', strokeWidth: 1.5 },
+        (journey.value_nodes || []).forEach((vn, i) => {
+          const valueId = ns(vn.id);
+          const linkedX = stepXById[vn.linked_from_node_id];
+          const x = linkedX !== undefined
+            ? linkedX
+            : COL_STEP_BASE + i * COL_STEP_GAP;
+          nodes.push({
+            id: valueId,
+            type: 'value',
+            position: { x, y: yBase + STEP_Y + VALUE_Y_OFFSET },
+            data: {
+              label: vn.label || vn.id,
+              valueType: vn.value_type || 'value',
+              timeToValue: vn.time_to_value_label || '',
+              description: vn.description || '',
+            },
           });
-
-          if (f.action) {
-            const aid = `a-${f.key}`;
-            const detail = f.action.config?.subject || f.action.config?.template || '';
-            nodes.push({
-              id: aid,
-              type: 'action',
-              position: { x: COL_ACTION, y: y + i * FEATURE_GAP },
-              data: {
-                actionType: f.action.use,
-                detail: detail,
-              },
-            });
+          if (vn.linked_from_node_id) {
             edges.push({
-              id: `e-${f.key}-act`,
-              source: fid,
-              target: aid,
+              id: `ev-${valueId}`,
+              source: ns(vn.linked_from_node_id),
+              sourceHandle: 'value',
+              target: valueId,
+              targetHandle: 'value',
               type: 'smoothstep',
-              style: { stroke: '#f0883e', strokeWidth: 1.5 },
-              label: f.action.use,
+              style: { stroke: '#f0883e', strokeWidth: 1.5, strokeDasharray: '4 4' },
+              label: vn.time_to_value_label || 'value',
             });
           }
         });
 
-        y += groupHeight + GROUP_GAP;
-      });
-
-      unlinked.forEach((f, i) => {
-        const fid = `f-${f.key}`;
-        const dl = f.data_logic || {};
-        const src = dl.source || {};
-        const ssa = f.subject_state_analysis || {};
-
-        nodes.push({
-          id: fid,
-          type: 'feature',
-          position: { x: COL_FEATURE, y: y + i * FEATURE_GAP },
-          data: {
-            label: f.name || f.key,
-            description: f.how_it_works || '',
-            sourceLabel: f.source || '',
-            source_table: src.table || '',
-            operation: src.operation || '',
-            lifecycle: ssa.lifecycle_subject || '',
-          },
-        });
-
-        if (f.action) {
-          const aid = `a-${f.key}`;
-          const detail = f.action.config?.subject || f.action.config?.template || '';
-          nodes.push({
-            id: aid,
-            type: 'action',
-            position: { x: COL_ACTION, y: y + i * FEATURE_GAP },
-            data: { actionType: f.action.use, detail },
-          });
+        (journey.ordered_edges || []).forEach((e, i) => {
+          const sourceId = ns(e.source);
+          const targetId = ns(e.target);
+          const label = e.data_change?.summary || e.label || '';
           edges.push({
-            id: `e-${f.key}-act`,
-            source: fid,
-            target: aid,
+            id: `e-${subjectId}-${i}`,
+            source: sourceId,
+            target: targetId,
             type: 'smoothstep',
-            style: { stroke: '#f0883e', strokeWidth: 1.5 },
-            label: f.action.use,
+            animated: e.is_required !== false,
+            style: { stroke: '#30a14e', strokeWidth: 1.5 },
+            label,
           });
-        }
+        });
       });
 
       return { nodes, edges };

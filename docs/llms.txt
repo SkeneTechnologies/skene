@@ -91,6 +91,6 @@ Config: Config, load_config, save_upstream_to_config, remove_upstream_from_confi
 LLM: LLMClient, create_llm_client
 Schemas: GrowthManifest, DocsManifest, TechStack, GrowthFeature, GrowthOpportunity, IndustryInfo, ProductOverview, Feature
 Feature Registry: load_feature_registry, merge_features_into_registry, merge_registry_and_enrich_manifest, export_registry_to_format
-Engine/Migrations: load_engine_document, write_engine_document, build_loops_to_supabase, push_to_upstream, build_package
+Engine/Migrations: load_engine_document, write_engine_document, build_loops_to_supabase, push_to_upstream, collect_push_files
 Docs: DocsGenerator, PSEOBuilder
 Planning: Planner, decline_plan, load_declined_plans

@@ -267,6 +267,7 @@ from skene.cli.commands import (  # noqa: E402, F401
     analyse_growth_from_schema,
     analyse_journey,
     analyse_plan,
+    analyse_user_journey,
     analyze,
     build,
     config_cmd,

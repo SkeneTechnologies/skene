@@ -9,19 +9,43 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
-from skene.feature_registry import registry_path_for_project
 from skene.growth_loops.push import find_trigger_migration
+from skene.output import debug
+from skene.output_paths import resolve_bundle_dir
 
 
-def _api_base_from_upstream(upstream_url: str) -> str:
-    """Resolve API base URL from upstream workspace URL."""
-    base = upstream_url.rstrip("/")
-    if not base.endswith("/api/v1"):
-        base = f"{base}/api/v1"
-    return base
+SKENE_API_BASE = "https://www.skene.ai/api/v1"
+_DEFAULT_SKENE_HOSTS = {"skene.ai", "www.skene.ai"}
+
+
+def _is_default_skene_upstream(upstream_url: str | None) -> bool:
+    """True when the upstream URL points at the hosted Skene Cloud (skene.ai)."""
+    if not upstream_url:
+        return True
+    raw = upstream_url.strip()
+    if not raw:
+        return True
+    candidate = raw if "://" in raw else f"https://{raw}"
+    host = (urlparse(candidate).hostname or "").lower()
+    return host in _DEFAULT_SKENE_HOSTS
+
+
+def _api_base_from_upstream(upstream_url: str | None) -> str:
+    """Resolve the Skene API base URL.
+
+    For the hosted Skene Cloud (skene.ai / www.skene.ai in any form), always
+    use ``SKENE_API_BASE``. For any other upstream, derive ``{upstream}/api/v1``.
+    """
+    if _is_default_skene_upstream(upstream_url):
+        return SKENE_API_BASE
+    base = (upstream_url or "").rstrip("/")
+    if base.endswith("/api/v1"):
+        return base
+    return f"{base}/api/v1"
 
 
 def _workspace_slug_from_url(upstream_url: str) -> str:
@@ -64,61 +88,93 @@ def validate_token(api_base: str, token: str) -> bool:
         return False
 
 
-def build_package(
+def _relative_path(path: Path, project_root: Path) -> str:
+    """Return ``path`` as a POSIX-style string relative to ``project_root``."""
+    try:
+        return path.resolve().relative_to(project_root.resolve()).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _read_file_entry(path: Path, project_root: Path) -> dict[str, str] | None:
+    """Read a file as a ``{path, content}`` push entry, skipping unreadable ones."""
+    try:
+        return {
+            "path": _relative_path(path, project_root),
+            "content": path.read_text(encoding="utf-8"),
+        }
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def collect_push_files(
     project_root: Path,
     engine_path: Path | None = None,
     *,
     output_dir: str = "./skene",
-) -> dict[str, Any]:
+) -> list[dict[str, str]]:
+    """Collect the artifacts to upload as ``[{"path", "content"}]`` entries.
+
+    Uploads the entire Skene bundle directory (``skene/`` or the legacy
+    ``skene-context/``) plus the latest Skene trigger migration under
+    ``supabase/migrations/``. When ``engine_path`` is provided and lives
+    outside the bundle, it is also included.
     """
-    Build a single package for upstream: engine YAML, feature registry JSON, trigger SQL.
+    files: list[dict[str, str]] = []
+    seen: set[Path] = set()
 
-    Returns dict:
-        engine_yaml: content of skene/engine.yaml (or provided engine_path), or None
-        feature_registry_json: content of feature-registry.json, or None if missing
-        trigger_sql: content of the trigger migration, or None if missing
-    """
-    package: dict[str, Any] = {
-        "engine_yaml": None,
-        "feature_registry_json": None,
-        "trigger_sql": None,
-    }
+    def _add(path: Path) -> None:
+        resolved = path.resolve()
+        if resolved in seen or not resolved.is_file():
+            return
+        entry = _read_file_entry(resolved, project_root)
+        if entry is not None:
+            files.append(entry)
+            seen.add(resolved)
 
-    resolved_engine_path = engine_path or project_root / "skene" / "engine.yaml"
-    if resolved_engine_path.exists() and resolved_engine_path.is_file():
-        package["engine_yaml"] = resolved_engine_path.read_text(encoding="utf-8")
+    bundle_dir = resolve_bundle_dir(project_root)
+    if bundle_dir is None and output_dir:
+        candidate = Path(output_dir).expanduser()
+        candidate = candidate if candidate.is_absolute() else project_root / candidate
+        if candidate.is_dir():
+            bundle_dir = candidate
 
-    reg_path = registry_path_for_project(project_root, output_dir)
-    if reg_path.is_file():
-        package["feature_registry_json"] = reg_path.read_text(encoding="utf-8")
+    if bundle_dir is not None:
+        for path in sorted(bundle_dir.rglob("*")):
+            _add(path)
 
-    migrations_dir = project_root / "supabase" / "migrations"
-    trigger_path = find_trigger_migration(migrations_dir)
+    if engine_path is not None:
+        _add(engine_path)
+
+    trigger_path = find_trigger_migration(project_root / "supabase" / "migrations")
     if trigger_path:
-        package["trigger_sql"] = trigger_path.read_text(encoding="utf-8")
+        _add(trigger_path)
 
-    return package
+    return files
 
 
 def build_push_manifest(
-    project_root: Path,
     workspace_slug: str,
     trigger_events: list[str],
+    files: list[dict[str, str]],
     loops_count: int = 1,
-    engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene",
+    upstream_url: str | None = None,
 ) -> dict[str, Any]:
-    """Build push manifest with package checksum."""
-    package = build_package(project_root, engine_path=engine_path, output_dir=output_dir)
-    package_json = json.dumps(package, sort_keys=True)
+    """Build push manifest with a checksum derived from the uploaded files.
+
+    ``upstream_url`` is the user-configured upstream (or empty for the default
+    Skene Cloud). The upstream API is expected to validate it.
+    """
+    files_json = json.dumps(files, sort_keys=True)
     return {
         "version": "1.0",
         "pushed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "upstream_url": (upstream_url or "").strip(),
         "workspace_slug": workspace_slug,
         "trigger_events": trigger_events,
         "loops_count": loops_count,
-        "package_checksum": f"sha256:{_sha256_checksum(package_json)}",
+        "package_checksum": f"sha256:{_sha256_checksum(files_json)}",
     }
 
 
@@ -139,24 +195,26 @@ def push_to_upstream(
     """
     api_base = _api_base_from_upstream(upstream_url)
     workspace_slug = _workspace_slug_from_url(upstream_url)
-    package = build_package(project_root, engine_path=engine_path, output_dir=output_dir)
+    files = collect_push_files(project_root, engine_path=engine_path, output_dir=output_dir)
     manifest = build_push_manifest(
-        project_root=project_root,
         workspace_slug=workspace_slug,
         trigger_events=trigger_events,
+        files=files,
         loops_count=loops_count,
-        engine_path=engine_path,
-        output_dir=output_dir,
+        upstream_url=upstream_url,
     )
-    payload = {"manifest": manifest, "package": package}
+    payload = {"manifest": manifest, "files": files}
 
-    url = f"{api_base.rstrip('/')}/deploys"
+    url = f"{api_base.rstrip('/')}/push"
     try:
         resp = httpx.post(
             url,
             json=payload,
             headers=_auth_headers(token),
             timeout=60,
+        )
+        debug(
+            f"Push API response: status={resp.status_code} url={url!r} body={resp.text!r}"
         )
         if resp.status_code == 201:
             return {"ok": True, **resp.json()}

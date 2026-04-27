@@ -150,13 +150,19 @@ def analyse_growth_from_schema_cmd(
     if not skip_plan:
         stages.append(Stage.PLAN)
 
-    paths = PipelinePaths(schema=schema_path, growth=growth_path, engine=engine_path)
+    new_features_path = (growth_path.parent / "new-features.yaml").resolve()
+    journey_path = (engine_path.parent / "user-journey.yaml").resolve()
+    paths = PipelinePaths(
+        schema=schema_path,
+        growth=growth_path,
+        engine=engine_path,
+        new_features=new_features_path,
+        journey=journey_path,
+    )
     render_kickoff_panel(
         title="skene · analyse-growth-from-schema",
         base_path=base_path,
         rc=rc,
-        paths=paths,
-        stages=stages,
     )
 
     execute_pipeline(

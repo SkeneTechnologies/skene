@@ -1,10 +1,9 @@
-"""Promote growth opportunities into concrete engine.yaml features."""
+"""Compile user-journey.yaml from existing schema, manifest, and engine artifacts."""
 
 from pathlib import Path
 
 import typer
 
-from skene.analyzers.plan_engine import DEFAULT_FEATURE_COUNT
 from skene.cli._journey_runner import (
     PipelinePaths,
     Stage,
@@ -19,8 +18,8 @@ from skene.cli.app import app
 from skene.output import error
 
 
-@app.command(name="analyse-plan")
-def analyse_plan_cmd(
+@app.command(name="analyse-user-journey")
+def analyse_user_journey_cmd(
     path: Path | None = typer.Argument(
         None,
         help="Path to codebase / project root (omit for current directory)",
@@ -29,42 +28,29 @@ def analyse_plan_cmd(
         dir_okay=True,
         resolve_path=True,
     ),
+    schema: Path = typer.Option(
+        Path("./skene/schema.yaml"),
+        "-s",
+        "--schema",
+        help="Path to schema.yaml (run 'analyse-journey' first)",
+    ),
     manifest: Path = typer.Option(
         Path("./skene/growth-manifest.json"),
         "-M",
         "--manifest",
         help="Path to growth-manifest.json (run 'analyse-growth-from-schema' first)",
     ),
-    schema: Path = typer.Option(
-        Path("./skene/schema.yaml"),
-        "-s",
-        "--schema",
-        help="Path to schema.yaml (run 'analyse-journey' first to generate it)",
-    ),
-    output: Path = typer.Option(
+    engine: Path = typer.Option(
         Path("./skene/engine.yaml"),
+        "-e",
+        "--engine",
+        help="Path to engine.yaml (run 'analyse-plan' first)",
+    ),
+    output: Path | None = typer.Option(
+        None,
         "-o",
         "--output",
-        help="Path to engine.yaml (read for context only; new-features.yaml is written beside it)",
-    ),
-    journey_output: Path | None = typer.Option(
-        None,
-        "--journey-output",
-        help="Path for user-journey.yaml (default: next to engine.yaml)",
-    ),
-    skip_journey: bool = typer.Option(
-        False,
-        "--skip-journey",
-        help="Stop after engine.yaml; do not compile user-journey.yaml",
-    ),
-    plan_count: int = typer.Option(
-        DEFAULT_FEATURE_COUNT,
-        "--plan-count",
-        "-n",
-        "--count",
-        min=1,
-        max=10,
-        help="Number of growth features to promote from the manifest",
+        help="Output path for user-journey.yaml (default: next to engine.yaml)",
     ),
     api_key: str | None = typer.Option(
         None,
@@ -108,24 +94,17 @@ def analyse_plan_cmd(
     ),
 ):
     """
-    Promote growth opportunities from the manifest into concrete engine.yaml features.
+    Compile ``user-journey.yaml`` from existing schema, growth manifest, and
+    engine.yaml — without re-running the upstream pipeline stages.
 
-    Reads the schema-driven growth manifest produced by
-    ``analyse-growth-from-schema`` plus the introspected ``schema.yaml``, then
-    asks the LLM to turn the top ``--plan-count`` (default 3) growth
-    opportunities into fully-specified features — ``source``,
-    ``subject_state_analysis`` and an optional ``action`` — and writes them
-    to ``new-features.yaml`` beside ``engine.yaml``. The existing
-    ``engine.yaml`` is read for context only and is never modified by this
-    command; ``new-features.yaml`` is rewritten from scratch on every run.
+    Useful for re-generating the journey artifact when the engine or schema
+    has changed but the upstream LLM passes are still fresh.
 
     Examples:
 
-        skene analyse-plan
+        skene analyse-user-journey
 
-        skene analyse-plan ./my-project -n 3
-
-        skene analyse-plan --manifest ./skene/growth-manifest.json --schema ./skene/schema.yaml
+        skene analyse-user-journey ./my-project
     """
     base_path = resolve_base_path(path)
 
@@ -142,13 +121,17 @@ def analyse_plan_cmd(
         )
         raise typer.Exit(1)
 
-    engine_path = resolve_artifact_path(output, "engine.yaml")
-    new_features_path = (manifest_path.parent / "new-features.yaml").resolve()
+    engine_path = resolve_artifact_path(engine, "engine.yaml")
+    if not engine_path.exists():
+        error(f"Engine file not found: {engine_path}\nRun 'skene analyse-plan' first, or pass --engine <path>.")
+        raise typer.Exit(1)
+
     journey_path = (
-        resolve_artifact_path(journey_output, "user-journey.yaml")
-        if journey_output is not None
+        resolve_artifact_path(output, "user-journey.yaml")
+        if output is not None
         else (engine_path.parent / "user-journey.yaml").resolve()
     )
+    new_features_path = (engine_path.parent / "new-features.yaml").resolve()
 
     rc = resolve_cli_config(
         api_key=api_key,
@@ -158,7 +141,7 @@ def analyse_plan_cmd(
         quiet=quiet,
         debug=debug,
     )
-    resolved_api_key = require_llm_credentials(rc, "analyse-plan")
+    resolved_api_key = require_llm_credentials(rc, "analyse-user-journey")
 
     paths = PipelinePaths(
         schema=schema_path,
@@ -167,15 +150,10 @@ def analyse_plan_cmd(
         new_features=new_features_path,
         journey=journey_path,
     )
-    stages: list[Stage] = [Stage.PLAN]
-    if not skip_journey:
-        stages.append(Stage.JOURNEY)
-
     render_kickoff_panel(
-        title="skene · analyse-plan",
+        title="skene · analyse-user-journey",
         base_path=base_path,
         rc=rc,
-        extra_lines=[f"[bold]Features[/bold]  {plan_count}"],
     )
 
     execute_pipeline(
@@ -183,9 +161,9 @@ def analyse_plan_cmd(
         rc=rc,
         api_key=resolved_api_key,
         paths=paths,
-        stages=stages,
+        stages=[Stage.JOURNEY],
         iterations=0,
         excludes=None,
-        plan_feature_count=plan_count,
+        plan_feature_count=0,
         no_fallback=no_fallback,
     )

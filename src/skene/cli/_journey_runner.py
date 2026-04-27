@@ -108,6 +108,7 @@ _STAGE_LABEL = {
     Stage.SCHEMA: "Schema discovery",
     Stage.GROWTH: "Growth manifest",
     Stage.PLAN: "Engine plan",
+    Stage.JOURNEY: "User journey",
 }
 
 _STATUS_STYLE = {
@@ -122,26 +123,15 @@ def render_kickoff_panel(
     title: str,
     base_path: Path,
     rc: ResolvedConfig,
-    paths: PipelinePaths,
-    stages: list[Stage],
     extra_lines: list[str] | None = None,
 ) -> None:
-    """Render the "here's what will happen" panel before any work starts."""
+    """Render a short kickoff panel before any work starts (path + provider)."""
     lines = [
         f"[bold]Path[/bold]      {base_path}",
         f"[bold]Provider[/bold]  {rc.provider} · [dim]{rc.model}[/dim]",
     ]
     if extra_lines:
         lines.extend(extra_lines)
-    lines.append("")
-    lines.append("[bold]Stages[/bold]")
-    for i, stage in enumerate(stages, start=1):
-        artifact = {
-            Stage.SCHEMA: paths.schema,
-            Stage.GROWTH: paths.growth,
-            Stage.PLAN: paths.engine,
-        }[stage]
-        lines.append(f"  {i}. {_STAGE_LABEL[stage]:<18} → {artifact}")
 
     console.print(Panel.fit("\n".join(lines), title=title, border_style="blue"))
 
