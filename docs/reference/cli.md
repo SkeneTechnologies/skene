@@ -37,7 +37,7 @@ skene analyze [PATH] [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--output PATH` | `-o` | `./skene/growth-manifest.json` (or configured `output_dir`) | Output path for the manifest file. If a directory is given, `growth-manifest.json` is appended automatically. |
+| `--output PATH` | `-o` | `./skene-context/growth-manifest.json` (or configured `output_dir`) | Output path for the manifest file. If a directory is given, `growth-manifest.json` is appended automatically. |
 | `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic` (or `claude`), `lmstudio`, `ollama`, `generic` (aliases: `openai-compatible`, `openai_compatible`) |
 | `--model TEXT` | `-m` | provider default | LLM model name (e.g. `gpt-4o`, `gemini-3-flash-preview`) |
@@ -73,10 +73,10 @@ skene plan [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--manifest PATH` | | auto-detected | Path to `growth-manifest.json`. Auto-detected from `./skene/` (or legacy `./skene-context/`), `./`, or the context directory. |
+| `--manifest PATH` | | auto-detected | Path to `growth-manifest.json`. Auto-detected from `./skene-context/` (or legacy `./skene/`), `./`, or the context directory. |
 | `--template PATH` | | auto-detected | Path to `growth-template.json`. Auto-detected using the same search order. |
 | `--context PATH` | `-c` | auto-detected | Directory containing manifest and template files. Checked before default paths. |
-| `--output PATH` | `-o` | `./skene/growth-plan.md` | Output path for the growth plan (markdown). If a directory is given, `growth-plan.md` is appended. |
+| `--output PATH` | `-o` | `./skene-context/growth-plan.md` | Output path for the growth plan (markdown). If a directory is given, `growth-plan.md` is appended. |
 | `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
 | `--model TEXT` | `-m` | provider default | LLM model name |
@@ -92,8 +92,8 @@ skene plan [OPTIONS]
 Both `--manifest` and `--template` are auto-detected by searching these paths in order:
 
 1. `<context>/growth-manifest.json` (if `--context` is set)
-2. `./skene/growth-manifest.json`
-3. `./skene-context/growth-manifest.json` (legacy)
+2. `./skene-context/growth-manifest.json`
+3. `./skene/growth-manifest.json` (legacy)
 4. `./growth-manifest.json`
 
 Neither file is strictly required; the plan command works with whatever context is available.
@@ -106,7 +106,7 @@ See the [plan guide](../guides/plan.md) for detailed usage.
 
 Build engine artifacts and an AI-ready implementation prompt from your growth plan.
 
-Extracts the Technical Execution section from the growth plan, updates `skene/engine.yaml`, updates `skene/feature-registry.json` (or the legacy `skene-context/feature-registry.json` when the bundle already uses that name), generates Supabase trigger migration SQL (unless skipped), and then offers prompt delivery options (Cursor deep link, Claude CLI, or display).
+Extracts the Technical Execution section from the growth plan, updates `skene-context/engine.yaml`, updates `skene-context/feature-registry.json` (or the legacy `skene/feature-registry.json` when the bundle already uses that name), generates Supabase trigger migration SQL (unless skipped), and then offers prompt delivery options (Cursor deep link, Claude CLI, or display).
 
 ```
 skene build [OPTIONS]
@@ -116,7 +116,7 @@ skene build [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--plan PATH` | | auto-detected | Path to the growth plan markdown file. Auto-detected from `./skene/growth-plan.md` (or legacy `./skene-context/growth-plan.md`) or `./growth-plan.md`. |
+| `--plan PATH` | | auto-detected | Path to the growth plan markdown file. Auto-detected from `./skene-context/growth-plan.md` (or legacy `./skene/growth-plan.md`) or `./growth-plan.md`. |
 | `--context PATH` | `-c` | auto-detected | Directory containing `growth-plan.md` |
 | `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
@@ -144,8 +144,8 @@ The prompt is always saved to a file in the plan's parent directory regardless o
 ### Behavior notes
 
 - Requires a configured LLM (API key + provider). Falls back to a template-based prompt if the LLM call fails.
-- Ensures `skene/engine.yaml` exists and merges a new LLM-generated engine delta into it.
-- Updates `skene/feature-registry.json` from engine features (legacy `skene-context/` location still supported).
+- Ensures `skene-context/engine.yaml` exists and merges a new LLM-generated engine delta into it.
+- Updates `skene-context/feature-registry.json` from engine features (legacy `skene/` location still supported).
 - Generates `supabase/migrations/*_skene_triggers.sql` from engine features that include `action` (unless `--skip-migrations` is used).
 - Use `--target file` for non-interactive pipelines (e.g. `analyze && plan && build --target file`).
 
@@ -155,9 +155,9 @@ See the [build guide](../guides/build.md) for detailed usage.
 
 ## `status`
 
-Show implementation status for `skene/engine.yaml`.
+Show implementation status for `skene-context/engine.yaml`.
 
-Loads `skene/engine.yaml`, validates structure, and checks whether action-enabled features have matching trigger/function entries in `supabase/migrations/*.sql`.
+Loads `skene-context/engine.yaml`, validates structure, and checks whether action-enabled features have matching trigger/function entries in `supabase/migrations/*.sql`.
 
 ```
 skene status [PATH] [OPTIONS]
@@ -173,7 +173,7 @@ skene status [PATH] [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--context PATH` | `-c` | | Deprecated. If set to a Skene bundle directory (`skene/` or legacy `skene-context/`), the parent directory is used as project root. |
+| `--context PATH` | `-c` | | Deprecated. If set to a Skene bundle directory (`skene-context/` or legacy `skene/`), the parent directory is used as project root. |
 | `--find-alternatives` | | `false` | Deprecated for engine status checks; currently ignored. |
 | `--api-key TEXT` | | `$SKENE_API_KEY` or config | Deprecated for engine status checks; currently ignored. |
 | `--provider TEXT` | `-p` | config value | Deprecated for engine status checks; currently ignored. |
@@ -182,11 +182,11 @@ skene status [PATH] [OPTIONS]
 ### Project root resolution
 
 - Uses `PATH` as project root by default.
-- If `--context` points to a Skene bundle directory (`.../skene` or `.../skene-context`), uses the parent directory as project root.
+- If `--context` points to a Skene bundle directory (`.../skene-context` or `.../skene`), uses the parent directory as project root.
 
 ### Behavior notes
 
-- Validates `skene/engine.yaml` and checks duplicate keys/required fields.
+- Validates `skene-context/engine.yaml` and checks duplicate keys/required fields.
 - For features with `action`, expects matching trigger/function tokens in SQL migrations. The detail column shows the latest matching migration filename; if the same trigger appears in older files, the suffix `(+N)` indicates how many additional matches exist.
 - For features without `action`, reports code-only mode (no trigger required).
 - Returns non-zero exit code when required engine/migration checks fail.
@@ -257,7 +257,7 @@ See the [configuration guide](../guides/configuration.md) for file format and al
 
 Push pre-generated engine, feature registry, and trigger artifacts to upstream.
 
-`push` no longer generates migrations. Run `skene build` first to update `skene/engine.yaml`, `{output_dir}/feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql`.
+`push` no longer generates migrations. Run `skene build` first to update `skene-context/engine.yaml`, `{output_dir}/feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql`.
 
 ```
 skene push [PATH] [OPTIONS]
@@ -284,7 +284,7 @@ skene push [PATH] [OPTIONS]
 
 ### Behavior notes
 
-- Requires existing `skene/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
+- Requires existing `skene-context/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
 - When `--upstream` is provided (or resolved from `.skene.config`), pushes package contents (`engine.yaml`, `feature_registry_json`, `trigger_sql`) to the upstream API. Registry content is read from `{output_dir}/feature-registry.json` when the file exists.
 - Use `skene login` to authenticate before pushing to upstream.
 - Deprecated flags now return an error with migration guidance.
@@ -355,7 +355,7 @@ skene features export [PATH] [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--context PATH` | `-c` | auto-detected | Path to the Skene bundle directory (`skene/` or legacy `skene-context/`) |
+| `--context PATH` | `-c` | auto-detected | Path to the Skene bundle directory (`skene-context/` or legacy `skene/`) |
 | `--format TEXT` | `-f` | `json` | Output format: `json`, `csv`, `markdown` |
 | `--output PATH` | `-o` | stdout | Output file path. Prints to stdout if omitted. |
 
@@ -376,6 +376,7 @@ See the [features guide](../guides/features.md) for detailed usage.
 | `SKENE_API_KEY` | `analyze`, `plan`, `build`, `status` | API key for the LLM provider. Equivalent to `--api-key`. |
 | `SKENE_BASE_URL` | `analyze`, `plan`, `build` | Base URL for OpenAI-compatible endpoints. Equivalent to `--base-url`. |
 | `SKENE_PROVIDER` | config loading | LLM provider override at the environment level. |
+| `SKENE_OUTPUT_DIR` | all commands | Override `output_dir` for commands that have no dedicated flag (primarily `push`). |
 | `SKENE_UPSTREAM_API_KEY` | `push`, `login` | API key for upstream authentication. |
 | `SKENE_DEBUG` | all commands | Enable debug mode (`true`/`false`). |
 
@@ -413,7 +414,7 @@ uvx skene analyze . -p generic --base-url http://localhost:8080/v1
 uvx skene plan --activation
 
 # Validate a manifest
-uvx skene validate ./skene/growth-manifest.json
+uvx skene validate ./skene-context/growth-manifest.json
 
 # Check engine implementation status
 uvx skene status

@@ -62,7 +62,7 @@ The binary version is automatically injected via `-ldflags` at build time — `t
 The TUI pins the Python CLI version it depends on via `GrowthPackageVersion` in `tui/internal/constants/constants.go`. When releasing a new Python CLI version that the TUI should use, update this constant.
 
 - **Stable releases:** Update `VERSION` in `tui/Makefile` (e.g. `VERSION=tui-v0.3.0`). This is used by the no-Go fallback download path and for local builds, and should always point to the latest stable release. If the pinned Python CLI version needs bumping, also update `GrowthPackageVersion` in `tui/internal/constants/constants.go`.
-- **Pre-releases:** Do _not_ update the Makefile. The CI workflow reads the version from the git tag directly, so the Makefile should keep pointing to the latest stable release.
+- **Pre-releases:** Do _not_ update the Makefile. The CI workflow reads the version from the git tag directly, so the Makefile should keep pointing to the latest stable release. If the TUI pre-release needs to point at a pre-release Python CLI, update `GrowthPackageVersion` in `tui/internal/constants/constants.go` — and remember to re-pin it to a stable CLI version before the next stable TUI release, since this constant persists on `main`.
 
 ### Stable release steps
 
@@ -85,7 +85,18 @@ git push origin tui-vX.Y.Z
 ### Pre-release steps
 
 ```bash
-# No file changes needed — just tag and push
+# 1. (Only if the TUI pre-release needs a pre-release Python CLI)
+#    Update GrowthPackageVersion in tui/internal/constants/constants.go
+#    Example: GrowthPackageVersion = "0.4.0rc2"
+#    git add tui/internal/constants/constants.go
+#    git commit -m "Pin TUI to skene X.Y.ZrcN"
+#    git push origin main
+#
+#    Reminder: before the next *stable* TUI release, re-pin GrowthPackageVersion
+#    to a stable CLI version — this constant persists on main and is baked into
+#    every binary built from it.
+#
+# 2. Tag and push (this triggers the release workflow)
 git tag tui-vX.Y.Za1
 git push origin tui-vX.Y.Za1
 ```
@@ -160,12 +171,13 @@ gh release create skills-vX.Y.Zrc1 --prerelease --title "Skills vX.Y.Zrc1" --gen
 
 ### TUI stable release
 - [ ] `VERSION` updated in `tui/Makefile`
-- [ ] `GrowthPackageVersion` updated in `tui/internal/constants/constants.go` (if Python CLI version changed)
+- [ ] `GrowthPackageVersion` in `tui/internal/constants/constants.go` points to a **stable** Python CLI version (bump if Python CLI version changed; re-pin to stable if it was left on a pre-release from a prior TUI pre-release)
 - [ ] Changes committed and pushed to `main`
 - [ ] Tag created and pushed (`git tag tui-vX.Y.Z && git push origin tui-vX.Y.Z`)
 - [ ] Verify on [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases)
 
 ### TUI pre-release
+- [ ] `GrowthPackageVersion` updated in `tui/internal/constants/constants.go` (only if the pre-release TUI needs to invoke a pre-release CLI; committed and pushed to `main`)
 - [ ] Tag created and pushed (`git tag tui-vX.Y.Za1 && git push origin tui-vX.Y.Za1`)
 - [ ] Verify on [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases)
 

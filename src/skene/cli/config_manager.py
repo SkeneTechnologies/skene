@@ -9,6 +9,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from skene.output import console
+from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
 def _set_config_permissions(config_path: Path) -> None:
@@ -132,7 +133,7 @@ def save_config(config_path: Path, provider: str, model: str, api_key: str, base
     if "output_dir" not in existing_config:
         lines.append("")
         lines.append("# Default output directory")
-        lines.append('output_dir = "./skene"')
+        lines.append(f'output_dir = "{DEFAULT_OUTPUT_DIR}"')
 
     if "debug" not in existing_config:
         lines.append("")
@@ -338,7 +339,7 @@ def show_config_status(cfg, project_cfg, user_cfg):
 
 def create_sample_config(config_path: Path) -> None:
     """Create a sample configuration file."""
-    sample_config = """# skene configuration
+    sample_config = f"""# skene configuration
 # See: https://github.com/skene-technologies/skene
 
 # API key for LLM provider (can also use SKENE_API_KEY env var)
@@ -348,7 +349,7 @@ def create_sample_config(config_path: Path) -> None:
 provider = "gemini"
 
 # Default output directory
-output_dir = "./skene"
+output_dir = "{DEFAULT_OUTPUT_DIR}"
 
 # Enable verbose output
 verbose = false

@@ -12,7 +12,7 @@ Set up analytics infrastructure via the Skene CLI.
 - **Autonomous.** Run CLI commands, report results, suggest next step. No mid-flow questions except for genuine blockers.
 - **CLI is the source of truth.** Do NOT fabricate migration schemas or client code if the CLI fails.
 - **User cannot type into agent terminals.** Pipe safe defaults for routine prompts. Kill stuck terminals.
-- **Upstream push can be a genuine blocker.** Ask the user in chat to confirm before running `uvx skene push` — it POSTs `skene/engine.yaml`, `{output_dir}/feature-registry.json` when present, and the latest trigger migration to Skene Cloud (it does not generate SQL; run `uvx skene build` first if artifacts are missing).
+- **Upstream push can be a genuine blocker.** Ask the user in chat to confirm before running `uvx skene push` — it POSTs `skene-context/engine.yaml`, `{output_dir}/feature-registry.json` when present, and the latest trigger migration to Skene Cloud (it does not generate SQL; run `uvx skene build` first if artifacts are missing).
 
 ## Steps
 
@@ -20,8 +20,8 @@ Set up analytics infrastructure via the Skene CLI.
    Run `uvx skene push --help` to see available flags. Use only flags that appear in the output.
 
 2. **Verify prerequisites**
-   - `skene/engine.yaml` must exist; trigger SQL lives under `supabase/migrations/` as `*_skene_triggers.sql` after `uvx skene build` (older projects may use legacy `*skene_trigger*` / `*skene_telemetry*` filenames).
-   - Feature registry: default `skene/feature-registry.json` (or `{output_dir}` from config; legacy `skene-context/feature-registry.json` auto-detected). If missing, push still runs but omits the registry until `build` creates it.
+   - `skene-context/engine.yaml` must exist; trigger SQL lives under `supabase/migrations/` as `*_skene_triggers.sql` after `uvx skene build` (older projects may use legacy `*skene_trigger*` / `*skene_telemetry*` filenames).
+   - Feature registry: default `skene-context/feature-registry.json` (or `{output_dir}` from config; legacy `skene/feature-registry.json` auto-detected). If missing, push still runs but omits the registry until `build` creates it.
    - If engine or migrations are missing: tell the user to run `uvx skene build` first, then retry deploy.
    - `ls supabase/ 2>/dev/null` — if missing: "No Supabase directory. Set up Supabase first."
 

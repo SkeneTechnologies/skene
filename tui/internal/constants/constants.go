@@ -36,10 +36,10 @@ const (
 // Package and directory names
 const (
 	GrowthPackageName    = "skene"
-	GrowthPackageVersion = "0.3.1"
-	OutputDirName     = "skene"
-	DefaultOutputDir  = "./skene"
-	LegacyOutputDirName = "skene-context"
+	GrowthPackageVersion = "0.4.0rc2"
+	OutputDirName     = "skene-context"
+	DefaultOutputDir  = "./skene-context"
+	LegacyOutputDirName = "skene"
 	SkeneCacheDir     = ".skene"
 	SkeneCacheBinDir  = "bin"
 	ProjectConfigFile = ".skene.config"

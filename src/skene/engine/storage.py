@@ -80,19 +80,33 @@ class EngineDocument(BaseModel):
     features: list[EngineFeature] = Field(default_factory=list, description="Declared features in engine.yaml.")
 
 
-def default_engine_dir(project_root: Path) -> Path:
-    """Return the canonical skene engine directory under a project root."""
-    return project_root / "skene"
+def default_engine_dir(project_root: Path, output_dir: str | Path | None = None) -> Path:
+    """Return the canonical skene engine directory under a project root.
+
+    When ``output_dir`` is provided (absolute or relative), the returned path is
+    anchored at that directory. Otherwise, the first existing bundle directory
+    under ``project_root`` is preferred; if none exists, the default name is used.
+    """
+    if output_dir is not None:
+        candidate = Path(output_dir).expanduser()
+        return candidate if candidate.is_absolute() else (project_root / candidate)
+
+    from skene.output_paths import DEFAULT_OUTPUT_DIR_NAME, resolve_bundle_dir
+
+    existing = resolve_bundle_dir(project_root)
+    if existing is not None:
+        return existing
+    return project_root / DEFAULT_OUTPUT_DIR_NAME
 
 
-def default_engine_path(project_root: Path) -> Path:
+def default_engine_path(project_root: Path, output_dir: str | Path | None = None) -> Path:
     """Return the canonical engine.yaml path under a project root."""
-    return default_engine_dir(project_root) / "engine.yaml"
+    return default_engine_dir(project_root, output_dir) / "engine.yaml"
 
 
-def ensure_engine_dir(project_root: Path) -> Path:
+def ensure_engine_dir(project_root: Path, output_dir: str | Path | None = None) -> Path:
     """Ensure the skene engine directory exists."""
-    engine_dir = default_engine_dir(project_root)
+    engine_dir = default_engine_dir(project_root, output_dir)
     engine_dir.mkdir(parents=True, exist_ok=True)
     return engine_dir
 

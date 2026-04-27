@@ -12,6 +12,7 @@ from skene.engine import (
     parse_source_to_db_event,
     write_engine_document,
 )
+from skene.engine.storage import default_engine_dir, default_engine_path, ensure_engine_dir
 from skene.growth_loops.push import build_loops_to_supabase
 
 
@@ -237,3 +238,25 @@ class TestEnginePathSafety:
 
         with pytest.raises(ValueError, match="escapes project root"):
             write_engine_document(outside_engine_path, doc, project_root=tmp_path)
+
+
+class TestEngineDirOverride:
+    def test_default_engine_path_respects_explicit_override(self, tmp_path: Path):
+        """When output_dir is provided, engine.yaml is anchored there."""
+        assert default_engine_path(tmp_path, "./custom") == tmp_path / "custom" / "engine.yaml"
+
+    def test_default_engine_path_accepts_absolute_override(self, tmp_path: Path):
+        """Absolute output_dir overrides project_root anchoring."""
+        absolute = tmp_path / "elsewhere"
+        assert default_engine_path(tmp_path, absolute) == absolute / "engine.yaml"
+
+    def test_default_engine_path_prefers_existing_bundle(self, tmp_path: Path):
+        """Without override, the first existing bundle directory wins."""
+        (tmp_path / "skene-context").mkdir()
+        assert default_engine_dir(tmp_path).name in {"skene-context", "skene"}
+
+    def test_ensure_engine_dir_creates_override_directory(self, tmp_path: Path):
+        """ensure_engine_dir creates the override directory if it does not exist."""
+        created = ensure_engine_dir(tmp_path, "./elsewhere")
+        assert created.is_dir()
+        assert created == tmp_path / "elsewhere"

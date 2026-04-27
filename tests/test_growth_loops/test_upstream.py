@@ -61,6 +61,16 @@ class TestCollectPushFiles:
         engine = _file_by_path(files, "skene/engine.yaml")
         assert engine is not None and engine["content"] == "version: 1\nsubjects: []\nfeatures: []\n"
 
+    def test_prefers_explicit_output_dir_over_auto_discover(self, tmp_path: Path):
+        (tmp_path / "skene").mkdir(parents=True)
+        (tmp_path / "skene" / "engine.yaml").write_text("wrong\n")
+        (tmp_path / "custom").mkdir(parents=True)
+        (tmp_path / "custom" / "engine.yaml").write_text("custom engine\n")
+
+        files = collect_push_files(tmp_path, output_dir="./custom")
+        paths = sorted(f["path"] for f in files)
+        assert paths == ["custom/engine.yaml"]
+
     def test_excludes_schema_migration(self, tmp_path: Path):
         (tmp_path / "supabase" / "migrations").mkdir(parents=True)
         (tmp_path / "supabase" / "migrations" / "20260201000000_skene_growth_schema.sql").write_text("CREATE SCHEMA")

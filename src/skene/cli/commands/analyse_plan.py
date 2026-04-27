@@ -17,6 +17,7 @@ from skene.cli._journey_runner import (
 )
 from skene.cli.app import app
 from skene.output import error
+from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
 @app.command(name="analyse-plan")
@@ -30,19 +31,19 @@ def analyse_plan_cmd(
         resolve_path=True,
     ),
     manifest: Path = typer.Option(
-        Path("./skene/growth-manifest.json"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/growth-manifest.json"),
         "-M",
         "--manifest",
         help="Path to growth-manifest.json (run 'analyse-growth-from-schema' first)",
     ),
     schema: Path = typer.Option(
-        Path("./skene/schema.yaml"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/schema.yaml"),
         "-s",
         "--schema",
         help="Path to schema.yaml (run 'analyse-journey' first to generate it)",
     ),
     output: Path = typer.Option(
-        Path("./skene/engine.yaml"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/engine.yaml"),
         "-o",
         "--output",
         help="Path to engine.yaml (read for context only; new-features.yaml is written beside it)",
@@ -125,7 +126,7 @@ def analyse_plan_cmd(
 
         skene analyse-plan ./my-project -n 3
 
-        skene analyse-plan --manifest ./skene/growth-manifest.json --schema ./skene/schema.yaml
+        skene analyse-plan --manifest ./skene-context/growth-manifest.json --schema ./skene-context/schema.yaml
     """
     base_path = resolve_base_path(path)
 

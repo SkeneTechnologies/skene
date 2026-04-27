@@ -10,6 +10,7 @@ from skene.cli.analysis_helpers import run_generate_plan
 from skene.cli.app import app, resolve_cli_config
 from skene.cli.sample_report import show_sample_report
 from skene.output import console, error, success, warning
+from skene.output_paths import DEFAULT_OUTPUT_DIR
 from skene.planner import find_plan_steps_path
 
 
@@ -32,7 +33,7 @@ def plan(
         help="Directory containing growth-manifest.json and growth-template.json (auto-detected if not specified)",
     ),
     output: Path = typer.Option(
-        "./skene/growth-plan.md",
+        f"{DEFAULT_OUTPUT_DIR}/growth-plan.md",
         "-o",
         "--output",
         help="Output path for growth plan (markdown)",
@@ -92,7 +93,7 @@ def plan(
     Generate a growth plan using Council of Growth Engineers.
 
     Uses manifest and template when present (auto-detected from
-    ./skene/, legacy ./skene-context/, or current dir) to generate a growth plan.
+    ./skene-context/, legacy ./skene/, or current dir) to generate a growth plan.
     None of these context files are required.
 
     Examples:
@@ -105,7 +106,7 @@ def plan(
         uvx skene plan --context ./my-context --api-key "your-key"
 
         # Override context file paths
-        uvx skene plan --manifest ./skene/growth-manifest.json --template ./skene/growth-template.json
+        uvx skene plan --manifest ./skene-context/growth-manifest.json --template ./skene-context/growth-template.json
 
         # Generate activation-focused plan
         uvx skene plan --activation --api-key "your-key"

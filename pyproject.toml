@@ -1,6 +1,6 @@
 [project]
 name = "skene"
-version = "0.4.0rc1"
+version = "0.4.0rc2"
 description = "PLG analysis toolkit for codebases - analyze code, detect growth opportunities, generate documentation"
 readme = "README.md"
 license = { text = "MIT" }

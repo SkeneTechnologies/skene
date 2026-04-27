@@ -16,19 +16,16 @@ from skene.engine.storage import (
 )
 from skene.llm.base import LLMClient
 from skene.output import warning
+from skene.output_paths import BUNDLE_DIR_NAMES
 from skene.progress import run_with_progress
 
 SCHEMA_NOT_FOUND_WARNING = "schema not found. Schema definition would significantly improve the engine building."
-_SCHEMA_CANDIDATE_PATHS = (
-    ("skene", "schema.yaml"),
-    ("skene", "schema.md"),
-    ("skene-context", "schema.yaml"),
-    ("skene-context", "schema.md"),
-)
+_SCHEMA_FILENAMES = ("schema.yaml", "schema.md")
+_SCHEMA_CANDIDATE_PATHS = tuple((bundle, filename) for bundle in BUNDLE_DIR_NAMES for filename in _SCHEMA_FILENAMES)
 
 
 def _resolve_schema_path(project_root: Path) -> Path | None:
-    """Resolve schema file from skene/ or skene-context/ folders."""
+    """Resolve schema file from the default (skene-context/) or legacy (skene/) bundle."""
     for parts in _SCHEMA_CANDIDATE_PATHS:
         candidate = project_root.joinpath(*parts)
         if candidate.exists() and candidate.is_file():
@@ -37,7 +34,7 @@ def _resolve_schema_path(project_root: Path) -> Path | None:
 
 
 async def _resolve_schema_path_async(project_root: Path) -> Path | None:
-    """Resolve schema file from skene/ or skene-context/ folders asynchronously."""
+    """Resolve schema file from the default or legacy bundle asynchronously."""
     for parts in _SCHEMA_CANDIDATE_PATHS:
         candidate = project_root.joinpath(*parts)
         candidate_str = str(candidate)

@@ -1,6 +1,6 @@
 """Shared constants and helpers for Skene's output bundle directory.
 
-The primary bundle directory is ``./skene/``; ``./skene-context/`` is the
+The primary bundle directory is ``./skene-context/``; ``./skene/`` is the
 legacy default and is still recognised when auto-discovering inputs so that
 existing projects continue to work.
 """
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-DEFAULT_OUTPUT_DIR = "./skene"
-LEGACY_OUTPUT_DIR_NAME = "skene-context"
-DEFAULT_OUTPUT_DIR_NAME = "skene"
+DEFAULT_OUTPUT_DIR = "./skene-context"
+LEGACY_OUTPUT_DIR_NAME = "skene"
+DEFAULT_OUTPUT_DIR_NAME = "skene-context"
 
 BUNDLE_DIR_NAMES: tuple[str, ...] = (DEFAULT_OUTPUT_DIR_NAME, LEGACY_OUTPUT_DIR_NAME)
 

@@ -111,7 +111,8 @@ def analyze(
 
     With --features flag:
     - Only runs growth features analysis
-    - Updates {output_dir}/feature-registry.json (default ./skene/feature-registry.json) with growth-loops mapping
+    - Updates {output_dir}/feature-registry.json (default ./skene-context/feature-registry.json)
+      with growth-loops mapping
 
     Examples:
 

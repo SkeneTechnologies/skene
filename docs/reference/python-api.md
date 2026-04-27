@@ -121,7 +121,7 @@ config = load_config()
 config.api_key       # str | None
 config.provider      # str (default: "openai")
 config.model         # str (auto-determined if not set)
-config.output_dir    # str (default: "./skene"; legacy "./skene-context" auto-detected)
+config.output_dir    # str (default: "./skene-context"; legacy "./skene" auto-detected)
 config.debug         # bool (default: False)
 config.exclude_folders  # list[str] (default: [])
 config.base_url      # str | None
@@ -225,8 +225,8 @@ from skene.feature_registry import (
 
 ```python
 from skene.engine import (
-    load_engine_document,               # Load skene/engine.yaml
-    write_engine_document,              # Write skene/engine.yaml
+    load_engine_document,               # Load engine.yaml from the bundle dir
+    write_engine_document,              # Write engine.yaml to the bundle dir
     merge_engine_documents,             # Merge delta by key
     parse_source_to_db_event,           # Parse schema.table.operation source
     engine_features_to_loop_definitions # Adapter for migration builder

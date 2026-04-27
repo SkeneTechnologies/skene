@@ -1,7 +1,7 @@
 """
 Upstream push logic for skene push.
 
-Builds a single package (engine.yaml, feature-registry.json, trigger.sql) and POSTs to upstream API.
+Collects bundle files as ``[{"path", "content"}]`` and POSTs to the upstream API.
 """
 
 import hashlib
@@ -15,7 +15,7 @@ import httpx
 
 from skene.growth_loops.push import find_trigger_migration
 from skene.output import debug
-from skene.output_paths import resolve_bundle_dir
+from skene.output_paths import DEFAULT_OUTPUT_DIR, resolve_bundle_dir
 
 
 SKENE_API_BASE = "https://www.skene.ai/api/v1"
@@ -107,18 +107,28 @@ def _read_file_entry(path: Path, project_root: Path) -> dict[str, str] | None:
         return None
 
 
+def _bundle_dir_for_push(project_root: Path, output_dir: str | None) -> Path | None:
+    """Directory whose files to upload: prefer configured ``output_dir``, else auto-discover."""
+    effective = (output_dir or DEFAULT_OUTPUT_DIR).strip() or DEFAULT_OUTPUT_DIR
+    base = Path(effective).expanduser()
+    explicit = base if base.is_absolute() else (project_root / base)
+    if explicit.is_dir():
+        return explicit
+    return resolve_bundle_dir(project_root)
+
+
 def collect_push_files(
     project_root: Path,
     engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene",
+    output_dir: str | None = None,
 ) -> list[dict[str, str]]:
     """Collect the artifacts to upload as ``[{"path", "content"}]`` entries.
 
-    Uploads the entire Skene bundle directory (``skene/`` or the legacy
-    ``skene-context/``) plus the latest Skene trigger migration under
-    ``supabase/migrations/``. When ``engine_path`` is provided and lives
-    outside the bundle, it is also included.
+    Uploads the entire configured Skene bundle directory (see ``output_dir``),
+    else the first of ``skene/`` / ``skene-context/``, plus the latest Skene
+    trigger migration under ``supabase/migrations/``. When ``engine_path`` is
+    provided and lives outside the bundle, it is also included.
     """
     files: list[dict[str, str]] = []
     seen: set[Path] = set()
@@ -132,13 +142,7 @@ def collect_push_files(
             files.append(entry)
             seen.add(resolved)
 
-    bundle_dir = resolve_bundle_dir(project_root)
-    if bundle_dir is None and output_dir:
-        candidate = Path(output_dir).expanduser()
-        candidate = candidate if candidate.is_absolute() else project_root / candidate
-        if candidate.is_dir():
-            bundle_dir = candidate
-
+    bundle_dir = _bundle_dir_for_push(project_root, output_dir)
     if bundle_dir is not None:
         for path in sorted(bundle_dir.rglob("*")):
             _add(path)
@@ -186,10 +190,10 @@ def push_to_upstream(
     loops_count: int = 1,
     engine_path: Path | None = None,
     *,
-    output_dir: str = "./skene",
+    output_dir: str | None = None,
 ) -> dict[str, Any]:
     """
-    Push a single package (engine.yaml, feature-registry.json, trigger.sql) to upstream API.
+    Push bundle files to upstream API.
 
     Returns dict: on success {"ok": True, **response}; on failure {"ok": False, "error": str}.
     """

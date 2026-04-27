@@ -23,6 +23,7 @@ from skene.cli._journey_runner import (
     resolve_cli_config,
 )
 from skene.cli.app import app
+from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
 @app.command(name="analyse-journey")
@@ -36,7 +37,7 @@ def analyse_journey_cmd(
         resolve_path=True,
     ),
     output: Path = typer.Option(
-        Path("./skene/schema.yaml"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/schema.yaml"),
         "-o",
         "--output",
         help="Output path for schema.yaml",

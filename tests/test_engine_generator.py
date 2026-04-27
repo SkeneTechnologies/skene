@@ -6,8 +6,20 @@ from skene.engine import generator
 
 
 class TestEngineGeneratorSchemaContext:
-    def test_resolve_schema_prefers_skene_yaml(self, tmp_path: Path):
-        """Prefers skene/schema.yaml over skene-context candidates."""
+    def test_resolve_schema_prefers_skene_context_over_legacy(self, tmp_path: Path):
+        """Prefers skene-context/schema.yaml over the legacy skene/ bundle."""
+        skene_dir = tmp_path / "skene"
+        skene_context_dir = tmp_path / "skene-context"
+        skene_dir.mkdir(parents=True)
+        skene_context_dir.mkdir(parents=True)
+        (skene_dir / "schema.yaml").write_text("tables: []", encoding="utf-8")
+        (skene_context_dir / "schema.yaml").write_text("tables: [new]", encoding="utf-8")
+
+        resolved = generator._resolve_schema_path(tmp_path)
+        assert resolved == skene_context_dir / "schema.yaml"
+
+    def test_resolve_schema_prefers_default_yaml_over_legacy_md(self, tmp_path: Path):
+        """Even when only legacy has .yaml and default has .md, prefer the default bundle first."""
         skene_dir = tmp_path / "skene"
         skene_context_dir = tmp_path / "skene-context"
         skene_dir.mkdir(parents=True)
@@ -16,16 +28,16 @@ class TestEngineGeneratorSchemaContext:
         (skene_context_dir / "schema.md").write_text("# schema", encoding="utf-8")
 
         resolved = generator._resolve_schema_path(tmp_path)
-        assert resolved == skene_dir / "schema.yaml"
+        assert resolved == skene_context_dir / "schema.md"
 
-    def test_resolve_schema_uses_skene_context_when_skene_missing(self, tmp_path: Path):
-        """Falls back to skene-context when skene schema is missing."""
-        skene_context_dir = tmp_path / "skene-context"
-        skene_context_dir.mkdir(parents=True)
-        (skene_context_dir / "schema.md").write_text("# schema", encoding="utf-8")
+    def test_resolve_schema_falls_back_to_legacy_skene_when_default_missing(self, tmp_path: Path):
+        """Falls back to the legacy skene/ bundle when skene-context/ has no schema."""
+        skene_dir = tmp_path / "skene"
+        skene_dir.mkdir(parents=True)
+        (skene_dir / "schema.md").write_text("# legacy schema", encoding="utf-8")
 
         resolved = generator._resolve_schema_path(tmp_path)
-        assert resolved == skene_context_dir / "schema.md"
+        assert resolved == skene_dir / "schema.md"
 
     @pytest.mark.asyncio
     async def test_load_schema_context_warns_when_schema_missing(self, tmp_path: Path, monkeypatch):

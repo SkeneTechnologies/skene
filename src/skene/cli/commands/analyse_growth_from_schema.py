@@ -17,6 +17,7 @@ from skene.cli._journey_runner import (
 )
 from skene.cli.app import app
 from skene.output import error
+from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
 @app.command(name="analyse-growth-from-schema")
@@ -30,13 +31,13 @@ def analyse_growth_from_schema_cmd(
         resolve_path=True,
     ),
     schema: Path = typer.Option(
-        Path("./skene/schema.yaml"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/schema.yaml"),
         "-s",
         "--schema",
         help="Path to schema.yaml (run 'analyse-journey' first to generate it)",
     ),
     output: Path = typer.Option(
-        Path("./skene/growth-manifest.json"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/growth-manifest.json"),
         "-o",
         "--output",
         help="Output path for growth-manifest.json",
@@ -118,7 +119,7 @@ def analyse_growth_from_schema_cmd(
 
         skene analyse-growth-from-schema
 
-        skene analyse-growth-from-schema ./my-project -s ./skene/schema.yaml
+        skene analyse-growth-from-schema ./my-project -s ./skene-context/schema.yaml
 
         skene analyse-growth-from-schema --provider anthropic --model claude-sonnet-4.6
     """
