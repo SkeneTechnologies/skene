@@ -95,13 +95,14 @@ def analyse_user_journey_cmd(
     ),
 ):
     """
-    Compile ``user-journey.yaml`` from existing schema and growth manifest,
+    Compile ``user-journey.yaml`` from ``schema.yaml`` + ``growth-manifest.json``,
     optionally augmented by ``engine.yaml`` — without re-running the upstream
-    pipeline stages. If ``engine.yaml`` is absent, compilation uses an empty
-    engine (minimal journey output).
+    pipeline stages.
 
-    Useful for re-generating the journey artifact when the engine or schema
-    has changed but the upstream LLM passes are still fresh.
+    The ``ttv_journey_by_subject`` block is built from the schema and the
+    growth opportunities in the manifest via a single LLM call (no engine
+    required). When ``engine.yaml`` exists with planned features, those are
+    additionally compiled into ``compiled_features``.
 
     Examples:
 

@@ -1,9 +1,10 @@
 """
 User-journey compiler.
 
-Reads ``schema.yaml`` (introspected schema), ``growth-manifest.json`` (current
-features + opportunities), and ``engine.yaml`` (planned features) and produces
-``skene/user-journey.yaml`` — a ``skene_compiled_state_machine`` document.
+Reads ``schema.yaml`` (introspected schema) and ``growth-manifest.json``
+(current features + growth opportunities), optionally augmented by
+``engine.yaml`` (planned features), and produces ``skene/user-journey.yaml``
+— a ``skene_compiled_state_machine`` document.
 
 The output is assembled deterministically where possible:
 - top-level metadata (``format``, ``version``, ``exported_at``)
@@ -11,10 +12,13 @@ The output is assembled deterministically where possible:
 - ``schema_analysis.lifecycle_stages`` (canonical)
 
 The body the LLM owns:
-- ``compiled_features[]`` — one entry per engine feature, enriched with
-  conditions, state_effects, and trigger metadata
-- ``schema_analysis.ttv_journey_by_subject[]`` — ordered milestone/UI nodes,
-  value points, and ordered edges with optional data-change narratives.
+- ``schema_analysis.ttv_journey_by_subject[]`` — built from a single
+  schema + growth-opportunities LLM call that emits a global Time-to-Value
+  DAG (subjects, nodes, edges, valueProxies). The DAG is then validated
+  and grouped per subject for the storage shape consumed by the visualiser.
+- ``compiled_features[]`` — one entry per engine feature (only when an
+  ``engine.yaml`` with features exists), enriched with conditions,
+  state_effects, and trigger metadata.
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -279,8 +284,11 @@ Hard rules:
 """
 
 
-SUBJECT_JOURNEY_PROMPT = """\
-You are compiling the *time-to-value journey* for ONE subject in a product.
+TTV_JOURNEY_PROMPT = """\
+You are a database schema analyst for product-led growth. From the schema and
+growth context below, output ONE Time-to-Value (TTV) journey as a directed
+acyclic graph (DAG) of lifecycle milestones, scoped to one or more subjects
+(entities that "take" the journey).
 
 Project: {project_name}
 Description: {description}
@@ -290,105 +298,97 @@ Database schema (YAML — authoritative; only reference these tables/columns):
 {schema}
 ```
 
-Subject to compile:
+Current growth features already shipping in the product:
 ```json
-{subject}
+{current_features}
 ```
 
-Return ONLY a single JSON object with this exact shape (no prose, no code fences,
-no trailing commas):
+Growth opportunities the product wants to drive value from:
+```json
+{growth_opportunities}
+```
+
+Return ONLY a single JSON object with this exact shape (no prose, no code
+fences, no trailing commas):
 {{
-  "subject_id": "subject_{subject_key}",
-  "subject_label": "<Subject Label>",
-  "subject_table": "{subject_table}",
-  "ordered_nodes": [
+  "lifecycleDataExplanation": "2–8 sentences explaining for the PRIMARY subject which tables, columns and row events (INSERT/UPDATE/DELETE) imply movement between lifecycle phases. Cite real objects from the schema.",
+  "subjects": [
     {{
-      "id": "<snake_case_id>",
-      "kind": "milestone",
-      "label": "Human Readable",
-      "table": "<table only>",
-      "schema": "<schema only>",
-      "category": "signup|activation|engagement|monetization|retention",
-      "subject_id": "subject_{subject_key}",
-      "description": "What this milestone represents.",
-      "event_type": "INSERT|UPDATE|DELETE",
-      "trigger_event": "<schema>.<table>.<INSERT|UPDATE|DELETE>",
-      "state_scope": "<SQL where clause or descriptor>",
-      "lifecycle_stage_id": "stage_signup",
-      "lifecycle": {{"stage_id": "stage_signup", "label": "Signup", "order": 0}}
-    }},
-    {{
-      "id": "<snake_case_id>",
-      "kind": "ui_step",
-      "label": "Visits Some Page",
-      "table": "_ui",
-      "schema": "app",
-      "category": "signup|activation|engagement|monetization|retention",
-      "subject_id": "subject_{subject_key}",
-      "description": "Pre-DB UI step.",
-      "is_ui_only": true,
-      "route": "/some/route",
-      "component": "ComponentName"
+      "id": "user",
+      "table": "users",
+      "schema": "public",
+      "label": "User",
+      "description": "Why this entity is the journey owner."
     }}
   ],
-  "value_nodes": [
+  "nodes": [
     {{
-      "id": "vp__<schema>_<table>",
-      "kind": "value",
-      "label": "Short Value Label",
-      "table": "<schema.table>",
-      "value_type": "creation|consumption|conversion",
-      "description": "Why this represents value.",
-      "subject_id": "subject_{subject_key}",
-      "lifecycle_spot": "activation|engagement|retention",
-      "time_to_value_label": "~12 min",
-      "linked_from_node_id": "<ordered_node id>",
-      "estimated_minutes": 12
+      "id": "signed_up",
+      "label": "Signed Up",
+      "subjectId": "user",
+      "schema": "auth",
+      "table": "users",
+      "eventType": "INSERT",
+      "category": "signup",
+      "description": "Cohort definition: who the subjects ARE in this state.",
+      "stateScope": "created_at >= now() - interval '7 days'"
     }}
   ],
-  "ordered_edges": [
+  "edges": [
     {{
-      "source": "subject_{subject_key}",
-      "target": "<first node id>",
-      "source_label": "<Subject>",
-      "target_label": "<First Node Label>",
-      "label": "First step",
-      "is_required": true
-    }},
-    {{
-      "source": "<node id>",
-      "target": "<node id>",
-      "source_label": "<Source Node Label>",
-      "target_label": "<Target Node Label>",
-      "label": "<edge action label>",
-      "is_required": true,
-      "data_change": {{
-        "summary": "<short summary>",
-        "narrative": "<2-4 sentence narrative referencing real columns>",
-        "columns_changed": [
-          {{"schema": "<schema>", "table": "<table>", "column": "<col>", "from": "NULL", "to": "now()"}}
-        ]
+      "source": "signed_up",
+      "target": "profile_completed",
+      "label": "Completes profile",
+      "isRequired": true,
+      "dataChange": {{
+        "summary": "profiles.completed_at set",
+        "narrative": "1–4 sentences: what rows/columns change so the target state becomes true after the source state.",
+        "columnHints": [
+          {{"schema": "public", "table": "profiles", "column": "completed_at", "from": "NULL", "to": "now()"}}
+        ],
+        "assumptions": ""
       }}
+    }}
+  ],
+  "valueProxies": [
+    {{
+      "table": "public.posts",
+      "label": "First Post",
+      "valueType": "creation",
+      "description": "Why this surface represents realised value.",
+      "linkedFromNodeId": "first_post_created",
+      "lifecycleSpot": "engagement"
     }}
   ]
 }}
 
 Hard rules:
-- ``subject_id`` MUST be exactly "subject_{subject_key}".
-- ``subject_table`` MUST be exactly "{subject_table}".
-- Walk the subject through signup → activation → engagement → (monetization)
-  → retention using ``kind: "milestone"`` for DB events and ``kind: "ui_step"``
-  for pre-DB UI steps.
-- ``value_nodes[].id`` MUST be of the form ``vp__<schema>_<table>`` and link
-  back to a milestone via ``linked_from_node_id``.
-- ``ordered_edges`` MUST chain the nodes in order; the first edge always goes
-  from ``subject_{subject_key}`` to the first ordered node with label
-  ``"First step"`` and ``is_required: true``.
-- Include ``data_change`` blocks ONLY on edges that correspond to a real DB
-  write; omit ``data_change`` entirely on UI-only edges.
-- ``lifecycle_stage_id`` MUST be one of ``stage_signup``, ``stage_activation``,
-  ``stage_engagement``, ``stage_monetization``, ``stage_retention``.
-- Aim for 4-10 ordered_nodes total. Keep the JSON minimal but complete.
+- Output ONE global graph; subject separation is via ``subjectId`` on nodes.
+- Order ``subjects`` with the PRIMARY actor first — usually the end-user or
+  core business entity the product is "about" (infer from FK hubs, naming,
+  whether ``auth.users`` or a profiles/accounts/organizations table is the
+  real journey owner).
+- 4–18 milestone nodes total across ALL subjects. For huge schemas, merge
+  peripheral tables into fewer user-meaningful steps; do not emit one node
+  per internal/auth table.
+- Every ``nodes[].subjectId`` MUST equal one of ``subjects[].id``.
+- Only reference real schema/table/column names from the YAML above.
+- ``category`` MUST be one of: signup, activation, engagement, monetization,
+  retention.
+- ``stateScope`` is REQUIRED on every node — a SQL WHERE-style fragment that
+  defines which rows count as "in this state" (use cohort/time/status
+  predicates like ``created_at``, ``status``, ``trial_ends_at``). Do not use
+  per-session or ``auth.uid()`` filters. If nothing better fits, default to
+  ``created_at >= now() - interval '7 days'``.
+- Edges connect node id → node id only. The graph MUST be acyclic.
+- Every edge MUST include ``dataChange`` with at least ``summary``
+  (≤80 chars) and ``narrative`` (1–4 sentences). ``columnHints`` are 0–8
+  entries; ``assumptions`` is optional.
+- ``valueProxies[].valueType`` MUST be one of: creation, financial,
+  consumption. ``linkedFromNodeId`` MUST reference an existing node id and
+  pick the milestone where value is realised — not "first signup" unless
+  value truly realises there. Use ``valueProxies: []`` if no clear value
+  tables exist.
 - Return ONLY the JSON object — nothing else.
 """
 
@@ -585,22 +585,299 @@ def _subjects_for_prompt(engine: EngineDocument) -> list[dict[str, str]]:
     return [{"key": s.key, "table": s.table, "kind": s.kind} for s in engine.subjects]
 
 
-def _empty_journey_document(engine: EngineDocument) -> dict[str, Any]:
-    """Build a minimal, LLM-free document used when there are no engine
-    features to compile."""
-    return {
-        "format": OUTPUT_FORMAT,
-        "version": OUTPUT_VERSION,
-        "exported_at": _utc_now_iso(),
-        "definitions": build_definitions(engine),
-        "compiled_features": [],
-        "schema_analysis": {
-            "analysis_id": str(uuid.uuid4()),
-            "updated_at": _utc_now_iso(),
-            "lifecycle_stages": [dict(s) for s in LIFECYCLE_STAGES],
-            "ttv_journey_by_subject": [],
-        },
+# ---------------------------------------------------------------------------
+# TTV journey: spec validation + transform to storage shape
+# ---------------------------------------------------------------------------
+
+_VALID_CATEGORIES: set[str] = {"signup", "activation", "engagement", "monetization", "retention"}
+_VALID_VALUE_TYPES: set[str] = {"creation", "financial", "consumption"}
+_DEFAULT_STATE_SCOPE = "created_at >= now() - interval '7 days'"
+
+_LIFECYCLE_BY_KEY: dict[str, dict[str, Any]] = {
+    stage["key"]: {
+        "stage_id": f"stage_{stage['key']}",
+        "label": stage["name"],
+        "order": idx,
     }
+    for idx, stage in enumerate(CANONICAL_STAGES)
+}
+
+
+def _topo_sort(node_ids: list[str], edges: list[dict[str, Any]]) -> list[str]:
+    """Kahn-style topological sort restricted to ``node_ids``.
+
+    Falls back to the input order for any nodes left over (cycle defence).
+    """
+    indeg: dict[str, int] = {nid: 0 for nid in node_ids}
+    out: dict[str, list[str]] = defaultdict(list)
+    seen_pairs: set[tuple[str, str]] = set()
+    for e in edges:
+        s = e.get("source")
+        t = e.get("target")
+        if s in indeg and t in indeg and (s, t) not in seen_pairs:
+            seen_pairs.add((s, t))
+            out[s].append(t)
+            indeg[t] += 1
+
+    q: deque[str] = deque(nid for nid in node_ids if indeg[nid] == 0)
+    order: list[str] = []
+    while q:
+        n = q.popleft()
+        order.append(n)
+        for m in out[n]:
+            indeg[m] -= 1
+            if indeg[m] == 0:
+                q.append(m)
+
+    if len(order) != len(node_ids):
+        seen = set(order)
+        order.extend(nid for nid in node_ids if nid not in seen)
+    return order
+
+
+def _validate_ttv_spec(spec: dict[str, Any]) -> None:
+    """Apply the post-model validation checklist on the LLM output.
+
+    Raises ``ValueError`` if the spec is unusable. Mutates ``spec`` in place
+    to backfill defaults (``stateScope``, ``valueProxies``).
+    """
+    subjects = spec.get("subjects")
+    nodes = spec.get("nodes")
+    edges = spec.get("edges")
+    if not isinstance(subjects, list) or not subjects:
+        raise ValueError("ttv journey: 'subjects' must be a non-empty array")
+    if not isinstance(nodes, list) or not nodes:
+        raise ValueError("ttv journey: 'nodes' must be a non-empty array")
+    if not isinstance(edges, list) or not edges:
+        raise ValueError("ttv journey: 'edges' must be a non-empty array")
+
+    subject_ids: set[str] = set()
+    for s in subjects:
+        if not isinstance(s, dict) or not s.get("id"):
+            raise ValueError("ttv journey: each subject needs an 'id'")
+        subject_ids.add(str(s["id"]))
+
+    node_ids: set[str] = set()
+    for n in nodes:
+        if not isinstance(n, dict) or not n.get("id"):
+            raise ValueError("ttv journey: each node needs an 'id'")
+        nid = str(n["id"])
+        if nid in node_ids:
+            raise ValueError(f"ttv journey: duplicate node id {nid!r}")
+        node_ids.add(nid)
+        if n.get("subjectId") not in subject_ids:
+            raise ValueError(f"ttv journey: node {nid!r} subjectId not in subjects")
+        if n.get("category") not in _VALID_CATEGORIES:
+            n["category"] = "engagement"
+        if not isinstance(n.get("stateScope"), str) or not n["stateScope"].strip():
+            n["stateScope"] = _DEFAULT_STATE_SCOPE
+
+    for e in edges:
+        if not isinstance(e, dict):
+            raise ValueError("ttv journey: edges must be objects")
+        s, t = e.get("source"), e.get("target")
+        if s not in node_ids or t not in node_ids:
+            raise ValueError(f"ttv journey: edge {s!r}->{t!r} references unknown node id")
+        dc = e.get("dataChange")
+        if not isinstance(dc, dict) or not (dc.get("summary") and dc.get("narrative")):
+            raise ValueError(f"ttv journey: edge {s}->{t} is missing dataChange.summary/narrative")
+
+    indeg = {nid: 0 for nid in node_ids}
+    out: dict[str, list[str]] = defaultdict(list)
+    for e in edges:
+        out[e["source"]].append(e["target"])
+        indeg[e["target"]] += 1
+    q = deque([nid for nid, d in indeg.items() if d == 0])
+    visited = 0
+    while q:
+        n = q.popleft()
+        visited += 1
+        for m in out[n]:
+            indeg[m] -= 1
+            if indeg[m] == 0:
+                q.append(m)
+    if visited != len(node_ids):
+        raise ValueError("ttv journey: edge graph contains a cycle (must be a DAG)")
+
+    proxies = spec.get("valueProxies")
+    if proxies is None:
+        spec["valueProxies"] = []
+    elif not isinstance(proxies, list):
+        raise ValueError("ttv journey: 'valueProxies' must be a list")
+    else:
+        for vp in proxies:
+            if not isinstance(vp, dict):
+                raise ValueError("ttv journey: each valueProxy must be an object")
+            if vp.get("valueType") not in _VALID_VALUE_TYPES:
+                raise ValueError(
+                    f"ttv journey: valueProxy valueType {vp.get('valueType')!r} not in {_VALID_VALUE_TYPES}"
+                )
+            if vp.get("linkedFromNodeId") not in node_ids:
+                raise ValueError(
+                    f"ttv journey: valueProxy linkedFromNodeId {vp.get('linkedFromNodeId')!r} not in nodes"
+                )
+
+
+def _ttv_spec_to_subject_journeys(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    """Group the global TTV DAG into per-subject journey objects in the
+    storage shape consumed by ``user-journey.yaml`` and the visualiser.
+    """
+    subjects = spec["subjects"]
+    nodes_by_id = {str(n["id"]): n for n in spec["nodes"]}
+    edges = spec["edges"]
+    proxies = spec.get("valueProxies") or []
+
+    journeys: list[dict[str, Any]] = []
+    for subj in subjects:
+        sid = str(subj["id"])
+        subject_id = f"subject_{sid}"
+        subj_node_ids = [nid for nid, n in nodes_by_id.items() if n.get("subjectId") == sid]
+        if not subj_node_ids:
+            continue
+
+        within = [e for e in edges if e["source"] in subj_node_ids and e["target"] in subj_node_ids]
+        order = _topo_sort(subj_node_ids, within)
+
+        ordered_nodes: list[dict[str, Any]] = []
+        for nid in order:
+            n = nodes_by_id[nid]
+            stage = n.get("category") or "engagement"
+            schema_part = n.get("schema") or "public"
+            table_part = n.get("table") or ""
+            event_type = (n.get("eventType") or "INSERT").upper()
+            trigger_event = (
+                f"{schema_part}.{table_part}.{event_type}".lower() if table_part else None
+            )
+            ordered_nodes.append(
+                {
+                    "id": nid,
+                    "kind": "milestone",
+                    "label": n.get("label") or nid,
+                    "schema": schema_part,
+                    "table": table_part,
+                    "category": stage,
+                    "subject_id": subject_id,
+                    "description": n.get("description") or "",
+                    "event_type": event_type,
+                    "trigger_event": trigger_event,
+                    "state_scope": n.get("stateScope") or _DEFAULT_STATE_SCOPE,
+                    "lifecycle_stage_id": f"stage_{stage}",
+                    "lifecycle": dict(_LIFECYCLE_BY_KEY[stage]),
+                }
+            )
+
+        value_nodes: list[dict[str, Any]] = []
+        for vp in proxies:
+            linked = vp.get("linkedFromNodeId")
+            if linked not in subj_node_ids:
+                continue
+            tbl = str(vp.get("table") or "")
+            if "." in tbl:
+                schema_part, _, table_part = tbl.partition(".")
+            else:
+                schema_part, table_part = "public", tbl
+            vp_id_basis = f"{schema_part}_{table_part}".strip("_") or linked
+            value_nodes.append(
+                {
+                    "id": f"vp__{vp_id_basis}",
+                    "kind": "value",
+                    "label": vp.get("label") or tbl or linked,
+                    "table": tbl,
+                    "value_type": vp.get("valueType") or "creation",
+                    "description": vp.get("description") or "",
+                    "subject_id": subject_id,
+                    "lifecycle_spot": vp.get("lifecycleSpot")
+                    or (nodes_by_id[linked].get("category") if linked in nodes_by_id else "activation"),
+                    "linked_from_node_id": linked,
+                }
+            )
+
+        ordered_edges: list[dict[str, Any]] = []
+        if order:
+            first = order[0]
+            ordered_edges.append(
+                {
+                    "source": subject_id,
+                    "target": first,
+                    "source_label": subj.get("label") or sid,
+                    "target_label": nodes_by_id[first].get("label") or first,
+                    "label": "First step",
+                    "is_required": True,
+                }
+            )
+        for e in within:
+            dc = e.get("dataChange") or {}
+            cols_changed: list[dict[str, Any]] = []
+            for c in dc.get("columnHints") or []:
+                if not isinstance(c, dict):
+                    continue
+                cols_changed.append(
+                    {
+                        "schema": c.get("schema"),
+                        "table": c.get("table"),
+                        "column": c.get("column"),
+                        "from": c.get("from"),
+                        "to": c.get("to"),
+                    }
+                )
+            ordered_edges.append(
+                {
+                    "source": e["source"],
+                    "target": e["target"],
+                    "source_label": nodes_by_id[e["source"]].get("label") or e["source"],
+                    "target_label": nodes_by_id[e["target"]].get("label") or e["target"],
+                    "label": e.get("label") or dc.get("summary") or "",
+                    "is_required": bool(e.get("isRequired", True)),
+                    "data_change": {
+                        "summary": dc.get("summary") or "",
+                        "narrative": dc.get("narrative") or "",
+                        "columns_changed": cols_changed,
+                    },
+                }
+            )
+
+        journeys.append(
+            {
+                "subject_id": subject_id,
+                "subject_label": subj.get("label") or sid,
+                "subject_table": subj.get("table") or "",
+                "ordered_nodes": ordered_nodes,
+                "value_nodes": value_nodes,
+                "ordered_edges": ordered_edges,
+            }
+        )
+
+    return journeys
+
+
+def _growth_for_prompt(manifest: dict[str, Any]) -> tuple[str, str]:
+    """Render compact JSON blocks for current features and growth opportunities."""
+    current = []
+    for f in manifest.get("current_growth_features") or []:
+        if not isinstance(f, dict):
+            continue
+        current.append(
+            {
+                "feature_name": f.get("feature_name"),
+                "detected_intent": f.get("detected_intent"),
+                "growth_potential": f.get("growth_potential") or [],
+            }
+        )
+    opps = []
+    for o in manifest.get("growth_opportunities") or []:
+        if not isinstance(o, dict):
+            continue
+        opps.append(
+            {
+                "feature_name": o.get("feature_name"),
+                "description": o.get("description"),
+                "priority": o.get("priority"),
+            }
+        )
+    return (
+        json.dumps(current, indent=2) if current else "[]",
+        json.dumps(opps, indent=2) if opps else "[]",
+    )
 
 
 _JSON_RETRY_REMINDER = (
@@ -646,6 +923,100 @@ async def _generate_and_parse(
 # ---------------------------------------------------------------------------
 
 
+async def _build_ttv_journey_by_subject(
+    *,
+    llm: LLMClient,
+    schema: dict[str, Any],
+    manifest: dict[str, Any],
+    output_path: Path,
+) -> tuple[list[dict[str, Any]], str]:
+    """Run the single TTV-spec LLM call and convert its output to the
+    per-subject storage shape.
+
+    Returns ``(journeys, lifecycle_explanation)``. Raises ``ValueError`` if
+    the LLM cannot produce a valid spec; the raw response is dumped next to
+    the output for debugging.
+    """
+    schema_block = _schema_for_prompt(schema)
+    current_block, opps_block = _growth_for_prompt(manifest)
+    project_name = manifest.get("project_name") or "unknown"
+    description = manifest.get("description") or "(no description)"
+
+    prompt = TTV_JOURNEY_PROMPT.format(
+        project_name=project_name,
+        description=description,
+        schema=schema_block,
+        current_features=current_block,
+        growth_opportunities=opps_block,
+    )
+
+    parsed, raw = await _generate_and_parse(llm, prompt)
+    if parsed is None:
+        _dump_raw_response(output_path, raw or "", suffix="ttv.raw.txt")
+        raise ValueError("ttv journey: LLM did not return a parsable JSON object")
+
+    try:
+        _validate_ttv_spec(parsed)
+    except ValueError:
+        _dump_raw_response(output_path, raw or "", suffix="ttv.raw.txt")
+        raise
+
+    journeys = _ttv_spec_to_subject_journeys(parsed)
+    explanation = parsed.get("lifecycleDataExplanation")
+    return journeys, explanation if isinstance(explanation, str) else ""
+
+
+async def _compile_engine_features(
+    *,
+    llm: LLMClient,
+    engine: EngineDocument,
+    schema: dict[str, Any],
+    manifest: dict[str, Any],
+    output_path: Path,
+) -> list[dict[str, Any]]:
+    """Compile every engine feature into a runtime entry. Returns the
+    enriched ``compiled_features`` list (possibly empty).
+    """
+    if not engine.features:
+        return []
+
+    schema_block = _schema_for_prompt(schema)
+    subjects_block = json.dumps(_subjects_for_prompt(engine), indent=2)
+    project_name = manifest.get("project_name") or "unknown"
+    description = manifest.get("description") or "(no description)"
+
+    raw_features: list[dict[str, Any]] = []
+    failed: list[str] = []
+    total = len(engine.features)
+    status(f"Compiling {total} engine feature(s) into compiled_features[]")
+
+    for idx, feat in enumerate(engine.features, start=1):
+        prompt = FEATURE_PROMPT.format(
+            project_name=project_name,
+            description=description,
+            schema=schema_block,
+            subjects=subjects_block,
+            feature=json.dumps(_feature_for_prompt(feat), indent=2),
+            feature_key=feat.key,
+            feature_name=feat.name,
+        )
+        status(f"  [{idx}/{total}] feature {feat.key}")
+        parsed, raw = await _generate_and_parse(llm, prompt)
+        if parsed is None:
+            _dump_raw_response(output_path, raw or "", suffix=f"feature.{feat.key}.raw.txt")
+            failed.append(feat.key)
+            continue
+        parsed.setdefault("loop_key", feat.key)
+        raw_features.append(parsed)
+
+    if failed:
+        warning(
+            f"user-journey: dropped {len(failed)} feature(s) that failed to parse: "
+            f"{', '.join(failed)}"
+        )
+    return _enrich_compiled_features(raw_features, engine)
+
+
 async def compile_user_journey(
     *,
     schema_path: Path,
@@ -656,101 +1027,52 @@ async def compile_user_journey(
     project_root: Path | None = None,
 ) -> JourneyState:
     """
-    Compile ``user-journey.yaml`` from schema + manifest + engine artifacts.
+    Compile ``user-journey.yaml`` from schema + growth manifest, optionally
+    enriched by engine.yaml.
 
-    On LLM failure or invalid response, the previous user-journey.yaml is
-    preserved (the function raises so the caller can record a failed outcome).
+    The ``ttv_journey_by_subject`` block is built from the schema and the
+    growth manifest's growth opportunities via a single LLM call (per the
+    TTV spec). The ``compiled_features`` block is built from ``engine.yaml``
+    when it has features; otherwise it is empty.
+
+    On LLM failure or invalid response, the previous ``user-journey.yaml``
+    is preserved (the function raises so the caller can record the failure).
     """
     state = JourneyState()
     state.schema = _load_yaml(schema_path)
     state.manifest = _load_json(manifest_path)
     state.engine = load_engine_document(engine_path, project_root=project_root)
-
     state.definitions = build_definitions(state.engine)
 
-    if not state.engine.features:
-        state.document = _empty_journey_document(state.engine)
-        _write_document(output_path, state.document, project_root=project_root)
-        return state
+    status(
+        "Compiling user-journey.yaml: TTV journey from schema + growth opportunities"
+        + (f" (+ {len(state.engine.features)} engine feature(s))" if state.engine.features else "")
+    )
 
-    schema_block = _schema_for_prompt(state.schema)
-    subjects_block = json.dumps(_subjects_for_prompt(state.engine), indent=2)
-    project_name = state.manifest.get("project_name") or "unknown"
-    description = state.manifest.get("description") or "(no description)"
+    journeys, lifecycle_explanation = await _build_ttv_journey_by_subject(
+        llm=llm,
+        schema=state.schema,
+        manifest=state.manifest,
+        output_path=output_path,
+    )
 
-    raw_features: list[dict[str, Any]] = []
-    failed_features: list[str] = []
-    total_features = len(state.engine.features)
-    status(f"Compiling user-journey.yaml: {total_features} feature(s) + {len(state.engine.subjects)} subject(s)")
+    state.compiled_features = await _compile_engine_features(
+        llm=llm,
+        engine=state.engine,
+        schema=state.schema,
+        manifest=state.manifest,
+        output_path=output_path,
+    )
 
-    for idx, feat in enumerate(state.engine.features, start=1):
-        prompt = FEATURE_PROMPT.format(
-            project_name=project_name,
-            description=description,
-            schema=schema_block,
-            subjects=subjects_block,
-            feature=json.dumps(_feature_for_prompt(feat), indent=2),
-            feature_key=feat.key,
-            feature_name=feat.name,
-        )
-        status(f"  [{idx}/{total_features}] feature {feat.key}")
-        parsed, raw = await _generate_and_parse(llm, prompt)
-        if parsed is None:
-            _dump_raw_response(output_path, raw or "", suffix=f"feature.{feat.key}.raw.txt")
-            failed_features.append(feat.key)
-            continue
-        parsed.setdefault("loop_key", feat.key)
-        raw_features.append(parsed)
-
-    if not raw_features:
-        raise ValueError(
-            f"Compiled-features step produced no parsable feature objects "
-            f"(failed: {', '.join(failed_features) or 'none'})."
-        )
-    if failed_features:
-        warning(
-            f"user-journey: dropped {len(failed_features)} feature(s) that failed to parse: "
-            f"{', '.join(failed_features)}"
-        )
-
-    raw_subjects: list[dict[str, Any]] = []
-    failed_subjects: list[str] = []
-    total_subjects = len(state.engine.subjects)
-    for idx, subj in enumerate(state.engine.subjects, start=1):
-        prompt = SUBJECT_JOURNEY_PROMPT.format(
-            project_name=project_name,
-            description=description,
-            schema=schema_block,
-            subject=json.dumps({"key": subj.key, "table": subj.table, "kind": subj.kind}, indent=2),
-            subject_key=subj.key,
-            subject_table=subj.table,
-        )
-        status(f"  [{idx}/{total_subjects}] subject {subj.key}")
-        parsed, raw = await _generate_and_parse(llm, prompt)
-        if parsed is None:
-            _dump_raw_response(output_path, raw or "", suffix=f"subject.{subj.key}.raw.txt")
-            failed_subjects.append(subj.key)
-            continue
-        parsed.setdefault("subject_id", f"subject_{subj.key}")
-        parsed.setdefault("subject_table", subj.table)
-        parsed.setdefault("ordered_nodes", [])
-        parsed.setdefault("value_nodes", [])
-        parsed.setdefault("ordered_edges", [])
-        raw_subjects.append(parsed)
-
-    if failed_subjects:
-        warning(
-            f"user-journey: dropped {len(failed_subjects)} subject(s) that failed to parse: "
-            f"{', '.join(failed_subjects)}"
-        )
-
-    state.compiled_features = _enrich_compiled_features(raw_features, state.engine)
-    state.schema_analysis = {
+    schema_analysis: dict[str, Any] = {
         "analysis_id": str(uuid.uuid4()),
         "updated_at": _utc_now_iso(),
         "lifecycle_stages": [dict(s) for s in LIFECYCLE_STAGES],
-        "ttv_journey_by_subject": raw_subjects,
+        "ttv_journey_by_subject": journeys,
     }
+    if lifecycle_explanation:
+        schema_analysis["lifecycle_data_explanation"] = lifecycle_explanation
+    state.schema_analysis = schema_analysis
 
     state.document = {
         "format": OUTPUT_FORMAT,
