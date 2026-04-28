@@ -418,9 +418,6 @@ async def plan_engine_from_manifest(
     )
 
     new_feature_keys = [f.key for f in state.delta.features]
-    status(
-        f"Wrote new-features.yaml with {len(new_feature_keys)} feature(s) "
-        f"({', '.join(new_feature_keys) or 'none'})"
-    )
+    status(f"Wrote new-features.yaml with {len(new_feature_keys)} feature(s) ({', '.join(new_feature_keys) or 'none'})")
 
     return state

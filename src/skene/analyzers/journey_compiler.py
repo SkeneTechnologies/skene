@@ -631,10 +631,7 @@ async def _generate_and_parse(
         if parsed is not None:
             return parsed, last_response
 
-        warning(
-            f"user-journey: could not parse JSON on attempt {attempt} "
-            f"(response length={len(last_response)})"
-        )
+        warning(f"user-journey: could not parse JSON on attempt {attempt} (response length={len(last_response)})")
         current_prompt = prompt + _RETRY_REMINDER
 
     return None, last_response
@@ -708,7 +705,10 @@ async def compile_user_journey(
             f"(failed: {', '.join(failed_features) or 'none'})."
         )
     if failed_features:
-        warning(f"user-journey: dropped {len(failed_features)} feature(s) that failed to parse: {', '.join(failed_features)}")
+        warning(
+            f"user-journey: dropped {len(failed_features)} feature(s) that failed to parse: "
+            f"{', '.join(failed_features)}"
+        )
 
     raw_subjects: list[dict[str, Any]] = []
     failed_subjects: list[str] = []
@@ -736,7 +736,10 @@ async def compile_user_journey(
         raw_subjects.append(parsed)
 
     if failed_subjects:
-        warning(f"user-journey: dropped {len(failed_subjects)} subject(s) that failed to parse: {', '.join(failed_subjects)}")
+        warning(
+            f"user-journey: dropped {len(failed_subjects)} subject(s) that failed to parse: "
+            f"{', '.join(failed_subjects)}"
+        )
 
     state.compiled_features = _enrich_compiled_features(raw_features, state.engine)
     state.schema_analysis = {

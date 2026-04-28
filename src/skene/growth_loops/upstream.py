@@ -17,7 +17,6 @@ from skene.growth_loops.push import find_trigger_migration
 from skene.output import debug
 from skene.output_paths import DEFAULT_OUTPUT_DIR, resolve_bundle_dir
 
-
 SKENE_API_BASE = "https://www.skene.ai/api/v1"
 _DEFAULT_SKENE_HOSTS = {"skene.ai", "www.skene.ai"}
 
@@ -217,9 +216,7 @@ def push_to_upstream(
             headers=_auth_headers(token),
             timeout=60,
         )
-        debug(
-            f"Push API response: status={resp.status_code} url={url!r} body={resp.text!r}"
-        )
+        debug(f"Push API response: status={resp.status_code} url={url!r} body={resp.text!r}")
         if resp.status_code == 201:
             return {"ok": True, **resp.json()}
         # Upstream may return 200 when the package is identical to what is already

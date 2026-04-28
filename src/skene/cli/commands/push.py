@@ -103,10 +103,7 @@ def push(
             push_id = result.get("push_id", "?")
             updated_paths = result.get("updated_paths") or []
             artifact_count = result.get("artifact_count", len(updated_paths))
-            success(
-                f"Pushed {artifact_count} artifact(s); "
-                f"{len(updated_paths)} updated upstream (push_id={push_id})"
-            )
+            success(f"Pushed {artifact_count} artifact(s); {len(updated_paths)} updated upstream (push_id={push_id})")
             for p in updated_paths:
                 success(f"  • {p}")
         return
