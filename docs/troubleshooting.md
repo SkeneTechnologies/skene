@@ -107,6 +107,14 @@ export SKENE_BASE_URL="http://localhost:8000/v1"
 
 ## File not found errors
 
+### Wrong bundle when running from another directory (`push`, `analyze`, journey)
+
+If `output_dir` is not set in config, Skene picks `./skene-context` vs `./skene` by looking for those folders **under the project path you pass to the command** (for example `skene push ./my-repo`), not necessarily your shell’s current directory.
+
+If artifacts are still not found, set `output_dir` in `.skene.config` or `SKENE_OUTPUT_DIR`, or pass explicit paths (for example `skene analyse-user-journey --schema ./skene/engine.yaml` on legacy-only trees).
+
+See [configuration — sticky output directory](guides/configuration.md#sticky-output-directory).
+
 ### Manifest not found (plan/build commands)
 
 The `plan` and `build` commands look for files in `./skene-context/` by default (legacy `./skene/` is still auto-detected). Make sure you've run `analyze` first:

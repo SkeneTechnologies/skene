@@ -62,10 +62,18 @@ Displays all current configuration values and their sources.
 | `provider` | string | `"openai"` | LLM provider name |
 | `model` | string | Per provider | LLM model name |
 | `base_url` | string | — | Base URL for OpenAI-compatible endpoints |
-| `output_dir` | string | `"./skene-context"` | Default output directory. The legacy default `"./skene"` is still auto-detected for existing projects. |
+| `output_dir` | string | `"./skene-context"` | Default output directory. See [Sticky output directory](#sticky-output-directory) below. |
 | `debug` | boolean | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `exclude_folders` | list | `[]` | Folder names to exclude from analysis |
 | `upstream` | string | — | Upstream workspace URL for `push` command |
+
+### Sticky output directory
+
+If `output_dir` is **not** set in config and **`SKENE_OUTPUT_DIR`** is unset, Skene infers a default of `./skene-context` vs `./skene` by looking for bundle directories **`skene-context/`** (preferred) and **`skene/`** (legacy) under a **project root**.
+
+- **Which root:** Commands that take a project path (for example `skene push ./my-repo`, `skene analyze ./my-repo`, or journey commands with a `PATH` argument) resolve this layout against **that directory**, not necessarily your shell’s current working directory. That way a different cwd cannot pick the wrong bundle.
+- **Precedence:** If both `skene-context/` and `skene/` exist under that root, **`skene-context` wins**. If only `skene/` exists, sticky defaults to `./skene`.
+- **Override:** Set `output_dir` in `.skene.config` or `SKENE_OUTPUT_DIR` to skip sticky detection entirely.
 
 ### Default models by provider
 
@@ -112,6 +120,7 @@ exclude_folders = ["tests", "vendor"]
 | `SKENE_API_KEY` | API key for LLM provider | `sk-...` |
 | `SKENE_PROVIDER` | Provider name | `gemini` |
 | `SKENE_BASE_URL` | Base URL for generic provider | `http://localhost:8000/v1` |
+| `SKENE_OUTPUT_DIR` | Overrides config `output_dir` (sticky detection skipped when set) | `./skene-context` |
 | `SKENE_DEBUG` | Enable debug mode | `true` |
 | `SKENE_UPSTREAM_API_KEY` | API key for upstream authentication | `sk-upstream-...` |
 | `LMSTUDIO_BASE_URL` | LM Studio server URL | `http://localhost:1234/v1` |
