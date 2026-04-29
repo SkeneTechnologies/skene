@@ -7,7 +7,7 @@ import typer
 from skene.cli.app import app, resolve_cli_config
 from skene.config import resolve_upstream_token
 from skene.engine import collect_engine_trigger_events, default_engine_path, load_engine_document
-from skene.growth_loops.push import find_trigger_migration, push_to_upstream
+from skene.growth_loops.push import push_to_upstream
 from skene.output import error, success, warning
 from skene.output_paths import DEFAULT_OUTPUT_DIR
 
@@ -60,30 +60,19 @@ def push(
 
     out_dir = rc.config.output_dir or DEFAULT_OUTPUT_DIR
     engine_path = default_engine_path(project_root, out_dir)
-    if not engine_path.exists():
-        error(f"Engine file not found: {engine_path}\nRun `skene build` first.")
-        raise typer.Exit(1)
-
-    migrations_dir = project_root / "supabase" / "migrations"
-    trigger_path = find_trigger_migration(migrations_dir)
-    if trigger_path is None:
-        error(
-            "No trigger migration found in supabase/migrations.\n"
-            "Run `skene build` first so migration artifacts are generated."
-        )
-        raise typer.Exit(1)
 
     trigger_events: list[str] = []
     features_count = 0
-    try:
-        engine_doc = load_engine_document(engine_path, project_root=project_root)
-        trigger_events = collect_engine_trigger_events(engine_doc)
-        features_count = len(engine_doc.features)
-    except Exception as exc:
-        warning(
-            f"Could not extract manifest metadata from the engine ({exc}). "
-            "Continuing with empty trigger_events and zero features_count."
-        )
+    if engine_path.exists():
+        try:
+            engine_doc = load_engine_document(engine_path, project_root=project_root)
+            trigger_events = collect_engine_trigger_events(engine_doc)
+            features_count = len(engine_doc.features)
+        except Exception as exc:
+            warning(
+                f"Could not extract manifest metadata from the engine ({exc}). "
+                "Continuing with empty trigger_events and zero features_count."
+            )
 
     try:
         result = push_to_upstream(
