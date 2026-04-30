@@ -101,11 +101,11 @@ var NextStepActions = []NextStepDef{
 		RequiresFileInContext: true,
 	},
 	{
-		ID:           "push",
-		Name:         "Deploy to Skene Cloud",
-		Description:  "Push engine.yaml and trigger migration to your Skene workspace",
-		Command:      "uvx skene push .",
-		RequiresFile: EngineFile,
+		ID:          "push",
+		Name:        "Deploy to Skene Cloud",
+		Description: "Push the analysis bundle to your Skene workspace",
+		Command:     "uvx skene push .",
+		RequiresDir: true,
 	},
 	{
 		ID:                    "validate",
