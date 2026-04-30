@@ -34,7 +34,8 @@ const (
 	FileDescTemplate     = "Actionable growth strategies for your stack."
 	FileDescPlan         = "Prioritized roadmap with implementation order."
 	FileDescSchema       = "Live schema introspected from your codebase."
-	FileDescEngine       = "User journey map and growth engine config."
+	FileDescEngine       = "Growth engine config: subjects, features, and triggers."
+	FileDescUserJourney  = "Compiled user journey: lifecycle stages, milestones, and value points."
 	FileDescNewFeatures  = "Feature backlog generated from the latest run."
 	FileDescCompiledYAML = "Edge function state machine for Supabase backend."
 )
@@ -44,11 +45,11 @@ const (
 	FileDetailUpdatedFormat = "Last updated: %s"
 )
 
-// Engine visualizer
+// User journey visualizer
 const (
-	VisualizerStarting = "Starting engine visualizer..."
-	VisualizerURL      = "Engine visualizer running at %s"
-	VisualizerStopping = "Stopping engine visualizer..."
+	VisualizerStarting = "Starting user journey visualizer..."
+	VisualizerURL      = "User journey visualizer running at %s"
+	VisualizerStopping = "Stopping user journey visualizer..."
 )
 
 // Next steps view
@@ -61,12 +62,13 @@ const (
 
 // Next step action definitions
 type NextStepDef struct {
-	ID           string
-	Name         string
-	Description  string
-	Command      string
-	RequiresFile string // Relative path inside outputDir; empty = always available.
-	RequiresDir  bool   // When true, RequiresFile is ignored and the outputDir itself must exist.
+	ID                    string
+	Name                  string
+	Description           string
+	Command               string
+	RequiresFile          string // Relative path; empty = always available.
+	RequiresFileInContext bool   // When true, RequiresFile is resolved under the context dir; else under the skene/ bundle.
+	RequiresDir           bool   // When true, RequiresFile is ignored and the outputDir itself must exist.
 }
 
 var NextStepActions = []NextStepDef{
@@ -83,32 +85,35 @@ var NextStepActions = []NextStepDef{
 		Command:     "uvx skene analyze .",
 	},
 	{
-		ID:           "plan",
-		Name:         "Generate Growth Plan",
-		Description:  "Create a prioritized growth plan with implementation roadmap",
-		Command:      "uvx skene plan",
-		RequiresFile: GrowthManifestFile,
+		ID:                    "plan",
+		Name:                  "Generate Growth Plan",
+		Description:           "Create a prioritized growth plan with implementation roadmap",
+		Command:               "uvx skene plan",
+		RequiresFile:          GrowthManifestFile,
+		RequiresFileInContext: true,
 	},
 	{
-		ID:           "build",
-		Name:         "Build Implementation Prompt",
-		Description:  "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
-		Command:      "uvx skene build",
-		RequiresFile: GrowthManifestFile,
+		ID:                    "build",
+		Name:                  "Build Implementation Prompt",
+		Description:           "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
+		Command:               "uvx skene build",
+		RequiresFile:          GrowthManifestFile,
+		RequiresFileInContext: true,
 	},
 	{
-		ID:           "push",
-		Name:         "Deploy to Skene Cloud",
-		Description:  "Push engine.yaml and trigger migration to your Skene workspace",
-		Command:      "uvx skene push .",
-		RequiresFile: EngineFile,
+		ID:          "push",
+		Name:        "Deploy to Skene Cloud",
+		Description: "Push the analysis bundle to your Skene workspace",
+		Command:     "uvx skene push .",
+		RequiresDir: true,
 	},
 	{
-		ID:           "validate",
-		Name:         "Validate Manifest",
-		Description:  "Validate the growth manifest against the schema",
-		Command:      "uvx skene validate",
-		RequiresFile: GrowthManifestFile,
+		ID:                    "validate",
+		Name:                  "Validate Manifest",
+		Description:           "Validate the growth manifest against the schema",
+		Command:               "uvx skene validate",
+		RequiresFile:          GrowthManifestFile,
+		RequiresFileInContext: true,
 	},
 	{
 		ID:          "view-files",

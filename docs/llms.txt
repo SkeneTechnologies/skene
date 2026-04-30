@@ -27,8 +27,12 @@ skene status [PATH]
   Flags: -c/--context, --find-alternatives, --api-key, -p/--provider, -m/--model
 
 skene push [PATH]
-  Push existing engine + trigger artifacts upstream (does not build SQL).
-  Flags: -u/--upstream, --push-only, deprecated: -c/--context, -l/--loop, --local, --ingest-url, --proxy-secret, --init
+  Upload Skene bundle files under output_dir + latest trigger migration to Skene Cloud (does not build). POST {manifest, files}.
+  Flags: -u/--upstream, -q/--quiet, --debug
+
+skene analyse-user-journey [PATH]
+  Compile user-journey.yaml from existing schema/manifest/engine. Defaults ./skene-context/*. Legacy ./skene/ requires explicit paths.
+  Flags: -s/--schema, -M/--manifest, -e/--engine, -o/--output, --api-key, -p/--provider, -m/--model, --base-url, -q/--quiet, --debug, --no-fallback
 
 skene login
   Log in to Skene Cloud upstream for push.
@@ -69,7 +73,7 @@ Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_OUTP
 
 ## Output Files
 
-Default output directory: ./skene-context/ (legacy ./skene/ still auto-detected for existing projects)
+Default output directory: ./skene-context/ when unset; sticky ./skene vs ./skene-context is resolved under the CLI project PATH (push, analyze, journey commands), not only cwd. Override with output_dir config or SKENE_OUTPUT_DIR.
 
 growth-manifest.json — Structured analysis: tech_stack, current_growth_features, growth_opportunities, revenue_leakage, industry
 growth-template.json — Custom PLG template with lifecycle stages and metrics
@@ -91,6 +95,6 @@ Config: Config, load_config, save_upstream_to_config, remove_upstream_from_confi
 LLM: LLMClient, create_llm_client
 Schemas: GrowthManifest, DocsManifest, TechStack, GrowthFeature, GrowthOpportunity, IndustryInfo, ProductOverview, Feature
 Feature Registry: load_feature_registry, merge_features_into_registry, merge_registry_and_enrich_manifest, export_registry_to_format
-Engine/Migrations: load_engine_document, write_engine_document, build_loops_to_supabase, push_to_upstream, build_package
+Engine/Migrations: load_engine_document, write_engine_document, build_loops_to_supabase, push_to_upstream, collect_push_files
 Docs: DocsGenerator, PSEOBuilder
 Planning: Planner, decline_plan, load_declined_plans

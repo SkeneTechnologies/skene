@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"skene/internal/constants"
+	"skene/internal/outputdirs"
 	"skene/internal/services/uvresolver"
 )
 
@@ -134,12 +135,13 @@ func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting schema-driven analysis...")
 
-	outputDir := e.resolveOutputDir()
+	bundle := e.bundleOutputDir()
+	ctxDir := e.contextOutputDir()
 	args := []string{
 		constants.GrowthPackageSpec(), "analyse-journey", ".",
-		"-o", filepath.Join(outputDir, constants.SchemaFile),
-		"--growth-output", filepath.Join(outputDir, constants.GrowthManifestFile),
-		"--plan-output", filepath.Join(outputDir, constants.EngineFile),
+		"-o", filepath.Join(bundle, constants.SchemaFile),
+		"--growth-output", filepath.Join(ctxDir, constants.GrowthManifestFile),
+		"--plan-output", filepath.Join(bundle, constants.EngineFile),
 	}
 
 	if err := e.runUVX(ctx, args); err != nil {
@@ -149,7 +151,7 @@ func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseGenerateDocs, 1.0, "Analysis complete")
 
-	result.Manifest = loadFileContent(filepath.Join(outputDir, constants.GrowthManifestFile))
+	result.Manifest = loadFileContent(filepath.Join(ctxDir, constants.GrowthManifestFile))
 
 	return result
 }
@@ -215,7 +217,7 @@ func (e *Engine) Push() *AnalysisResult {
 func (e *Engine) ValidateManifest() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	manifestPath := filepath.Join(e.resolveOutputDir(), constants.GrowthManifestFile)
+	manifestPath := filepath.Join(e.contextOutputDir(), constants.GrowthManifestFile)
 	args := []string{constants.GrowthPackageSpec(), "validate", manifestPath}
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -472,24 +474,23 @@ func (e *Engine) buildEnvVars() []string {
 	return envs
 }
 
+// bundleOutputDir is the canonical <project>/skene directory (schema, engine).
+func (e *Engine) bundleOutputDir() string {
+	return outputdirs.Bundle(e.config.ProjectDir)
+}
+
+// contextOutputDir is the configured / legacy path for non-bundle outputs (manifest, plans, etc.).
+func (e *Engine) contextOutputDir() string {
+	rel := e.config.OutputDir
+	if rel == "" {
+		rel = constants.DefaultOutputDir
+	}
+	return outputdirs.Context(e.config.ProjectDir, rel)
+}
+
+// resolveOutputDir matches the Python CLI context directory for SKENE_OUTPUT_DIR / --context.
 func (e *Engine) resolveOutputDir() string {
-	if e.config.OutputDir != "" {
-		if filepath.IsAbs(e.config.OutputDir) {
-			return e.config.OutputDir
-		}
-		return filepath.Join(e.config.ProjectDir, e.config.OutputDir)
-	}
-	// Prefer the canonical `skene/` bundle; fall back to legacy `skene-context/`
-	// when only that exists so existing projects keep working.
-	primary := filepath.Join(e.config.ProjectDir, constants.OutputDirName)
-	if info, err := os.Stat(primary); err == nil && info.IsDir() {
-		return primary
-	}
-	legacy := filepath.Join(e.config.ProjectDir, constants.LegacyOutputDirName)
-	if info, err := os.Stat(legacy); err == nil && info.IsDir() {
-		return legacy
-	}
-	return primary
+	return e.contextOutputDir()
 }
 
 func (e *Engine) sendUpdate(phase AnalysisPhase, progress float64, message string) {

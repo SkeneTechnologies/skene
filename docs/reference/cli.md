@@ -153,6 +153,42 @@ See the [build guide](../guides/build.md) for detailed usage.
 
 ---
 
+## `analyse-user-journey`
+
+Compile `user-journey.yaml` from existing `schema.yaml`, `growth-manifest.json`, and `engine.yaml` without re-running the full `analyse-journey` pipeline.
+
+```
+skene analyse-user-journey [PATH] [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `PATH` | *(omit for `.`)* | Project root. Used for resolving paths and config (sticky `output_dir`). |
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--schema PATH` | `-s` | `./skene-context/schema.yaml` | Path to `schema.yaml` (same default family as `analyse-journey`). |
+| `--manifest PATH` | `-M` | `./skene-context/growth-manifest.json` | Path to `growth-manifest.json`. |
+| `--engine PATH` | `-e` | `./skene-context/engine.yaml` | Path to `engine.yaml`. |
+| `--output PATH` | `-o` | *(next to engine)* | Output path for `user-journey.yaml`. |
+| `--api-key TEXT` | | `$SKENE_API_KEY` | LLM API key |
+| `--provider TEXT` | `-p` | config | LLM provider |
+| `--model TEXT` | `-m` | config | Model name |
+| `--base-url TEXT` | | `$SKENE_BASE_URL` | OpenAI-compatible base URL (`generic` provider) |
+| `--quiet` | `-q` | `false` | Minimal output |
+| `--debug` | | `false` | Verbose / LLM logging |
+| `--no-fallback` | | `false` | Disable model fallback on rate limits |
+
+### Behavior notes
+
+- Defaults assume the primary bundle directory **`./skene-context/`** (aligned with `analyse-journey`). Projects that only use legacy **`./skene/`** should pass `--schema`, `--manifest`, and `--engine` explicitly.
+
+---
+
 ## `status`
 
 Show implementation status for `skene-context/engine.yaml`.
@@ -255,9 +291,9 @@ See the [configuration guide](../guides/configuration.md) for file format and al
 
 ## `push`
 
-Push pre-generated engine, feature registry, and trigger artifacts to upstream.
+Upload the Skene bundle (all files under `{output_dir}`) and the latest trigger migration to Skene Cloud.
 
-`push` no longer generates migrations. Run `skene build` first to update `skene-context/engine.yaml`, `{output_dir}/feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql`.
+`push` does not generate migrations. Run `skene build` first so `engine.yaml`, optional `feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql` exist.
 
 ```
 skene push [PATH] [OPTIONS]
@@ -267,27 +303,21 @@ skene push [PATH] [OPTIONS]
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `PATH` | `.` | Project root (output directory for `supabase/`) |
+| `PATH` | `.` | Project root. Artifact paths and sticky `output_dir` resolution use this directory (see [configuration](../guides/configuration.md)). |
 
 ### Options
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--upstream TEXT` | `-u` | config | Upstream workspace URL (e.g. `https://skene.ai/workspace/my-app`). Resolved from `.skene.config` or this flag. |
-| `--push-only` | | `false` | Legacy no-op flag. Push is already artifact-only. |
-| `--context PATH` | `-c` | | Deprecated; no longer used. |
-| `--loop TEXT` | `-l` | | Deprecated; loop filtering is removed. |
-| `--local` | | `false` | Deprecated; migration generation moved to `build`. |
-| `--ingest-url TEXT` | | | Deprecated; migration generation moved to `build`. |
-| `--proxy-secret TEXT` | | | Deprecated; migration generation moved to `build`. |
-| `--init` | | `false` | Deprecated; migration generation moved to `build`. |
+| `--upstream TEXT` | `-u` | config / default cloud | Workspace URL (e.g. `https://skene.ai/workspace/my-app`). Also read from `.skene.config`. |
+| `--quiet` | `-q` | `false` | Suppress non-error output. |
+| `--debug` | | `false` | Diagnostic messages and LLM debug logging. |
 
 ### Behavior notes
 
-- Requires existing `skene-context/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
-- When `--upstream` is provided (or resolved from `.skene.config`), pushes package contents (`engine.yaml`, `feature_registry_json`, `trigger_sql`) to the upstream API. Registry content is read from `{output_dir}/feature-registry.json` when the file exists.
-- Use `skene login` to authenticate before pushing to upstream.
-- Deprecated flags now return an error with migration guidance.
+- Requires `{output_dir}/engine.yaml` and a trigger migration under `supabase/migrations/` (newest `*_skene_triggers.sql`, or legacy `*skene_trigger*` / `*skene_telemetry*` names).
+- Sends a JSON payload with `manifest` and `files` (project-relative paths and file contents) to the upstream `/api/v1/push` API.
+- Use `skene login` (or `SKENE_UPSTREAM_API_KEY`) for authentication.
 
 See the [push guide](../guides/push.md) for detailed usage.
 

@@ -65,6 +65,7 @@ const (
 	ImplementationPromptFile = "implementation-prompt.md"
 	SchemaFile               = "schema.yaml"
 	EngineFile               = "engine.yaml"
+	UserJourneyFile          = "user-journey.yaml"
 	NewFeaturesFile          = "new-features.yaml"
 	CompiledStateMachineFile = "compiled/state-machine.yaml"
 )
@@ -75,17 +76,21 @@ type DashboardFile struct {
 	DisplayName string
 	Filename    string
 	Description string
+	// InContext: when true, the file is resolved under the context/legacy output
+	// directory (e.g. skene-context/); when false, under the canonical skene/ bundle.
+	InContext bool
 }
 
 // DashboardFiles defines the output files shown on the results dashboard.
 var DashboardFiles = []DashboardFile{
-	{ID: "manifest", DisplayName: "Growth Manifest", Filename: GrowthManifestFile, Description: FileDescManifest},
-	{ID: "template", DisplayName: "Growth Template", Filename: GrowthTemplateFile, Description: FileDescTemplate},
-	{ID: "new-features", DisplayName: "Planned Features", Filename: NewFeaturesFile, Description: FileDescNewFeatures},
-	{ID: "compiled", DisplayName: "State Machine", Filename: CompiledStateMachineFile, Description: FileDescCompiledYAML},
-	{ID: "engine", DisplayName: "Growth Features", Filename: EngineFile, Description: FileDescEngine},
-	{ID: "schema", DisplayName: "Schema", Filename: SchemaFile, Description: FileDescSchema},
-	{ID: "plan", DisplayName: "Growth Plan", Filename: GrowthPlanFile, Description: FileDescPlan},
+	{ID: "manifest", DisplayName: "Growth Manifest", Filename: GrowthManifestFile, Description: FileDescManifest, InContext: true},
+	{ID: "template", DisplayName: "Growth Template", Filename: GrowthTemplateFile, Description: FileDescTemplate, InContext: true},
+	{ID: "new-features", DisplayName: "Planned Features", Filename: NewFeaturesFile, Description: FileDescNewFeatures, InContext: true},
+	{ID: "compiled", DisplayName: "State Machine", Filename: CompiledStateMachineFile, Description: FileDescCompiledYAML, InContext: false},
+	{ID: "user-journey", DisplayName: "User Journey", Filename: UserJourneyFile, Description: FileDescUserJourney, InContext: false},
+	{ID: "engine", DisplayName: "Growth Features", Filename: EngineFile, Description: FileDescEngine, InContext: false},
+	{ID: "schema", DisplayName: "Schema", Filename: SchemaFile, Description: FileDescSchema, InContext: false},
+	{ID: "plan", DisplayName: "Growth Plan", Filename: GrowthPlanFile, Description: FileDescPlan, InContext: true},
 }
 
 // Skene ecosystem package metadata

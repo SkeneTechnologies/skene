@@ -31,12 +31,13 @@ type NextStepsView struct {
 // NewNextStepsView creates a next steps view without availability checks
 // (all actions enabled). Used by the results dashboard.
 func NewNextStepsView() *NextStepsView {
-	return NewNextStepsViewWithContext("")
+	return NewNextStepsViewWithContext("", "")
 }
 
 // NewNextStepsViewWithContext creates a next steps view that checks file
-// availability relative to outputDir. Pass "" to enable all actions.
-func NewNextStepsViewWithContext(outputDir string) *NextStepsView {
+// availability. bundleDir is the skene/ tree; contextDir is the configured
+// or legacy path. Pass both "" to enable all actions.
+func NewNextStepsViewWithContext(bundleDir, contextDir string) *NextStepsView {
 	var actions []NextStepAction
 	var available []bool
 
@@ -47,7 +48,7 @@ func NewNextStepsViewWithContext(outputDir string) *NextStepsView {
 			Description: def.Description,
 			Command:     def.Command,
 		})
-		available = append(available, isActionAvailable(def, outputDir))
+		available = append(available, isActionAvailable(def, bundleDir, contextDir))
 	}
 
 	v := &NextStepsView{
@@ -59,16 +60,33 @@ func NewNextStepsViewWithContext(outputDir string) *NextStepsView {
 	return v
 }
 
-func isActionAvailable(def constants.NextStepDef, outputDir string) bool {
-	if outputDir == "" {
+func isActionAvailable(def constants.NextStepDef, bundleDir, contextDir string) bool {
+	if bundleDir == "" && contextDir == "" {
 		return true
 	}
 	if def.RequiresDir {
-		info, err := os.Stat(outputDir)
+		check := bundleDir
+		if check == "" {
+			check = contextDir
+		}
+		info, err := os.Stat(check)
 		return err == nil && info.IsDir()
 	}
 	if def.RequiresFile != "" {
-		_, err := os.Stat(filepath.Join(outputDir, def.RequiresFile))
+		base := bundleDir
+		if def.RequiresFileInContext {
+			base = contextDir
+		}
+		_, err := os.Stat(filepath.Join(base, def.RequiresFile))
+		if err == nil {
+			return true
+		}
+		// Fallback: manifest-style files may only exist in the other tree.
+		if def.RequiresFileInContext {
+			_, err = os.Stat(filepath.Join(bundleDir, def.RequiresFile))
+		} else {
+			_, err = os.Stat(filepath.Join(contextDir, def.RequiresFile))
+		}
 		return err == nil
 	}
 	return true

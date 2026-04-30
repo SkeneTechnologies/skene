@@ -42,7 +42,7 @@ type ProjectDirView struct {
 	existingAnalysis      ExistingAnalysisChoice
 	existingButtonGroup   *components.ButtonGroup
 	hasSkeneContext        bool
-	noSchemaDetected       bool // true when the last analyse-journey run didn't produce engine.yaml
+	noSchemaDetected       bool // true when the last analyse-journey run didn't produce user-journey.yaml
 
 	// Next steps modal (shown over the existing analysis prompt)
 	showNextSteps bool
@@ -319,16 +319,16 @@ func existingBundleDir(projectDir string) string {
 }
 
 // buildExistingButtons creates the button group based on which files exist.
-// "View Journey" only appears when engine.yaml is present. When engine.yaml
-// is missing, both "Analyse Journey" and "Analyse Codebase" are offered so
-// the user can fall back to the full analysis if schema detection failed.
+// "View Journey" only appears when user-journey.yaml is present. When it is
+// missing, both "Analyse Journey" and "Analyse Codebase" are offered so the
+// user can fall back to the full analysis if schema detection failed.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
-	bundle := existingBundleDir(projectDir)
-	if bundle == "" {
-		bundle = constants.OutputDirName
+	primary := filepath.Join(projectDir, constants.OutputDirName, constants.UserJourneyFile)
+	if _, err := os.Stat(primary); err == nil {
+		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirRerunAnalysis)
 	}
-	enginePath := filepath.Join(projectDir, bundle, constants.EngineFile)
-	if _, err := os.Stat(enginePath); err == nil {
+	legacy := filepath.Join(projectDir, constants.LegacyOutputDirName, constants.UserJourneyFile)
+	if _, err := os.Stat(legacy); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirRerunAnalysis)
 	}
 	return components.NewButtonGroup(constants.ProjectDirRunAnalysis, constants.ProjectDirRunCodebaseAnalysis)
@@ -376,9 +376,9 @@ func (v *ProjectDirView) DismissExistingChoice() {
 }
 
 // ShowNextSteps opens the next-steps modal overlay.
-func (v *ProjectDirView) ShowNextSteps(outputDir string) {
+func (v *ProjectDirView) ShowNextSteps(bundleDir, contextDir string) {
 	v.showNextSteps = true
-	v.nextStepsView = NewNextStepsViewWithContext(outputDir)
+	v.nextStepsView = NewNextStepsViewWithContext(bundleDir, contextDir)
 	v.nextStepsView.SetSize(v.width, v.height)
 }
 
@@ -403,7 +403,7 @@ func (v *ProjectDirView) HasExistingAnalysis() bool {
 }
 
 // SetNoSchemaDetected marks that the last analyse-journey run did not produce
-// engine.yaml, so the prompt should explain the fallback.
+// user-journey.yaml, so the prompt should explain the fallback.
 func (v *ProjectDirView) SetNoSchemaDetected(detected bool) {
 	v.noSchemaDetected = detected
 }

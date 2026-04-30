@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from skene.cli.app import ResolvedConfig, app, resolve_cli_config
+from skene.cli.bundle_resolution import bundle_resolution_root
 from skene.cli.prompt_builder import (
     build_prompt_from_template,
     build_prompt_with_llm,
@@ -131,6 +132,7 @@ def build(
         Set api_key and provider in .skene.config or ~/.config/skene/config
     """
     rc = resolve_cli_config(
+        project_root=bundle_resolution_root(context_dir=context),
         api_key=api_key,
         provider=provider,
         model=model,

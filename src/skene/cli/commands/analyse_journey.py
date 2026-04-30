@@ -105,7 +105,12 @@ def analyse_journey_cmd(
     skip_plan: bool = typer.Option(
         False,
         "--skip-plan",
-        help="Stop after the growth manifest; do not write engine.yaml",
+        help="Stop after the growth manifest; do not propose new-features.yaml",
+    ),
+    skip_journey: bool = typer.Option(
+        False,
+        "--skip-journey",
+        help="Stop after new-features.yaml; do not compile user-journey.yaml",
     ),
     growth_output: Path | None = typer.Option(
         None,
@@ -115,19 +120,30 @@ def analyse_journey_cmd(
     plan_output: Path | None = typer.Option(
         None,
         "--plan-output",
-        help="Path for engine.yaml (default: next to schema)",
+        help="Path to engine.yaml (read for context only; default: next to schema)",
+    ),
+    new_features_output: Path | None = typer.Option(
+        None,
+        "--new-features-output",
+        help="Path for new-features.yaml (default: same directory as growth manifest)",
+    ),
+    journey_output: Path | None = typer.Option(
+        None,
+        "--journey-output",
+        help="Path for user-journey.yaml (default: next to schema)",
     ),
     plan_count: int = typer.Option(
         DEFAULT_FEATURE_COUNT,
         "--plan-count",
         min=1,
         max=10,
-        help="Number of growth features to promote into engine.yaml",
+        help="Number of growth features to propose in new-features.yaml",
     ),
 ):
     """
     Analyse the data schema of a codebase, then optionally derive a growth
-    manifest and promote growth opportunities into ``engine.yaml``.
+    manifest and propose growth opportunities as a fresh
+    ``new-features.yaml`` (the existing ``engine.yaml`` is never modified).
 
     Repeatedly runs ripgrep for schema-related patterns — classes, models,
     tables, migrations, typed records — and asks the LLM to distil entities
@@ -145,6 +161,7 @@ def analyse_journey_cmd(
     """
     base_path = resolve_base_path(path)
     rc = resolve_cli_config(
+        project_root=base_path,
         api_key=api_key,
         provider=provider,
         model=model,
@@ -165,19 +182,33 @@ def analyse_journey_cmd(
         if plan_output is not None
         else schema_path.parent / "engine.yaml"
     )
+    new_features_path = (
+        resolve_artifact_path(new_features_output, "new-features.yaml")
+        if new_features_output is not None
+        else (growth_path.parent / "new-features.yaml").resolve()
+    )
+    journey_path = (
+        resolve_artifact_path(journey_output, "user-journey.yaml")
+        if journey_output is not None
+        else schema_path.parent / "user-journey.yaml"
+    )
+
+    # Engine plan stage is temporarily skipped in analyse-journey; the
+    # Stage.PLAN machinery is kept intact for other commands and future use.
+    skip_plan = True
 
     stages: list[Stage] = [Stage.SCHEMA]
     if not skip_growth:
         stages.append(Stage.GROWTH)
     if not skip_growth and not skip_plan:
         stages.append(Stage.PLAN)
+    if not skip_growth and not skip_journey:
+        stages.append(Stage.JOURNEY)
 
     render_kickoff_panel(
         title="skene · analyse-journey",
         base_path=base_path,
         rc=rc,
-        paths=PipelinePaths(schema=schema_path, growth=growth_path, engine=engine_path),
-        stages=stages,
         extra_lines=[f"[bold]Iterations[/bold] {iterations}"],
     )
 
@@ -185,7 +216,13 @@ def analyse_journey_cmd(
         base_path=base_path,
         rc=rc,
         api_key=resolved_api_key,
-        paths=PipelinePaths(schema=schema_path, growth=growth_path, engine=engine_path),
+        paths=PipelinePaths(
+            schema=schema_path,
+            growth=growth_path,
+            engine=engine_path,
+            new_features=new_features_path,
+            journey=journey_path,
+        ),
         stages=stages,
         iterations=iterations,
         excludes=exclude if exclude else None,

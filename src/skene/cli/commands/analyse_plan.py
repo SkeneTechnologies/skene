@@ -46,7 +46,17 @@ def analyse_plan_cmd(
         Path(f"{DEFAULT_OUTPUT_DIR}/engine.yaml"),
         "-o",
         "--output",
-        help="Output path for engine.yaml (merged with existing content by key)",
+        help="Path to engine.yaml (read for context only; new-features.yaml is written beside it)",
+    ),
+    journey_output: Path | None = typer.Option(
+        None,
+        "--journey-output",
+        help="Path for user-journey.yaml (default: next to engine.yaml)",
+    ),
+    skip_journey: bool = typer.Option(
+        False,
+        "--skip-journey",
+        help="Stop after engine.yaml; do not compile user-journey.yaml",
     ),
     plan_count: int = typer.Option(
         DEFAULT_FEATURE_COUNT,
@@ -105,10 +115,10 @@ def analyse_plan_cmd(
     ``analyse-growth-from-schema`` plus the introspected ``schema.yaml``, then
     asks the LLM to turn the top ``--plan-count`` (default 3) growth
     opportunities into fully-specified features — ``source``,
-    ``subject_state_analysis`` and an optional ``action`` — and merges them
-    into ``skene/engine.yaml`` by key. The same run writes
-    ``new-features.yaml`` beside the engine file: a JSON array of only the
-    features planned in that invocation.
+    ``subject_state_analysis`` and an optional ``action`` — and writes them
+    to ``new-features.yaml`` beside ``engine.yaml``. The existing
+    ``engine.yaml`` is read for context only and is never modified by this
+    command; ``new-features.yaml`` is rewritten from scratch on every run.
 
     Examples:
 
@@ -134,8 +144,15 @@ def analyse_plan_cmd(
         raise typer.Exit(1)
 
     engine_path = resolve_artifact_path(output, "engine.yaml")
+    new_features_path = (manifest_path.parent / "new-features.yaml").resolve()
+    journey_path = (
+        resolve_artifact_path(journey_output, "user-journey.yaml")
+        if journey_output is not None
+        else (engine_path.parent / "user-journey.yaml").resolve()
+    )
 
     rc = resolve_cli_config(
+        project_root=base_path,
         api_key=api_key,
         provider=provider,
         model=model,
@@ -145,13 +162,21 @@ def analyse_plan_cmd(
     )
     resolved_api_key = require_llm_credentials(rc, "analyse-plan")
 
-    paths = PipelinePaths(schema=schema_path, growth=manifest_path, engine=engine_path)
+    paths = PipelinePaths(
+        schema=schema_path,
+        growth=manifest_path,
+        engine=engine_path,
+        new_features=new_features_path,
+        journey=journey_path,
+    )
+    stages: list[Stage] = [Stage.PLAN]
+    if not skip_journey:
+        stages.append(Stage.JOURNEY)
+
     render_kickoff_panel(
         title="skene · analyse-plan",
         base_path=base_path,
         rc=rc,
-        paths=paths,
-        stages=[Stage.PLAN],
         extra_lines=[f"[bold]Features[/bold]  {plan_count}"],
     )
 
@@ -160,7 +185,7 @@ def analyse_plan_cmd(
         rc=rc,
         api_key=resolved_api_key,
         paths=paths,
-        stages=[Stage.PLAN],
+        stages=stages,
         iterations=0,
         excludes=None,
         plan_feature_count=plan_count,

@@ -188,14 +188,15 @@ def write_new_features_sidecar(
     features: list[EngineFeature],
     *,
     project_root: Path | None = None,
+    output_path: Path | None = None,
 ) -> Path:
     """
-    Write ``new-features.yaml`` beside ``engine_path``.
+    Write ``new-features.yaml`` next to the engine (default) or at output_path.
 
     The file body is a pretty-printed JSON array of feature objects (JSON is
     valid YAML 1.2) listing the latest planned features from a single run.
     """
-    out = engine_path.parent / "new-features.yaml"
+    out = output_path if output_path is not None else (engine_path.parent / "new-features.yaml")
     _assert_within_project_root(out, project_root)
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = [f.model_dump(mode="json") for f in features]

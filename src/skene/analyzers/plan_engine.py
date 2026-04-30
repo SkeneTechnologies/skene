@@ -4,8 +4,13 @@ Engine planner.
 Reads a ``growth-manifest.json`` (produced by ``analyse-growth-from-schema``)
 and a ``schema.yaml`` (produced by ``analyse-journey``), then asks the LLM to
 promote three concrete growth features — grounded in the manifest's
-``growth_opportunities`` and the introspected schema — into the
-``skene/engine.yaml`` engine document.
+``growth_opportunities`` and the introspected schema — into a fresh
+``new-features.yaml`` proposal sidecar.
+
+The existing ``engine.yaml`` is read for prompt context only (so the LLM does
+not duplicate features already shipped) and is never modified by this stage.
+Each run rewrites ``new-features.yaml`` from scratch with that run's planned
+features.
 
 When the schema has no tables (e.g. the journey analyzer could not discover
 any), a schemaless prompt is used instead: subjects use synthetic ``app.<key>``
@@ -18,9 +23,10 @@ Pipeline:
 3. Ask the LLM to emit an engine delta (subjects + features) that implements
    those opportunities — against the real schema, or schemalessly when no
    schema tables are available.
-4. Merge the delta into any existing ``engine.yaml`` by key and persist.
-5. Write ``new-features.yaml`` next to ``engine.yaml`` with a JSON array of
-   the features from this planning run only.
+4. Write ``new-features.yaml`` (default: beside ``engine.yaml``) with a JSON
+   array of the features from this planning run only. Use
+   ``new_features_path`` to place it in another directory (e.g. the legacy
+   skene-context bundle).
 """
 
 from __future__ import annotations
@@ -40,9 +46,7 @@ from skene.analyzers._journey_common import (
 from skene.engine.storage import (
     EngineDocument,
     load_engine_document,
-    merge_engine_documents,
     parse_engine_delta_response,
-    write_engine_document,
     write_new_features_sidecar,
 )
 from skene.llm import LLMClient
@@ -236,7 +240,6 @@ class PlanState:
     selected_opportunities: list[dict[str, Any]] = field(default_factory=list)
     existing_engine: EngineDocument | None = None
     delta: EngineDocument | None = None
-    merged: EngineDocument | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -329,30 +332,27 @@ async def plan_engine_from_manifest(
     schema_path: Path,
     llm: LLMClient,
     engine_path: Path,
+    new_features_path: Path | None = None,
     project_root: Path | None = None,
     feature_count: int = DEFAULT_FEATURE_COUNT,
 ) -> PlanState:
     """
-    Promote top growth opportunities into engine.yaml features via the LLM.
+    Promote top growth opportunities into a fresh ``new-features.yaml`` proposal.
 
-    Writes ``engine_path`` even on partial failure (the existing document is
-    preserved if the LLM call fails). On a successful LLM parse and merge,
-    also writes ``new-features.yaml`` beside ``engine_path`` (JSON array of
-    this run's planned features).
+    The existing ``engine.yaml`` is read for LLM context only and is never
+    modified by this stage. On a successful LLM parse, ``new-features.yaml``
+    is rewritten from scratch (beside ``engine_path`` or at
+    ``new_features_path``) with this run's planned features.
     """
     state = PlanState()
     state.manifest = _load_manifest(manifest_path)
     state.schema = _filter_skene_growth_from_schema(_load_schema(schema_path))
+    state.existing_engine = load_engine_document(engine_path, project_root=project_root)
 
     state.selected_opportunities = _select_opportunities(state.manifest, feature_count)
     if not state.selected_opportunities:
         warning("No growth_opportunities found in manifest — nothing to plan.")
-        state.existing_engine = load_engine_document(engine_path, project_root=project_root)
-        state.merged = state.existing_engine
-        write_engine_document(engine_path, state.merged, project_root=project_root)
         return state
-
-    state.existing_engine = load_engine_document(engine_path, project_root=project_root)
 
     current_features = state.manifest.get("current_growth_features") or []
     if not isinstance(current_features, list):
@@ -398,34 +398,26 @@ async def plan_engine_from_manifest(
         response = await llm.generate_content(prompt)
     except Exception as e:
         warning(f"Engine planning LLM call failed: {e}")
-        state.merged = state.existing_engine
-        write_engine_document(engine_path, state.merged, project_root=project_root)
         return state
 
     try:
         state.delta = parse_engine_delta_response(response or "")
     except Exception as e:
         warning(f"Could not parse engine delta response: {e}")
-        state.merged = state.existing_engine
-        write_engine_document(engine_path, state.merged, project_root=project_root)
         return state
 
     state.delta = _drop_skene_growth_entries(state.delta)
     if schemaless:
         state.delta = _strip_actions(state.delta)
 
-    state.merged = merge_engine_documents(state.existing_engine, state.delta)
-    write_engine_document(engine_path, state.merged, project_root=project_root)
     write_new_features_sidecar(
         engine_path,
         state.delta.features,
         project_root=project_root,
+        output_path=new_features_path,
     )
 
     new_feature_keys = [f.key for f in state.delta.features]
-    status(
-        f"Updated engine.yaml and new-features.yaml with the feature(s) "
-        f"(added/updated: {', '.join(new_feature_keys) or 'none'})"
-    )
+    status(f"Wrote new-features.yaml with {len(new_feature_keys)} feature(s) ({', '.join(new_feature_keys) or 'none'})")
 
     return state

@@ -69,21 +69,21 @@ def status(
     For features with `action`, status verifies the expected trigger/function exists
     under supabase/migrations. Features without `action` are reported as code-only.
     """
+    from skene.output_paths import is_bundle_dir_name
     from skene.validators.engine_validator import print_engine_validation_report, validate_engine
 
+    project_root = path.resolve()
+    if context is not None and context.exists() and is_bundle_dir_name(context.name):
+        project_root = context.resolve().parent
+
     resolve_cli_config(
+        project_root=project_root,
         api_key=api_key,
         provider=provider,
         model=model,
         quiet=quiet,
         debug=debug,
     )
-
-    from skene.output_paths import is_bundle_dir_name
-
-    project_root = path.resolve()
-    if context is not None and context.exists() and is_bundle_dir_name(context.name):
-        project_root = context.resolve().parent
 
     if find_alternatives:
         warning("--find-alternatives is not supported for engine status checks and will be ignored.")

@@ -66,3 +66,15 @@ class TestConfigOutputDirStickyLegacy:
         (tmp_path / "skene-context").mkdir()
         cfg = Config()
         assert cfg.output_dir == "./skene-context"
+
+    def test_sticky_uses_bundle_root_not_cwd(self, tmp_path, monkeypatch):
+        """When CWD and target project differ, set_bundle_resolution_root picks the target layout."""
+        outer = tmp_path / "other_cwd"
+        outer.mkdir()
+        target = tmp_path / "repo"
+        target.mkdir()
+        (target / "skene").mkdir()
+        monkeypatch.chdir(outer)
+        cfg = Config()
+        cfg.set_bundle_resolution_root(target)
+        assert cfg.output_dir == "./skene"

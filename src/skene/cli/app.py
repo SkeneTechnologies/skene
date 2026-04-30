@@ -8,6 +8,7 @@ helper (ResolvedConfig), and registers all command modules.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import click
 import typer
@@ -145,6 +146,7 @@ class ResolvedConfig:
 
 def resolve_cli_config(
     *,
+    project_root: Path | None = None,
     api_key: str | None = None,
     provider: str | None = None,
     model: str | None = None,
@@ -156,8 +158,13 @@ def resolve_cli_config(
 
     Call once at the start of each command.  Raises ``typer.Exit(1)`` if the
     generic provider is selected without ``--base-url``.
+
+    ``project_root`` sets where sticky ``output_dir`` (skene vs skene-context) is
+    resolved; omit to use the process working directory.
     """
     config = load_config()
+    if project_root is not None:
+        config.set_bundle_resolution_root(project_root)
     resolved_debug = apply_verbosity(quiet, debug, config.debug)
     resolved_provider = provider or config.provider
     resolved_base_url = _resolve_base_url(
@@ -267,6 +274,7 @@ from skene.cli.commands import (  # noqa: E402, F401
     analyse_growth_from_schema,
     analyse_journey,
     analyse_plan,
+    analyse_user_journey,
     analyze,
     build,
     config_cmd,

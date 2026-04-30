@@ -9,7 +9,7 @@ A CLI toolkit for analyzing codebases through the lens of Product-Led Growth (PL
 - **Maintains a feature registry** — persistent tracking of growth features across analysis runs with merge-update semantics
 - **Creates growth plans** — a Council of Growth Engineers produces 3-5 high-impact growth loops
 - **Builds implementation artifacts and prompts** — updates `skene-context/engine.yaml`, feature-registry, trigger SQL, and generates implementation prompts
-- **Pushes engine artifacts upstream** — deploys `engine.yaml` + trigger SQL to Skene Cloud
+- **Pushes the Skene bundle upstream** — uploads files from the configured output directory plus the latest trigger migration to Skene Cloud
 - **Validates engine/migration alignment** — checks action-enabled engine features against generated SQL artifacts
 - **Supports multiple LLM providers**: OpenAI, Gemini, Anthropic, LM Studio, Ollama, and any OpenAI-compatible endpoint
 

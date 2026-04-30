@@ -8,6 +8,7 @@ from rich.panel import Panel
 
 from skene.cli.analysis_helpers import run_generate_plan
 from skene.cli.app import app, resolve_cli_config
+from skene.cli.bundle_resolution import bundle_resolution_root
 from skene.cli.sample_report import show_sample_report
 from skene.output import console, error, success, warning
 from skene.output_paths import DEFAULT_OUTPUT_DIR
@@ -115,6 +116,7 @@ def plan(
         uvx skene plan --prompt "Focus on enterprise customers" --api-key "your-key"
     """
     rc = resolve_cli_config(
+        project_root=bundle_resolution_root(context_dir=context),
         api_key=api_key,
         provider=provider,
         model=model,

@@ -39,6 +39,7 @@ class Config:
     def __init__(self):
         self._values: dict[str, Any] = {}
         self._base_url_from_skene_env = False
+        self._bundle_resolution_root: Path | None = None
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a config value."""
@@ -47,6 +48,14 @@ class Config:
     def set(self, key: str, value: Any) -> None:
         """Set a config value."""
         self._values[key] = value
+
+    def set_bundle_resolution_root(self, root: Path | None) -> None:
+        """Root directory for sticky ``output_dir`` (skene vs skene-context).
+
+        CLI commands that target a project path should set this to that project's
+        root so detection does not use :func:`pathlib.Path.cwd` alone.
+        """
+        self._bundle_resolution_root = Path(root).resolve() if root is not None else None
 
     def update(self, values: dict[str, Any]) -> None:
         """Update config with new values (existing values take precedence)."""
@@ -71,10 +80,10 @@ class Config:
         """Get default output directory.
 
         Precedence:
-          1. Explicit ``output_dir`` from loaded config.
-          2. Sticky-legacy: if ``./skene/`` or ``./skene-context/`` already
-             exists in the current working directory, prefer the first match
-             so existing projects keep using the bundle they already have.
+          1. Explicit ``output_dir`` from loaded config or ``SKENE_OUTPUT_DIR``.
+          2. Sticky-legacy: if ``skene/`` or ``skene-context/`` exists under the
+             bundle resolution root (see ``set_bundle_resolution_root``), prefer
+             the first match. Defaults to :func:`pathlib.Path.cwd` when unset.
           3. The shipped default (``./skene-context``).
         """
         if "output_dir" in self._values:
@@ -84,7 +93,8 @@ class Config:
 
         from skene.output_paths import DEFAULT_OUTPUT_DIR, resolve_bundle_dir
 
-        existing = resolve_bundle_dir(Path.cwd())
+        root = self._bundle_resolution_root if self._bundle_resolution_root is not None else Path.cwd()
+        existing = resolve_bundle_dir(root.resolve())
         if existing is not None:
             return f"./{existing.name}"
         return DEFAULT_OUTPUT_DIR

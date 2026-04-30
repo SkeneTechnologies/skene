@@ -26,18 +26,21 @@ type ResultsView struct {
 	files       []fileEntry
 	selectedIdx int
 	projectName string
-	outputDir   string
+	bundleDir   string
+	contextDir  string
 
 	showNextSteps    bool
 	nextStepsView    *NextStepsView
 }
 
 // NewResultsView creates a dashboard view. projectName is displayed as the
-// heading; outputDir is the skene output directory to scan for files.
-func NewResultsView(projectName, outputDir string) *ResultsView {
+// heading; bundleDir is the skene/ tree, contextDir the legacy/configured
+// path where manifest and similar files may live.
+func NewResultsView(projectName, bundleDir, contextDir string) *ResultsView {
 	v := &ResultsView{
 		projectName:   projectName,
-		outputDir:     outputDir,
+		bundleDir:     bundleDir,
+		contextDir:    contextDir,
 		nextStepsView: NewNextStepsView(),
 	}
 	v.scanFiles()
@@ -49,8 +52,8 @@ func NewResultsView(projectName, outputDir string) *ResultsView {
 func (v *ResultsView) scanFiles() {
 	v.files = make([]fileEntry, len(constants.DashboardFiles))
 	for i, def := range constants.DashboardFiles {
-		path := filepath.Join(v.outputDir, def.Filename)
-		_, err := os.Stat(path)
+		p := ResolveDashboardFilePath(def, v.bundleDir, v.contextDir)
+		_, err := os.Stat(p)
 		v.files[i] = fileEntry{def: def, present: err == nil}
 	}
 }
@@ -124,7 +127,7 @@ func (v *ResultsView) IsShowingNextSteps() bool {
 // ShowNextSteps opens the next-steps modal overlay.
 func (v *ResultsView) ShowNextSteps() {
 	v.showNextSteps = true
-	v.nextStepsView = NewNextStepsViewWithContext(v.outputDir)
+	v.nextStepsView = NewNextStepsViewWithContext(v.bundleDir, v.contextDir)
 	v.nextStepsView.SetSize(v.width, v.height)
 }
 
@@ -139,8 +142,9 @@ func (v *ResultsView) GetNextStepsView() *NextStepsView {
 }
 
 // RefreshContent rescans files from disk.
-func (v *ResultsView) RefreshContent(outputDir string) {
-	v.outputDir = outputDir
+func (v *ResultsView) RefreshContent(bundleDir, contextDir string) {
+	v.bundleDir = bundleDir
+	v.contextDir = contextDir
 	v.scanFiles()
 }
 
@@ -369,9 +373,18 @@ func splitLines(s string) []string {
 	return lines
 }
 
+// ResolveDashboardFilePath returns the on-disk path for a dashboard file.
+func ResolveDashboardFilePath(def constants.DashboardFile, bundleDir, contextDir string) string {
+	base := bundleDir
+	if def.InContext {
+		base = contextDir
+	}
+	return filepath.Join(base, def.Filename)
+}
+
 // NewFileDetailView creates a file detail view for the given file.
-func NewFileDetailView(def constants.DashboardFile, outputDir string) *FileDetailView {
-	filePath := filepath.Join(outputDir, def.Filename)
+func NewFileDetailView(def constants.DashboardFile, bundleDir, contextDir string) *FileDetailView {
+	filePath := ResolveDashboardFilePath(def, bundleDir, contextDir)
 	rawContent := ""
 	modTime := ""
 

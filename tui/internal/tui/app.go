@@ -11,6 +11,7 @@ import (
 
 	"skene/internal/constants"
 	"skene/internal/game"
+	"skene/internal/outputdirs"
 	"skene/internal/services/auth"
 	"skene/internal/services/config"
 	"skene/internal/services/growth"
@@ -364,9 +365,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.resultsView.SetSize(a.width, a.height)
 			if a.state != StateGame && a.analyzingOrigin == StateProjectDir {
 				if a.journeyAnalysis {
-					if a.engineFileExists() {
+					if a.userJourneyFileExists() {
 						a.projectDirView.SetNoSchemaDetected(false)
-						a.openEngineVisualizerIfExists()
+						a.openJourneyVisualizerIfExists()
 					} else {
 						a.projectDirView.SetNoSchemaDetected(true)
 					}
@@ -737,7 +738,7 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
 			switch choice {
 			case constants.ProjectDirViewAnalysis:
-				a.openEngineVisualizerIfExists()
+				a.openJourneyVisualizerIfExists()
 			case constants.ProjectDirRerunAnalysis, constants.ProjectDirRunAnalysis:
 				a.projectDirView.SetNoSchemaDetected(false)
 				return a.startJourneyAnalysis()
@@ -748,8 +749,15 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 				return cmd
 			}
 		case "n":
-			outputDir := filepath.Join(a.projectDirView.GetProjectDir(), constants.OutputDirName)
-			a.projectDirView.ShowNextSteps(outputDir)
+			pd := a.projectDirView.GetProjectDir()
+			rel := a.configMgr.Config.OutputDir
+			if rel == "" {
+				rel = constants.DefaultOutputDir
+			}
+			a.projectDirView.ShowNextSteps(
+				outputdirs.Bundle(pd),
+				outputdirs.Context(pd, rel),
+			)
 		case "esc":
 			a.projectDirView.DismissExistingChoice()
 		}
@@ -992,7 +1000,7 @@ func (a *App) handleResultsKeys(key string) tea.Cmd {
 	case "enter":
 		selected := a.resultsView.GetSelectedFile()
 		if selected != nil {
-			if selected.ID == "engine" {
+			if selected.ID == "user-journey" {
 				a.openYAMLVisualizer(selected)
 			} else {
 				a.openFileDetail(selected)
@@ -1057,29 +1065,34 @@ func (a *App) handleNextStepsModalKeys(key string) tea.Cmd {
 }
 
 func (a *App) openFileDetail(def *constants.DashboardFile) {
-	outputDir := a.getOutputDir()
-	a.fileDetailView = views.NewFileDetailView(*def, outputDir)
+	a.fileDetailView = views.NewFileDetailView(*def, a.getBundleOutputDir(), a.getContextOutputDir())
 	a.fileDetailView.SetSize(a.width, a.height)
 	a.state = StateFileDetail
 }
 
-func (a *App) openEngineVisualizerIfExists() {
-	engineDef := &constants.DashboardFile{
-		ID:          "engine",
-		DisplayName: "Growth Features",
-		Filename:    constants.EngineFile,
+func (a *App) openJourneyVisualizerIfExists() {
+	journeyDef := &constants.DashboardFile{
+		ID:          "user-journey",
+		DisplayName: "User Journey",
+		Filename:    constants.UserJourneyFile,
 	}
-	a.openYAMLVisualizer(engineDef)
+	a.openYAMLVisualizer(journeyDef)
 }
 
-// engineFileExists reports whether engine.yaml is present in the output dir.
-func (a *App) engineFileExists() bool {
-	_, err := os.Stat(filepath.Join(a.getOutputDir(), constants.EngineFile))
+// userJourneyFileExists reports whether user-journey.yaml is present in the
+// bundle (or legacy path).
+func (a *App) userJourneyFileExists() bool {
+	primary := filepath.Join(a.getBundleOutputDir(), constants.UserJourneyFile)
+	if _, err := os.Stat(primary); err == nil {
+		return true
+	}
+	legacy := filepath.Join(a.getContextOutputDir(), constants.UserJourneyFile)
+	_, err := os.Stat(legacy)
 	return err == nil
 }
 
 func (a *App) openYAMLVisualizer(def *constants.DashboardFile) {
-	filePath := filepath.Join(a.getOutputDir(), def.Filename)
+	filePath := views.ResolveDashboardFilePath(*def, a.getBundleOutputDir(), a.getContextOutputDir())
 	if _, err := os.Stat(filePath); err != nil {
 		return
 	}
@@ -1109,12 +1122,24 @@ func (a *App) handleFileDetailKeys(key string) tea.Cmd {
 	return nil
 }
 
-func (a *App) getOutputDir() string {
+func (a *App) getBundleOutputDir() string {
 	projectDir := a.configMgr.Config.ProjectDir
 	if projectDir == "" {
 		projectDir, _ = os.Getwd()
 	}
-	return filepath.Join(projectDir, constants.OutputDirName)
+	return outputdirs.Bundle(projectDir)
+}
+
+func (a *App) getContextOutputDir() string {
+	projectDir := a.configMgr.Config.ProjectDir
+	if projectDir == "" {
+		projectDir, _ = os.Getwd()
+	}
+	rel := a.configMgr.Config.OutputDir
+	if rel == "" {
+		rel = constants.DefaultOutputDir
+	}
+	return outputdirs.Context(projectDir, rel)
 }
 
 func (a *App) getProjectName() string {
@@ -1129,7 +1154,7 @@ func (a *App) getProjectName() string {
 }
 
 func (a *App) createResultsView() *views.ResultsView {
-	rv := views.NewResultsView(a.getProjectName(), a.getOutputDir())
+	rv := views.NewResultsView(a.getProjectName(), a.getBundleOutputDir(), a.getContextOutputDir())
 	return rv
 }
 
@@ -1164,9 +1189,9 @@ func (a *App) handleGameKeys(msg tea.KeyMsg) tea.Cmd {
 		}
 		if a.prevState == StateAnalyzing && a.resultsView != nil && a.analyzingView != nil && a.analyzingView.IsDone() && !a.analyzingView.HasFailed() && a.analyzingOrigin == StateProjectDir {
 			if a.journeyAnalysis {
-				if a.engineFileExists() {
+				if a.userJourneyFileExists() {
 					a.projectDirView.SetNoSchemaDetected(false)
-					a.openEngineVisualizerIfExists()
+					a.openJourneyVisualizerIfExists()
 				} else {
 					a.projectDirView.SetNoSchemaDetected(true)
 				}
@@ -1330,7 +1355,7 @@ func (a *App) refreshResultsView() {
 	if a.resultsView == nil {
 		return
 	}
-	a.resultsView.RefreshContent(a.getOutputDir())
+	a.resultsView.RefreshContent(a.getBundleOutputDir(), a.getContextOutputDir())
 }
 
 func (a *App) applyJourneyConfig() {
@@ -1870,12 +1895,9 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 		projectDir, _ = os.Getwd()
 	}
 
-	outputDir := a.configMgr.Config.OutputDir
-	if outputDir == "" {
-		outputDir = constants.DefaultOutputDir
-	}
-	if !filepath.IsAbs(outputDir) {
-		outputDir = filepath.Join(projectDir, outputDir)
+	rel := a.configMgr.Config.OutputDir
+	if rel == "" {
+		rel = constants.DefaultOutputDir
 	}
 
 	cfg := a.configMgr.Config
@@ -1886,7 +1908,7 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 		APIKey:         cfg.APIKey,
 		BaseURL:        cfg.BaseURL,
 		ProjectDir:     projectDir,
-		OutputDir:      outputDir,
+		OutputDir:      rel,
 		UseGrowth:      cfg.UseGrowth,
 		Upstream:       cfg.Upstream,
 		UpstreamAPIKey: cfg.UpstreamAPIKey,

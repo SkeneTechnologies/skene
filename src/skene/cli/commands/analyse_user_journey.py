@@ -1,10 +1,9 @@
-"""Derive a growth manifest from an existing schema + codebase evidence."""
+"""Compile user-journey.yaml from existing schema, manifest, and engine artifacts."""
 
 from pathlib import Path
 
 import typer
 
-from skene.analyzers.plan_engine import DEFAULT_FEATURE_COUNT
 from skene.cli._journey_runner import (
     PipelinePaths,
     Stage,
@@ -20,11 +19,11 @@ from skene.output import error
 from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
-@app.command(name="analyse-growth-from-schema")
-def analyse_growth_from_schema_cmd(
+@app.command(name="analyse-user-journey")
+def analyse_user_journey_cmd(
     path: Path | None = typer.Argument(
         None,
-        help="Path to codebase to analyse (omit for current directory)",
+        help="Path to codebase / project root (omit for current directory)",
         exists=False,
         file_okay=False,
         dir_okay=True,
@@ -34,13 +33,25 @@ def analyse_growth_from_schema_cmd(
         Path(f"{DEFAULT_OUTPUT_DIR}/schema.yaml"),
         "-s",
         "--schema",
-        help="Path to schema.yaml (run 'analyse-journey' first to generate it)",
+        help="Path to schema.yaml (run 'analyse-journey' first)",
     ),
-    output: Path = typer.Option(
+    manifest: Path = typer.Option(
         Path(f"{DEFAULT_OUTPUT_DIR}/growth-manifest.json"),
+        "-M",
+        "--manifest",
+        help="Path to growth-manifest.json (run 'analyse-growth-from-schema' first)",
+    ),
+    engine: Path = typer.Option(
+        Path(f"{DEFAULT_OUTPUT_DIR}/engine.yaml"),
+        "-e",
+        "--engine",
+        help="Path to engine.yaml (optional; missing file uses an empty engine)",
+    ),
+    output: Path | None = typer.Option(
+        None,
         "-o",
         "--output",
-        help="Output path for growth-manifest.json",
+        help="Output path for user-journey.yaml (default: next to engine.yaml)",
     ),
     api_key: str | None = typer.Option(
         None,
@@ -66,12 +77,6 @@ def analyse_growth_from_schema_cmd(
         envvar="SKENE_BASE_URL",
         help="Base URL for API endpoint",
     ),
-    exclude: list[str] | None = typer.Option(
-        None,
-        "--exclude",
-        "-e",
-        help="Folder name to exclude from grep (repeatable)",
-    ),
     quiet: bool = typer.Option(
         False,
         "-q",
@@ -88,40 +93,22 @@ def analyse_growth_from_schema_cmd(
         "--no-fallback",
         help="Disable model fallback on rate limits; retry same model instead",
     ),
-    skip_plan: bool = typer.Option(
-        False,
-        "--skip-plan",
-        help="Stop after the growth manifest; do not write engine.yaml",
-    ),
-    plan_output: Path | None = typer.Option(
-        None,
-        "--plan-output",
-        help="Path for engine.yaml (default: next to schema)",
-    ),
-    plan_count: int = typer.Option(
-        DEFAULT_FEATURE_COUNT,
-        "--plan-count",
-        min=1,
-        max=10,
-        help="Number of growth features to promote into engine.yaml",
-    ),
 ):
     """
-    Derive a growth manifest from the already-built schema plus codebase evidence.
+    Compile ``user-journey.yaml`` from ``schema.yaml`` + ``growth-manifest.json``,
+    optionally augmented by ``engine.yaml`` — without re-running the upstream
+    pipeline stages.
 
-    Uses the tables, columns, and relationships in ``schema.yaml`` to hypothesise
-    which growth features (invites, subscriptions, onboarding, analytics, etc.)
-    the product supports, then searches the codebase with ripgrep for grounded
-    evidence and assembles a standard ``growth-manifest.json``. Unless
-    ``--skip-plan`` is set, ``analyse-plan`` runs immediately afterward.
+    The ``ttv_journey_by_subject`` block is built from the schema and the
+    growth opportunities in the manifest via a single LLM call (no engine
+    required). When ``engine.yaml`` exists with planned features, those are
+    additionally compiled into ``compiled_features``.
 
     Examples:
 
-        skene analyse-growth-from-schema
+        skene analyse-user-journey
 
-        skene analyse-growth-from-schema ./my-project -s ./skene-context/schema.yaml
-
-        skene analyse-growth-from-schema --provider anthropic --model claude-sonnet-4.6
+        skene analyse-user-journey ./my-project
     """
     base_path = resolve_base_path(path)
 
@@ -130,12 +117,22 @@ def analyse_growth_from_schema_cmd(
         error(f"Schema file not found: {schema_path}\nRun 'skene analyse-journey' first, or pass --schema <path>.")
         raise typer.Exit(1)
 
-    growth_path = resolve_artifact_path(output, "growth-manifest.json")
-    engine_path = (
-        resolve_artifact_path(plan_output, "engine.yaml")
-        if plan_output is not None
-        else schema_path.parent / "engine.yaml"
+    manifest_path = resolve_artifact_path(manifest, "growth-manifest.json")
+    if not manifest_path.exists():
+        error(
+            f"Growth manifest not found: {manifest_path}\n"
+            "Run 'skene analyse-growth-from-schema' first, or pass --manifest <path>."
+        )
+        raise typer.Exit(1)
+
+    engine_path = resolve_artifact_path(engine, "engine.yaml")
+
+    journey_path = (
+        resolve_artifact_path(output, "user-journey.yaml")
+        if output is not None
+        else (engine_path.parent / "user-journey.yaml").resolve()
     )
+    new_features_path = (engine_path.parent / "new-features.yaml").resolve()
 
     rc = resolve_cli_config(
         project_root=base_path,
@@ -146,23 +143,17 @@ def analyse_growth_from_schema_cmd(
         quiet=quiet,
         debug=debug,
     )
-    resolved_api_key = require_llm_credentials(rc, "analyse-growth-from-schema")
+    resolved_api_key = require_llm_credentials(rc, "analyse-user-journey")
 
-    stages: list[Stage] = [Stage.GROWTH]
-    if not skip_plan:
-        stages.append(Stage.PLAN)
-
-    new_features_path = (growth_path.parent / "new-features.yaml").resolve()
-    journey_path = (engine_path.parent / "user-journey.yaml").resolve()
     paths = PipelinePaths(
         schema=schema_path,
-        growth=growth_path,
+        growth=manifest_path,
         engine=engine_path,
         new_features=new_features_path,
         journey=journey_path,
     )
     render_kickoff_panel(
-        title="skene · analyse-growth-from-schema",
+        title="skene · analyse-user-journey",
         base_path=base_path,
         rc=rc,
     )
@@ -172,9 +163,9 @@ def analyse_growth_from_schema_cmd(
         rc=rc,
         api_key=resolved_api_key,
         paths=paths,
-        stages=stages,
+        stages=[Stage.JOURNEY],
         iterations=0,
-        excludes=exclude if exclude else None,
-        plan_feature_count=plan_count,
+        excludes=None,
+        plan_feature_count=0,
         no_fallback=no_fallback,
     )

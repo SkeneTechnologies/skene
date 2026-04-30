@@ -133,6 +133,7 @@ def analyze(
         uvx skene analyze . --features
     """
     rc = resolve_cli_config(
+        project_root=path.resolve(),
         api_key=api_key,
         provider=provider,
         model=model,
