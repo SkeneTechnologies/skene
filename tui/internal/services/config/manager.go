@@ -353,8 +353,8 @@ func GetProviders() []Provider {
 	return []Provider{
 		{
 			ID:          "skene",
-			Name:        "Skene (Recommended)",
-			Description: "Built-in LLM optimized for growth analysis",
+			Name:        "Skene (Claim your free tokens)",
+			Description: "Recommended - Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
 			AuthURL:     constants.SkeneAuthURL,
 			Models: []Model{
