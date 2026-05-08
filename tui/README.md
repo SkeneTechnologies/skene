@@ -6,7 +6,7 @@ Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ## What It Does
 
-Skene terminal is the interactive front-end for **Skene** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
+Skene terminal is the interactive front-end for **Skene** — a PLG analysis toolkit that models your product's user journey from your schema and code, surfaces growth opportunities along it, and turns them into actionable implementation plans.
 
 The tool itself does **not** perform any analysis. It orchestrates `uvx skene` in your selected repository directory and displays the results.
 
@@ -15,9 +15,9 @@ The tool itself does **not** perform any analysis. It orchestrates `uvx skene` i
 - Step-by-step wizard — provider, model, authentication, project selection
 - Multiple AI providers — OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint
 - Authentication — Skene magic link, API key entry, local model auto-detection
-- Existing analysis detection — detects previous `skene/` (or legacy `skene-context/`) output and offers to view or re-run
+- Existing analysis detection — detects previous `skene-context/` (or legacy `skene/`) output and offers to view or re-run
 - Live terminal output during analysis
-- Tabbed results dashboard — Growth Manifest, Growth Template, Growth Plan
+- Tabbed results view — User Journey, Growth Manifest, Growth Plan, Engine
 - Next steps menu — generate plans, build prompts, validate, or re-analyse
 - Cancellable processes — press `Esc` to cancel a running analysis
 - Error handling with retry and go-back
@@ -41,7 +41,7 @@ This downloads the latest release binary for your platform and installs it to `/
 To install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | VERSION=v030 bash
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | VERSION=tui-v0.4.0 bash
 ```
 
 ### Clone and Run
@@ -113,7 +113,7 @@ Example `.skene.config`:
   "provider": "gemini",
   "model": "gemini-3-flash-preview",
   "api_key": "your-api-key",
-  "output_dir": "./skene",
+  "output_dir": "./skene-context",
   "verbose": true,
   "use_growth": true
 }
@@ -123,6 +123,7 @@ Example `.skene.config`:
 
 | Provider | ID | Auth |
 |----------|----|------|
+| Skene | `skene` | Magic link (free tokens) |
 | OpenAI | `openai` | API key |
 | Anthropic | `anthropic` | API key |
 | Gemini | `gemini` | API key |
@@ -148,7 +149,7 @@ make release      # package releases
 
 ## Related
 
-- [skene](https://github.com/SkeneTechnologies/skene) — PLG analysis toolkit (CLI + MCP server)
+- [skene](https://github.com/SkeneTechnologies/skene) — PLG analysis toolkit (Python CLI)
 
 ## License
 

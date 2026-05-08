@@ -9,7 +9,7 @@
 </p>
 
 
-Skene is a codebase analysis toolkit for product-led growth. It scan your codebase, detect growth opportunities, and generate actionable implementation plans.
+Skene is a codebase analysis toolkit for product-led growth. It models your product's user journey from your schema and code, surfaces growth opportunities, and turns them into actionable implementation plans.
 
 ## Quick Start
 
@@ -28,15 +28,16 @@ The wizard walks you through provider selection, authentication, and analysis �
 
 ## What It Does
 
+- **Journey-first analysis** -- compiles a view of your product's user journey: lifecycle stages, milestones, and value points, derived from your schema and code
+- **Journey visualizer** -- opens the compiled journey in a local web app, with the lifecycle stages and milestones laid out as a diagram alongside the underlying data
 - **Tech stack detection** -- identifies frameworks, databases, auth, deployment
 - **Growth feature discovery** -- finds existing signup flows, sharing, invites, billing
 - **Feature registry** -- tracks features across analysis runs, links them to growth loops
 - **Revenue leakage analysis** -- spots missing monetization and weak pricing tiers
 - **Growth plan generation** -- produces prioritized growth loops with implementation roadmaps
 - **Implementation prompts** -- builds ready-to-use prompts for Cursor, Claude, or other AI tools
-- **Telemetry deployment** -- `build` writes `supabase/migrations/*_skene_triggers.sql`; `push` sends engine + that SQL to upstream
-- **Loop validation** -- verifies that growth loop requirements are implemented
-- **Interactive chat** -- ask questions about your codebase in the terminal
+- **Telemetry deployment** -- when an `engine.yaml` is present, `build` writes `supabase/migrations/*_skene_triggers.sql`; `push` sends whatever bundle files exist to upstream
+- **Loop validation** -- verifies that growth loop requirements are implemented (Python, JavaScript, TypeScript)
 
 Supports OpenAI, Gemini, Claude, LM Studio, Ollama, and any OpenAI-compatible endpoint. Free local audit available with no API key required.
 
@@ -77,8 +78,8 @@ For CLI usage details, see the [documentation](https://www.skene.ai/resources/do
 
 Both the Python CLI (including `analyse-journey`, `analyze`, `plan`, and `build`) and the interactive TUI write their artifacts to a single bundle directory in your project root. The directory is created automatically when it is missing.
 
-- **Default:** `./skene/` — holds `schema.yaml`, `engine.yaml`, `growth-manifest.json`, `growth-template.json`, `growth-plan.md`, `feature-registry.json`, and related assets.
-- **Legacy:** `./skene-context/` — the previous default. Existing projects continue to work: discovery commands (`plan`, `build`, `push`, `features export`, TUI detection) look for `./skene/` first and fall back to `./skene-context/` when only the legacy directory is present.
+- **Default:** `./skene-context/` — holds `schema.yaml`, `engine.yaml`, `growth-manifest.json`, `growth-template.json`, `growth-plan.md`, `feature-registry.json`, and related assets.
+- **Upgrading from v0.3.x:** delete any existing `./skene/` or `./skene-context/` directories before re-running, so the new analysis starts from a clean slate.
 - **Override:** set `output_dir` in `.skene.config` or pass `-o`/`--output` to a specific command to write elsewhere.
 
 ## Monorepo Structure
