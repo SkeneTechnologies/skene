@@ -616,14 +616,15 @@ func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 		return nil
 	case "t":
 		newState := !a.configMgr.Config.TelemetryEnabled
+		// Fire the toggle event before changing the client state,
+		a.telemetry.Track(constants.EventTelemetryToggled, map[string]string{
+			"enabled": fmt.Sprintf("%t", newState),
+		})
 		a.configMgr.SetTelemetryEnabled(newState)
 		a.telemetry.SetEnabled(newState)
 		if a.welcomeView != nil {
 			a.welcomeView.SetTelemetryEnabled(newState)
 		}
-		a.telemetry.Track(constants.EventTelemetryToggled, map[string]string{
-			"enabled": fmt.Sprintf("%t", newState),
-		})
 		return nil
 	case "c":
 		if a.welcomeView != nil && a.welcomeView.HasUpdate() {
