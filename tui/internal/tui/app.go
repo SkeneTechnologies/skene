@@ -441,16 +441,23 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.analyzingView.SetDone()
 			}
 		}
-		if a.currentNextStepCommand == "push" {
-			duration := time.Since(a.currentNextStepStart).Truncate(time.Second).String()
+		duration := time.Since(a.currentNextStepStart).Truncate(time.Second).String()
+		var evOK, evFail string
+		switch a.currentNextStepCommand {
+		case "push":
+			evOK, evFail = constants.EventDeploymentCompleted, constants.EventDeploymentFailed
+		case "plan":
+			evOK, evFail = constants.EventPlanCompleted, constants.EventPlanFailed
+		case "build":
+			evOK, evFail = constants.EventBuildCompleted, constants.EventBuildFailed
+		case "validate":
+			evOK, evFail = constants.EventValidateCompleted, constants.EventValidateFailed
+		}
+		if evOK != "" {
 			if msg.Error != nil {
-				a.telemetry.Track(constants.EventDeploymentFailed, map[string]string{
-					"duration": duration,
-				})
+				a.telemetry.Track(evFail, map[string]string{"duration": duration})
 			} else {
-				a.telemetry.Track(constants.EventDeploymentCompleted, map[string]string{
-					"duration": duration,
-				})
+				a.telemetry.Track(evOK, map[string]string{"duration": duration})
 			}
 		}
 		a.currentNextStepCommand = ""
@@ -616,7 +623,10 @@ func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 		return nil
 	case "t":
 		newState := !a.configMgr.Config.TelemetryEnabled
-		// Fire the toggle event before changing the client state,
+		// Force-enable the client before tracking so both opt-in
+		// and opt-out events reach the server; the real state is
+		// applied immediately after.
+		a.telemetry.SetEnabled(true)
 		a.telemetry.Track(constants.EventTelemetryToggled, map[string]string{
 			"enabled": fmt.Sprintf("%t", newState),
 		})
@@ -1047,13 +1057,20 @@ func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 				a.navigateBackFromAnalyzing()
 			}
 		} else {
-			analysisType := "codebase"
-			if a.journeyAnalysis {
-				analysisType = "journey"
+			if a.currentNextStepCommand != "" {
+				a.telemetry.Track(constants.EventNextStepCancelled, map[string]string{
+					"command": a.currentNextStepCommand,
+				})
+				a.currentNextStepCommand = ""
+			} else {
+				analysisType := "codebase"
+				if a.journeyAnalysis {
+					analysisType = "journey"
+				}
+				a.telemetry.Track(constants.EventAnalysisCancelled, map[string]string{
+					"type": analysisType,
+				})
 			}
-			a.telemetry.Track(constants.EventAnalysisCancelled, map[string]string{
-				"type": analysisType,
-			})
 			if a.cancelFunc != nil {
 				a.cancelFunc()
 				a.cancelFunc = nil
@@ -1664,8 +1681,15 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 	})
 	a.currentNextStepCommand = command
 	a.currentNextStepStart = time.Now()
-	if command == "push" {
+	switch command {
+	case "push":
 		a.telemetry.Track(constants.EventDeploymentStarted, nil)
+	case "plan":
+		a.telemetry.Track(constants.EventPlanStarted, nil)
+	case "build":
+		a.telemetry.Track(constants.EventBuildStarted, nil)
+	case "validate":
+		a.telemetry.Track(constants.EventValidateStarted, nil)
 	}
 	a.analyzingView = views.NewCommandView(title)
 	a.analyzingView.SetSize(a.width, a.height)

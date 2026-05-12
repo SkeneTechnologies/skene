@@ -173,8 +173,8 @@ func (c *Client) post(e event) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// The publishable key is public; RLS on the events table gates direct access.
-	req.Header.Set("Authorization", "Bearer "+c.anonKey)
+	// Supabase Edge Function with verify_jwt disabled; the publishable
+	// key is public and only used to route to the correct project.
 	req.Header.Set("apikey", c.anonKey)
 
 	resp, err := c.httpClient.Do(req)

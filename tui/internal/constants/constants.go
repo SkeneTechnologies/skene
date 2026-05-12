@@ -146,6 +146,20 @@ const (
 	EventDeploymentStarted   = "deployment_started"
 	EventDeploymentCompleted = "deployment_completed"
 	EventDeploymentFailed    = "deployment_failed"
+
+	EventPlanStarted   = "plan_started"
+	EventPlanCompleted = "plan_completed"
+	EventPlanFailed    = "plan_failed"
+
+	EventBuildStarted   = "build_started"
+	EventBuildCompleted = "build_completed"
+	EventBuildFailed    = "build_failed"
+
+	EventValidateStarted   = "validate_started"
+	EventValidateCompleted = "validate_completed"
+	EventValidateFailed    = "validate_failed"
+
+	EventNextStepCancelled = "next_step_cancelled"
 )
 
 // Skene ecosystem package metadata
