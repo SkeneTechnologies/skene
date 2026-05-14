@@ -4,10 +4,11 @@ Google Gemini LLM client implementation.
 
 import asyncio
 from functools import partial
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from pydantic import SecretStr
 
+from skene.llm.agent_loop import AssistantTurn, Message, Tool, ToolCall
 from skene.llm.base import LLMClient
 from skene.output import debug, warning
 
@@ -274,3 +275,127 @@ class GoogleGeminiClient(LLMClient):
     def get_provider_name(self) -> str:
         """Return the provider name."""
         return "google"
+
+    async def generate_with_tools(
+        self,
+        messages: list[Message],
+        tools: list[Tool],
+    ) -> AssistantTurn:
+        """One tool-use turn against Gemini's function-calling API.
+
+        Translates the unified message/tool shape into google-genai's
+        Content/Part / FunctionDeclaration form:
+
+        - the ``system`` role becomes ``config.system_instruction``
+          (Gemini does not accept system inside the contents list)
+        - assistant tool calls become parts with ``function_call``
+        - tool results become a user content with ``function_response``
+          (Gemini does not use tool_call_id; it pairs by order and name)
+        - ``tools`` is a list of FunctionDeclaration wrapped in one Tool
+        """
+        from google.genai import types as genai_types
+
+        system_text = ""
+        contents: list[genai_types.Content] = []
+        for m in messages:
+            if m.role == "system":
+                system_text = (system_text + "\n\n" + (m.content or "")).strip()
+                continue
+            if m.role == "tool":
+                # Gemini pairs function_response back to the function_call by name
+                # (and order, when there are duplicates).
+                contents.append(
+                    genai_types.Content(
+                        role="user",
+                        parts=[
+                            genai_types.Part(
+                                function_response=genai_types.FunctionResponse(
+                                    name=m.name or "",
+                                    response={"content": m.content or ""},
+                                )
+                            )
+                        ],
+                    )
+                )
+                continue
+            if m.role == "assistant":
+                parts: list[genai_types.Part] = []
+                if m.content:
+                    parts.append(genai_types.Part(text=m.content))
+                for tc in m.tool_calls:
+                    parts.append(
+                        genai_types.Part(
+                            function_call=genai_types.FunctionCall(
+                                name=tc.name,
+                                args=tc.arguments,
+                            )
+                        )
+                    )
+                if parts:
+                    contents.append(genai_types.Content(role="model", parts=parts))
+                continue
+            # user
+            contents.append(
+                genai_types.Content(
+                    role="user",
+                    parts=[genai_types.Part(text=m.content or "")],
+                )
+            )
+
+        gemini_tools: list[genai_types.Tool] | None = None
+        if tools:
+            declarations = [
+                genai_types.FunctionDeclaration(
+                    name=t.name,
+                    description=t.description,
+                    parameters=t.parameters,
+                )
+                for t in tools
+            ]
+            gemini_tools = [genai_types.Tool(function_declarations=declarations)]
+
+        cfg_kwargs: dict[str, Any] = {}
+        if system_text:
+            cfg_kwargs["system_instruction"] = system_text
+        if gemini_tools is not None:
+            cfg_kwargs["tools"] = gemini_tools
+        config = genai_types.GenerateContentConfig(**cfg_kwargs) if cfg_kwargs else None
+
+        try:
+            response = await asyncio.to_thread(
+                partial(
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
+                )
+            )
+        except Exception as e:
+            raise RuntimeError(f"Error calling Gemini with tools: {e}") from e
+
+        text_chunks: list[str] = []
+        tool_calls: list[ToolCall] = []
+        tc_counter = 0
+        candidates = getattr(response, "candidates", None) or []
+        if candidates:
+            content = getattr(candidates[0], "content", None)
+            for part in getattr(content, "parts", None) or []:
+                fc = getattr(part, "function_call", None)
+                if fc is not None and getattr(fc, "name", None):
+                    tc_counter += 1
+                    args = dict(getattr(fc, "args", None) or {})
+                    tool_calls.append(
+                        ToolCall(
+                            id=f"gemini-{tc_counter}",
+                            name=fc.name,
+                            arguments=args,
+                        )
+                    )
+                    continue
+                txt = getattr(part, "text", None)
+                if txt:
+                    text_chunks.append(txt)
+
+        usage = _extract_usage(response)
+        text = "".join(text_chunks).strip() or None
+        return AssistantTurn(text=text, tool_calls=tool_calls, usage=usage, raw=response)

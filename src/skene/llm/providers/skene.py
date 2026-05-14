@@ -8,13 +8,15 @@ Workspace is derived from the API key; no slug in the URL.
 """
 
 import json
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 from urllib.parse import urlparse
 
 import httpx
 from pydantic import SecretStr
 
+from skene.llm.agent_loop import AssistantTurn, Message, Tool, ToolCall
 from skene.llm.base import LLMClient
+from skene.llm.providers.openai_compat import _to_openai_message, _tool_to_openai
 
 DEFAULT_TIMEOUT = 900.0
 DEFAULT_TEMPERATURE = 0.7
@@ -204,3 +206,70 @@ class SkeneClient(LLMClient):
     def get_provider_name(self) -> str:
         """Return the provider name."""
         return "skene"
+
+    async def generate_with_tools(
+        self,
+        messages: list[Message],
+        tools: list[Tool],
+    ) -> AssistantTurn:
+        """One tool-use turn against the Skene Chat Completions API.
+
+        The Skene endpoint speaks the OpenAI dialect, so we reuse the
+        same _to_openai_message / _tool_to_openai translators as
+        OpenAICompatibleClient and POST a tools-enabled payload. If the
+        backing model does not support tool calls the response simply
+        contains text and no tool_calls — the agent loop terminates
+        normally in that case.
+        """
+        api_messages = [_to_openai_message(m) for m in messages]
+        api_tools = [_tool_to_openai(t) for t in tools]
+        payload: dict[str, Any] = {
+            "messages": api_messages,
+            "stream": False,
+            "model": self.model_name,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "temperature": DEFAULT_TEMPERATURE,
+        }
+        if api_tools:
+            payload["tools"] = api_tools
+            payload["tool_choice"] = "auto"
+
+        try:
+            async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+                response = await client.post(
+                    self._endpoint,
+                    headers=self._headers(),
+                    json=payload,
+                )
+                response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(self._format_http_error(e)) from e
+        except Exception as e:
+            raise RuntimeError(f"Error calling Skene with tools: {e}") from e
+
+        data = response.json()
+        choices = data.get("choices") or []
+        message = (choices[0] or {}).get("message", {}) if choices else {}
+
+        text = (message.get("content") or "").strip() or None
+        tool_calls: list[ToolCall] = []
+        for raw in message.get("tool_calls") or []:
+            fn = (raw or {}).get("function") or {}
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+            except json.JSONDecodeError:
+                args = {"_raw": fn.get("arguments")}
+            tool_calls.append(
+                ToolCall(
+                    id=raw.get("id") or "",
+                    name=fn.get("name") or "",
+                    arguments=args,
+                )
+            )
+
+        return AssistantTurn(
+            text=text,
+            tool_calls=tool_calls,
+            usage=self._extract_usage(data),
+            raw=data,
+        )
