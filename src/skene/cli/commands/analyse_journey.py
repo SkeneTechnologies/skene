@@ -1,28 +1,36 @@
-"""Analyse the data schema of a codebase via iterative grep + LLM passes.
+"""Generate a journey.yaml from a repo's codebase and its SQL schema.
 
-This is the entry point of the full journey pipeline:
+Replaces the legacy schema/growth/plan pipeline. Two LLM agents explore
+in parallel — one over a directory of pre-exported SQL files, one over
+the repo filesystem — and emit candidate milestones. The pipeline merges
+them, classifies each into one of seven canonical lifecycle stages, and
+assembles a validated Journey written to ``journey.yaml``.
 
-    schema.yaml  →  growth-manifest.json  →  engine.yaml
-
-Use ``--skip-growth`` or ``--skip-plan`` to stop early.
+See :mod:`skene.analyzers.journey.pipeline` for the algorithm.
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 
 import typer
+from rich.panel import Panel
+from rich.table import Table
 
-from skene.analyzers.plan_engine import DEFAULT_FEATURE_COUNT
+from skene.analyzers.journey.pipeline import (
+    JourneyPipelineConfig,
+    run_journey_pipeline,
+)
+from skene.analyzers.journey.serialize import write as write_journey
 from skene.cli._journey_runner import (
-    PipelinePaths,
-    Stage,
-    execute_pipeline,
-    render_kickoff_panel,
+    build_llm,
     require_llm_credentials,
     resolve_artifact_path,
     resolve_base_path,
     resolve_cli_config,
 )
 from skene.cli.app import app
+from skene.output import console, error
 from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
@@ -36,19 +44,50 @@ def analyse_journey_cmd(
         dir_okay=True,
         resolve_path=True,
     ),
+    schema_dir: Path | None = typer.Option(
+        None,
+        "--schema-dir",
+        help=(
+            "Directory of pre-exported *.sql files for the schema agent. "
+            "Required when no codebase path is given."
+        ),
+    ),
     output: Path = typer.Option(
-        Path(f"{DEFAULT_OUTPUT_DIR}/schema.yaml"),
+        Path(f"{DEFAULT_OUTPUT_DIR}/journey.yaml"),
         "-o",
         "--output",
-        help="Output path for schema.yaml",
+        help="Output path for journey.yaml",
     ),
-    iterations: int = typer.Option(
-        6,
-        "--iterations",
-        "-n",
+    product_name: str | None = typer.Option(
+        None,
+        "--product-name",
+        help="Product name in the output (default: inferred from the repo directory name)",
+    ),
+    schema_max_turns: int = typer.Option(
+        150,
+        "--schema-max-turns",
         min=1,
-        max=30,
-        help="Number of grep + LLM refinement iterations",
+        max=500,
+        help="Maximum agent turns for the schema agent",
+    ),
+    code_max_turns: int = typer.Option(
+        200,
+        "--code-max-turns",
+        min=1,
+        max=500,
+        help="Maximum agent turns for the code agent",
+    ),
+    classify_concurrency: int = typer.Option(
+        8,
+        "--classify-concurrency",
+        min=1,
+        max=64,
+        help="Parallel classifier requests",
+    ),
+    no_specialize: bool = typer.Option(
+        False,
+        "--no-specialize",
+        help="Skip stage specialization; use canonical stage vocabulary",
     ),
     api_key: str | None = typer.Option(
         None,
@@ -74,12 +113,6 @@ def analyse_journey_cmd(
         envvar="SKENE_BASE_URL",
         help="Base URL for API endpoint",
     ),
-    exclude: list[str] | None = typer.Option(
-        None,
-        "--exclude",
-        "-e",
-        help="Folder name to exclude from grep (repeatable)",
-    ),
     quiet: bool = typer.Option(
         False,
         "-q",
@@ -96,72 +129,49 @@ def analyse_journey_cmd(
         "--no-fallback",
         help="Disable model fallback on rate limits; retry same model instead",
     ),
-    skip_growth: bool = typer.Option(
-        False,
-        "--skip-growth",
-        "--skip-growth-manifest",
-        help="Stop after schema.yaml; do not derive a growth manifest",
-    ),
-    skip_plan: bool = typer.Option(
-        False,
-        "--skip-plan",
-        help="Stop after the growth manifest; do not propose new-features.yaml",
-    ),
-    skip_journey: bool = typer.Option(
-        False,
-        "--skip-journey",
-        help="Stop after new-features.yaml; do not compile user-journey.yaml",
-    ),
-    growth_output: Path | None = typer.Option(
-        None,
-        "--growth-output",
-        help="Path for growth-manifest.json (default: next to schema)",
-    ),
-    plan_output: Path | None = typer.Option(
-        None,
-        "--plan-output",
-        help="Path to engine.yaml (read for context only; default: next to schema)",
-    ),
-    new_features_output: Path | None = typer.Option(
-        None,
-        "--new-features-output",
-        help="Path for new-features.yaml (default: same directory as growth manifest)",
-    ),
-    journey_output: Path | None = typer.Option(
-        None,
-        "--journey-output",
-        help="Path for user-journey.yaml (default: next to schema)",
-    ),
-    plan_count: int = typer.Option(
-        DEFAULT_FEATURE_COUNT,
-        "--plan-count",
-        min=1,
-        max=10,
-        help="Number of growth features to propose in new-features.yaml",
-    ),
-):
+) -> None:
     """
-    Analyse the data schema of a codebase, then optionally derive a growth
-    manifest and propose growth opportunities as a fresh
-    ``new-features.yaml`` (the existing ``engine.yaml`` is never modified).
+    Generate a journey.yaml describing the user lifecycle of the target product.
 
-    Repeatedly runs ripgrep for schema-related patterns — classes, models,
-    tables, migrations, typed records — and asks the LLM to distil entities
-    into a growing schema. Each iteration's response also suggests the next
-    grep keyword, so the analysis journeys through the codebase until the
-    schema stabilises.
+    Provide a codebase path, a ``--schema-dir`` of *.sql files, or both. The
+    pipeline runs two parallel agents:
+
+    \b
+      - Schema agent: walks the parsed SQL schema and emits a milestone for
+        every user-facing table.
+      - Code agent: walks the repo and emits a milestone for every
+        user-facing route, handler, analytics call, or job.
+
+    The candidates are merged, classified into discovery / onboarding /
+    activation / engagement / retention / expansion / virality, and
+    assembled into a single validated Journey document.
 
     Examples:
 
-        skene analyse-journey
-
-        skene analyse-journey ./my-project -n 10 --skip-plan
-
-        skene analyse-journey --provider anthropic --model claude-sonnet-4.6
+    \b
+        skene analyse-journey ./my-app --schema-dir ./supabase-schemas
+        skene analyse-journey --schema-dir ./schemas -o journey.json
+        skene analyse-journey ./my-app  # code-only mode (no SQL)
     """
-    base_path = resolve_base_path(path)
+    # At least one input is required.
+    if path is None and schema_dir is None:
+        error("at least one of PATH or --schema-dir is required")
+        raise typer.Exit(2)
+
+    base_path = resolve_base_path(path) if path is not None else None
+    schema_path = schema_dir.resolve() if schema_dir is not None else None
+    if schema_path is not None:
+        if not schema_path.exists():
+            error(f"--schema-dir does not exist: {schema_path}")
+            raise typer.Exit(1)
+        if not schema_path.is_dir():
+            error(f"--schema-dir is not a directory: {schema_path}")
+            raise typer.Exit(1)
+
+    # Config resolution needs a project root; fall back to cwd if only --schema-dir is given.
+    config_root = base_path if base_path is not None else Path.cwd()
     rc = resolve_cli_config(
-        project_root=base_path,
+        project_root=config_root,
         api_key=api_key,
         provider=provider,
         model=model,
@@ -171,61 +181,82 @@ def analyse_journey_cmd(
     )
     resolved_api_key = require_llm_credentials(rc, "analyse-journey")
 
-    schema_path = resolve_artifact_path(output, "schema.yaml")
-    growth_path = (
-        resolve_artifact_path(growth_output, "growth-manifest.json")
-        if growth_output is not None
-        else schema_path.parent / "growth-manifest.json"
-    )
-    engine_path = (
-        resolve_artifact_path(plan_output, "engine.yaml")
-        if plan_output is not None
-        else schema_path.parent / "engine.yaml"
-    )
-    new_features_path = (
-        resolve_artifact_path(new_features_output, "new-features.yaml")
-        if new_features_output is not None
-        else (growth_path.parent / "new-features.yaml").resolve()
-    )
-    journey_path = (
-        resolve_artifact_path(journey_output, "user-journey.yaml")
-        if journey_output is not None
-        else schema_path.parent / "user-journey.yaml"
+    journey_path = resolve_artifact_path(output, "journey.yaml")
+    journey_path.parent.mkdir(parents=True, exist_ok=True)
+
+    resolved_product_name = product_name or _infer_product_name(base_path, schema_path)
+
+    cfg = JourneyPipelineConfig(
+        repo_root=base_path,
+        schema_dir=schema_path,
+        product_name=resolved_product_name,
+        classify_concurrency=classify_concurrency,
+        schema_max_turns=schema_max_turns,
+        code_max_turns=code_max_turns,
+        specialize=not no_specialize,
     )
 
-    # Engine plan stage is temporarily skipped in analyse-journey; the
-    # Stage.PLAN machinery is kept intact for other commands and future use.
-    skip_plan = True
-
-    stages: list[Stage] = [Stage.SCHEMA]
-    if not skip_growth:
-        stages.append(Stage.GROWTH)
-    if not skip_growth and not skip_plan:
-        stages.append(Stage.PLAN)
-    if not skip_growth and not skip_journey:
-        stages.append(Stage.JOURNEY)
-
-    render_kickoff_panel(
+    _render_kickoff(
         title="skene · analyse-journey",
         base_path=base_path,
+        schema_dir=schema_path,
         rc=rc,
-        extra_lines=[f"[bold]Iterations[/bold] {iterations}"],
+        product_name=resolved_product_name,
+        journey_path=journey_path,
+        specialize=cfg.specialize,
     )
 
-    execute_pipeline(
-        base_path=base_path,
-        rc=rc,
-        api_key=resolved_api_key,
-        paths=PipelinePaths(
-            schema=schema_path,
-            growth=growth_path,
-            engine=engine_path,
-            new_features=new_features_path,
-            journey=journey_path,
-        ),
-        stages=stages,
-        iterations=iterations,
-        excludes=exclude if exclude else None,
-        plan_feature_count=plan_count,
-        no_fallback=no_fallback,
-    )
+    llm = build_llm(rc, resolved_api_key, no_fallback=no_fallback)
+
+    import asyncio
+
+    try:
+        journey = asyncio.run(run_journey_pipeline(cfg, llm))
+    except Exception as e:  # noqa: BLE001 — surface any failure to the user
+        error(f"pipeline failed: {e}")
+        raise typer.Exit(1) from e
+
+    write_journey(journey, journey_path)
+
+    _render_summary(journey_path, journey)
+
+
+def _infer_product_name(repo_root: Path | None, schema_dir: Path | None) -> str:
+    if repo_root is not None:
+        return repo_root.name or "Product"
+    if schema_dir is not None:
+        return schema_dir.parent.name or schema_dir.name or "Product"
+    return "Product"
+
+
+def _render_kickoff(
+    *,
+    title: str,
+    base_path: Path | None,
+    schema_dir: Path | None,
+    rc,
+    product_name: str,
+    journey_path: Path,
+    specialize: bool,
+) -> None:
+    lines = [
+        f"[bold]Product[/bold]    {product_name}",
+        f"[bold]Repo[/bold]       {base_path or '[dim](none)[/dim]'}",
+        f"[bold]Schema[/bold]     {schema_dir or '[dim](none)[/dim]'}",
+        f"[bold]Output[/bold]     {journey_path}",
+        f"[bold]Provider[/bold]   {rc.provider} · [dim]{rc.model}[/dim]",
+        f"[bold]Specialize[/bold] {'yes' if specialize else 'no'}",
+    ]
+    console.print(Panel.fit("\n".join(lines), title=title, border_style="blue"))
+
+
+def _render_summary(journey_path: Path, journey) -> None:
+    table = Table(title="Journey summary", title_style="bold", show_lines=False)
+    table.add_column("Stage", style="bold")
+    table.add_column("Milestones", justify="right")
+    for stage in journey.stages:
+        table.add_row(f"{stage.id} ({stage.name})", str(len(stage.milestones)))
+    table.add_row("[dim]total[/dim]", str(sum(len(s.milestones) for s in journey.stages)))
+    console.print()
+    console.print(table)
+    console.print(f"\n[green]✓[/green] wrote {journey_path}")
