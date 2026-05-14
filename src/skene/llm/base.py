@@ -3,7 +3,10 @@ Abstract base class for LLM clients.
 """
 
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator
+from typing import TYPE_CHECKING, AsyncGenerator
+
+if TYPE_CHECKING:
+    from skene.llm.agent_loop import AgentRunResult, AssistantTurn, Message, Tool
 
 
 class LLMClient(ABC):
@@ -15,6 +18,10 @@ class LLMClient(ABC):
 
     Subclasses must implement ``generate_content_with_usage``,
     ``generate_content_stream``, ``get_model_name``, and ``get_provider_name``.
+    They may also override ``generate_with_tools`` to enable tool-use
+    (agent) workflows; the default raises ``NotImplementedError`` so
+    providers without native tool support fail loudly when an agent
+    workflow is attempted.
 
     Example:
         client = create_llm_client("gemini", api_key, "gemini-3-flash-preview")
@@ -60,3 +67,44 @@ class LLMClient(ABC):
     def get_provider_name(self) -> str:
         """Return the provider name (e.g., 'google', 'openai')."""
         pass
+
+    async def generate_with_tools(
+        self,
+        messages: "list[Message]",
+        tools: "list[Tool]",
+    ) -> "AssistantTurn":
+        """Run a single tool-use turn against the model.
+
+        Each provider translates the unified :class:`Message` and
+        :class:`Tool` representations into its native tool-calling API and
+        returns the model's response normalized into an
+        :class:`AssistantTurn`. The default implementation raises so
+        providers without tool support fail loudly.
+        """
+        raise NotImplementedError(
+            f"{self.get_provider_name()} does not implement generate_with_tools yet"
+        )
+
+    async def run_agent(
+        self,
+        instructions: str,
+        tools: "list[Tool]",
+        initial_input: str,
+        max_turns: int = 20,
+    ) -> "AgentRunResult":
+        """Run an agent loop, dispatching tool calls until the model stops.
+
+        Default implementation delegates to
+        :func:`skene.llm.agent_loop.run_agent`. Providers may override
+        this if they need different semantics, but they should generally
+        only override :meth:`generate_with_tools`.
+        """
+        from skene.llm.agent_loop import run_agent
+
+        return await run_agent(
+            self,
+            instructions=instructions,
+            tools=tools,
+            initial_input=initial_input,
+            max_turns=max_turns,
+        )

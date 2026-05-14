@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 
 from loguru import logger
 
+from skene.llm.agent_loop import AssistantTurn, Message, Tool
 from skene.llm.base import LLMClient
 from skene.output import DEBUG_DIR
 
@@ -115,8 +116,93 @@ class DebugLLMClient(LLMClient):
             len(full_response),
         )
 
+    async def generate_with_tools(
+        self,
+        messages: list[Message],
+        tools: list[Tool],
+    ) -> AssistantTurn:
+        self._call_count += 1
+        call_id = self._call_count
+        ts = datetime.now().isoformat()
+
+        tool_names = ", ".join(t.name for t in tools) or "(none)"
+        msg_summary = _summarize_messages(messages)
+        self._write(
+            f"\n--- Call #{call_id} (tools) | {ts} ---\n"
+            f"Provider: {self._client.get_provider_name()}\n"
+            f"Model: {self._client.get_model_name()}\n"
+            f"Tools: {tool_names}\n"
+            f"\n[MESSAGES]\n{msg_summary}\n"
+        )
+        logger.debug(
+            "LLM tool call #{} | provider={} model={} messages={} tools={}",
+            call_id,
+            self._client.get_provider_name(),
+            self._client.get_model_name(),
+            len(messages),
+            len(tools),
+        )
+
+        start = time.monotonic()
+        turn = await self._client.generate_with_tools(messages, tools)
+        duration = time.monotonic() - start
+
+        token_info = ""
+        if turn.usage:
+            inp = turn.usage.get("input_tokens", 0)
+            out = turn.usage.get("output_tokens", 0)
+            token_info = f" | {out:,} out / {inp:,} in"
+        tc_summary = ""
+        if turn.tool_calls:
+            tc_summary = "\n[TOOL_CALLS]\n" + "\n".join(
+                f"  {tc.name}({_short_json(tc.arguments)})" for tc in turn.tool_calls
+            )
+        self._write(
+            f"\n[RESPONSE] ({duration:.2f}s{token_info})\n"
+            f"text: {turn.text!r}{tc_summary}\n"
+            f"\n--- End call #{call_id} ---\n"
+        )
+        logger.debug(
+            "LLM tool call #{} completed | {:.2f}s | tool_calls={}{}",
+            call_id,
+            duration,
+            len(turn.tool_calls),
+            token_info,
+        )
+        return turn
+
     def get_model_name(self) -> str:
         return self._client.get_model_name()
 
     def get_provider_name(self) -> str:
         return self._client.get_provider_name()
+
+
+def _summarize_messages(messages: list[Message]) -> str:
+    """Compact, log-friendly summary of a message list — full content is
+    too verbose for the agent loop's many turns.
+    """
+    lines: list[str] = []
+    for i, m in enumerate(messages):
+        body = (m.content or "").strip().replace("\n", " ")
+        if len(body) > 200:
+            body = body[:197] + "..."
+        extra = ""
+        if m.tool_calls:
+            extra = f" tool_calls=[{', '.join(tc.name for tc in m.tool_calls)}]"
+        if m.tool_call_id:
+            extra = f" tool_call_id={m.tool_call_id}"
+        lines.append(f"  [{i}] {m.role}{extra}: {body}")
+    return "\n".join(lines)
+
+
+def _short_json(obj: object, limit: int = 160) -> str:
+    import json as _json
+
+    try:
+        s = _json.dumps(obj, default=str)
+    except Exception:  # noqa: BLE001
+        s = str(obj)
+    if len(s) > limit:
+        s = s[: limit - 3] + "..."
+    return s
