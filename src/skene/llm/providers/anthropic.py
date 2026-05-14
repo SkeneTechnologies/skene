@@ -3,10 +3,11 @@ Anthropic LLM client implementation.
 """
 
 import asyncio
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from pydantic import SecretStr
 
+from skene.llm.agent_loop import AssistantTurn, Message, Tool, ToolCall
 from skene.llm.base import LLMClient
 from skene.output import debug, warning
 
@@ -226,3 +227,110 @@ class AnthropicClient(LLMClient):
     def get_provider_name(self) -> str:
         """Return the provider name."""
         return "anthropic"
+
+    async def generate_with_tools(
+        self,
+        messages: list[Message],
+        tools: list[Tool],
+    ) -> AssistantTurn:
+        """One tool-use turn against Anthropic's Messages API.
+
+        Translates the unified message/tool shape into Anthropic's native
+        format:
+
+        - the ``system`` role becomes a top-level ``system=`` argument
+          (Anthropic does not accept system inside the messages list)
+        - assistant tool calls become ``content`` blocks of type ``tool_use``
+        - tool results become a user message with a ``tool_result`` block
+        - the ``tools`` list uses ``input_schema`` instead of ``parameters``
+        """
+        system_text = ""
+        api_messages: list[dict[str, Any]] = []
+        for m in messages:
+            if m.role == "system":
+                # Anthropic only honors one system; concatenate if needed.
+                system_text = (system_text + "\n\n" + (m.content or "")).strip()
+                continue
+            if m.role == "tool":
+                api_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": m.tool_call_id or "",
+                                "content": m.content or "",
+                            }
+                        ],
+                    }
+                )
+                continue
+            if m.role == "assistant":
+                blocks: list[dict[str, Any]] = []
+                if m.content:
+                    blocks.append({"type": "text", "text": m.content})
+                for tc in m.tool_calls:
+                    blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc.id,
+                            "name": tc.name,
+                            "input": tc.arguments,
+                        }
+                    )
+                # Anthropic rejects empty content arrays — drop the message
+                # entirely in that pathological case.
+                if blocks:
+                    api_messages.append({"role": "assistant", "content": blocks})
+                continue
+            # user
+            api_messages.append({"role": "user", "content": m.content or ""})
+
+        api_tools = [
+            {
+                "name": t.name,
+                "description": t.description,
+                "input_schema": t.parameters,
+            }
+            for t in tools
+        ]
+
+        try:
+            kwargs: dict[str, Any] = {
+                "model": self.model_name,
+                "max_tokens": 8192,
+                "messages": api_messages,
+            }
+            if system_text:
+                kwargs["system"] = system_text
+            if api_tools:
+                kwargs["tools"] = api_tools
+            response = await self.client.messages.create(**kwargs)
+        except Exception as e:
+            raise RuntimeError(f"Error calling Anthropic with tools: {e}") from e
+
+        text_chunks: list[str] = []
+        tool_calls: list[ToolCall] = []
+        for block in response.content or []:
+            btype = getattr(block, "type", None)
+            if btype == "text":
+                text_chunks.append(getattr(block, "text", "") or "")
+            elif btype == "tool_use":
+                tool_calls.append(
+                    ToolCall(
+                        id=getattr(block, "id", ""),
+                        name=getattr(block, "name", ""),
+                        arguments=getattr(block, "input", {}) or {},
+                    )
+                )
+
+        usage = getattr(response, "usage", None)
+        usage_dict: dict[str, int] | None = None
+        if usage and hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
+            usage_dict = {
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+            }
+
+        text = "".join(text_chunks).strip() or None
+        return AssistantTurn(text=text, tool_calls=tool_calls, usage=usage_dict, raw=response)
