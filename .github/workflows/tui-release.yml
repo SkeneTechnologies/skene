@@ -86,6 +86,15 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Generate checksums
+        working-directory: artifacts
+        run: |
+          shopt -s nullglob
+          files=( skene-*.tar.gz skene-*.zip )
+          [ ${#files[@]} -gt 0 ] || { echo "No release artifacts found"; exit 1; }
+          sha256sum "${files[@]}" > checksums.txt
+          cat checksums.txt
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
