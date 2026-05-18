@@ -66,6 +66,7 @@ type AnalysisResult struct {
 	GrowthPlan     string
 	Manifest       string
 	GrowthTemplate string
+	Journey        string
 	Error          error
 }
 
@@ -128,20 +129,23 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 	return result
 }
 
-// RunJourney executes the simplified analysis by spawning uvx skene analyse-journey.
-// This runs a 3-step pipeline: schema analysis, growth-from-schema, and plan engine.
+// RunJourney executes the new agentic analyse-journey pipeline by spawning
+// uvx skene analyse-journey. The CLI now runs two parallel LLM agents (one
+// over the codebase, one over a SQL schema dir if provided) and emits a
+// single journey.yaml describing the user lifecycle in seven canonical
+// stages with evidence-backed milestones.
+//
+// This invocation is code-only — --schema-dir is intentionally omitted
+// until the TUI grows a view for collecting it.
 func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
 	result := &AnalysisResult{}
 
-	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting schema-driven analysis...")
+	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting journey analysis...")
 
 	bundle := e.bundleOutputDir()
-	ctxDir := e.contextOutputDir()
 	args := []string{
 		constants.GrowthPackageSpec(), "analyse-journey", ".",
-		"-o", filepath.Join(bundle, constants.SchemaFile),
-		"--growth-output", filepath.Join(ctxDir, constants.GrowthManifestFile),
-		"--plan-output", filepath.Join(bundle, constants.EngineFile),
+		"-o", filepath.Join(bundle, constants.JourneyFile),
 	}
 
 	if err := e.runUVX(ctx, args); err != nil {
@@ -151,7 +155,7 @@ func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseGenerateDocs, 1.0, "Analysis complete")
 
-	result.Manifest = loadFileContent(filepath.Join(ctxDir, constants.GrowthManifestFile))
+	result.Journey = loadFileContent(filepath.Join(bundle, constants.JourneyFile))
 
 	return result
 }

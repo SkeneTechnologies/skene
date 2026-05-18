@@ -42,7 +42,7 @@ type ProjectDirView struct {
 	existingAnalysis      ExistingAnalysisChoice
 	existingButtonGroup   *components.ButtonGroup
 	hasSkeneContext        bool
-	noSchemaDetected       bool // true when the last analyse-journey run didn't produce user-journey.yaml
+	noSchemaDetected       bool // true when the last analyse-journey run didn't produce journey.yaml
 
 	// Next steps modal (shown over the existing analysis prompt)
 	showNextSteps bool
@@ -319,16 +319,16 @@ func existingBundleDir(projectDir string) string {
 }
 
 // buildExistingButtons creates the button group based on which files exist.
-// When user-journey.yaml is present we expose the three primary actions
-// (view, re-run, deploy) directly so first-time users can reach
-// "Deploy to Skene Cloud" without opening the next-steps modal. When the
-// journey is missing we fall back to the two analysis options.
+// When journey.yaml is present we expose the three primary actions (view,
+// re-run, deploy) directly so first-time users can reach "Deploy to Skene
+// Cloud" without opening the next-steps modal. When the journey is
+// missing we fall back to the two analysis options.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
-	primary := filepath.Join(projectDir, constants.OutputDirName, constants.UserJourneyFile)
+	primary := filepath.Join(projectDir, constants.OutputDirName, constants.JourneyFile)
 	if _, err := os.Stat(primary); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirDeployToCloud, constants.ProjectDirRerunAnalysis)
 	}
-	legacy := filepath.Join(projectDir, constants.LegacyOutputDirName, constants.UserJourneyFile)
+	legacy := filepath.Join(projectDir, constants.LegacyOutputDirName, constants.JourneyFile)
 	if _, err := os.Stat(legacy); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirDeployToCloud, constants.ProjectDirRerunAnalysis)
 	}
@@ -404,7 +404,7 @@ func (v *ProjectDirView) HasExistingAnalysis() bool {
 }
 
 // SetNoSchemaDetected marks that the last analyse-journey run did not produce
-// user-journey.yaml, so the prompt should explain the fallback.
+// journey.yaml, so the prompt should explain the fallback.
 func (v *ProjectDirView) SetNoSchemaDetected(detected bool) {
 	v.noSchemaDetected = detected
 }
