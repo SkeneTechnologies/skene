@@ -238,7 +238,7 @@ class SchemaToolset:
                         "description": {"type": "string"},
                         "table": {"type": "string"},
                         "reason": {"type": "string"},
-                        "tracked_event": {"type": ["string", "null"]},
+                        "tracked_event": {"type": "string"},
                         "confidence": {
                             "type": "number",
                             "minimum": 0.0,

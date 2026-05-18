@@ -323,14 +323,19 @@ class GoogleGeminiClient(LLMClient):
                 if m.content:
                     parts.append(genai_types.Part(text=m.content))
                 for tc in m.tool_calls:
-                    parts.append(
-                        genai_types.Part(
-                            function_call=genai_types.FunctionCall(
-                                name=tc.name,
-                                args=tc.arguments,
-                            )
+                    # Gemini 3 requires thought_signature to round-trip with
+                    # the function_call Part on replay; otherwise the API
+                    # 400s with "Function call is missing a thought_signature".
+                    sig = tc.provider_extras.get("thought_signature")
+                    part_kwargs: dict[str, Any] = {
+                        "function_call": genai_types.FunctionCall(
+                            name=tc.name,
+                            args=tc.arguments,
                         )
-                    )
+                    }
+                    if sig is not None:
+                        part_kwargs["thought_signature"] = sig
+                    parts.append(genai_types.Part(**part_kwargs))
                 if parts:
                     contents.append(genai_types.Content(role="model", parts=parts))
                 continue
@@ -384,11 +389,16 @@ class GoogleGeminiClient(LLMClient):
                 if fc is not None and getattr(fc, "name", None):
                     tc_counter += 1
                     args = dict(getattr(fc, "args", None) or {})
+                    extras: dict[str, Any] = {}
+                    sig = getattr(part, "thought_signature", None)
+                    if sig is not None:
+                        extras["thought_signature"] = sig
                     tool_calls.append(
                         ToolCall(
                             id=f"gemini-{tc_counter}",
                             name=fc.name,
                             arguments=args,
+                            provider_extras=extras,
                         )
                     )
                     continue
