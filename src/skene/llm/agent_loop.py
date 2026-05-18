@@ -56,11 +56,17 @@ class Tool:
 
 @dataclass
 class ToolCall:
-    """A tool invocation the model produced in one turn."""
+    """A tool invocation the model produced in one turn.
+
+    ``provider_extras`` lets adapters stash provider-native metadata that
+    has to round-trip on replay (e.g. Gemini's ``thought_signature``).
+    Other adapters ignore it.
+    """
 
     id: str
     name: str
     arguments: dict[str, Any]
+    provider_extras: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
