@@ -22,9 +22,7 @@ class _FakeLLM(LLMClient):
         self._responses = list(responses)
         self.calls: list[str] = []
 
-    async def generate_content_with_usage(
-        self, prompt: str
-    ) -> tuple[str, dict[str, int] | None]:
+    async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
         self.calls.append(prompt)
         if not self._responses:
             raise AssertionError("fake LLM ran out of responses")

@@ -95,10 +95,7 @@ async def run_schema_agent(
     toolset = SchemaToolset(index, collector)
     tools = toolset.as_tools()
 
-    status(
-        f"Schema agent: starting LLM exploration "
-        f"(model={llm.get_model_name()} max_turns={max_turns})"
-    )
+    status(f"Schema agent: starting LLM exploration (model={llm.get_model_name()} max_turns={max_turns})")
     result = await llm.run_agent(
         instructions=SCHEMA_AGENT_INSTRUCTIONS,
         tools=tools,
@@ -106,7 +103,6 @@ async def run_schema_agent(
         max_turns=max_turns,
     )
     status(
-        f"Schema agent: emitted {len(collector)} candidate(s) "
-        f"(turns={result.turns}, stopped={result.stopped_reason})"
+        f"Schema agent: emitted {len(collector)} candidate(s) (turns={result.turns}, stopped={result.stopped_reason})"
     )
     return collector

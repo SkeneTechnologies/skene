@@ -24,7 +24,6 @@ from skene.analyzers.journey.models import Evidence
 from skene.llm.agent_loop import Tool
 from skene.output import debug
 
-
 IGNORED_DIR_NAMES: frozenset[str] = frozenset(
     {
         "node_modules",
@@ -152,9 +151,7 @@ class FsToolset:
             text += f"\n\n[truncated at {max_bytes} bytes]"
         return text
 
-    def _search_files(
-        self, pattern: str, path: str = "."
-    ) -> list[SearchHit] | dict[str, str]:
+    def _search_files(self, pattern: str, path: str = ".") -> list[SearchHit] | dict[str, str]:
         try:
             target = self._resolve(path)
         except ValueError as e:
@@ -211,12 +208,7 @@ class FsToolset:
         except ValueError as e:
             return {"error": str(e)}
         if not target.exists() or not target.is_file():
-            return {
-                "error": (
-                    f"path {path!r} must be a real file you have read; "
-                    "use search_files / read_file first"
-                )
-            }
+            return {"error": (f"path {path!r} must be a real file you have read; use search_files / read_file first")}
         cm = CandidateMilestone(
             proposed_id=proposed_id,
             name=name,
@@ -226,10 +218,7 @@ class FsToolset:
             confidence=confidence,
         )
         self._collector.append(cm)
-        debug(
-            f"fs tool: emit_milestone id={proposed_id} name={name!r} "
-            f"path={path} conf={confidence:.2f}"
-        )
+        debug(f"fs tool: emit_milestone id={proposed_id} name={name!r} path={path} conf={confidence:.2f}")
         return f"recorded {proposed_id}"
 
     # --- Tool bindings ---
@@ -295,8 +284,7 @@ class FsToolset:
             Tool(
                 name="read_file",
                 description=(
-                    "Read a text file. Truncates if larger than max_bytes "
-                    "and appends a [truncated ...] marker."
+                    "Read a text file. Truncates if larger than max_bytes and appends a [truncated ...] marker."
                 ),
                 parameters={
                     "type": "object",
@@ -310,10 +298,7 @@ class FsToolset:
             ),
             Tool(
                 name="search_files",
-                description=(
-                    "Regex search across text files under path. Returns up "
-                    "to 50 hits as {path, line, text}."
-                ),
+                description=("Regex search across text files under path. Returns up to 50 hits as {path, line, text}."),
                 parameters={
                     "type": "object",
                     "properties": {

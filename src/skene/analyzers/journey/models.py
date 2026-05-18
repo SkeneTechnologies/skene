@@ -203,9 +203,7 @@ class Journey(BaseModel):
         for layer in self.layers:
             missing = set(layer.spans_stages) - stage_ids
             if missing:
-                raise ValueError(
-                    f"layer {layer.id} references unknown stages: {sorted(missing)}"
-                )
+                raise ValueError(f"layer {layer.id} references unknown stages: {sorted(missing)}")
         return self
 
     @model_validator(mode="after")
@@ -220,11 +218,7 @@ class Journey(BaseModel):
         valid_refs = {f"{s.id}.{m.id}" for s in self.stages for m in s.milestones}
         for c in self.connectors:
             if c.from_ not in valid_refs:
-                raise ValueError(
-                    f"connector {c.id}: 'from' {c.from_!r} does not match any milestone"
-                )
+                raise ValueError(f"connector {c.id}: 'from' {c.from_!r} does not match any milestone")
             if c.to != "unknown" and c.to not in valid_refs:
-                raise ValueError(
-                    f"connector {c.id}: 'to' {c.to!r} does not match any milestone"
-                )
+                raise ValueError(f"connector {c.id}: 'to' {c.to!r} does not match any milestone")
         return self

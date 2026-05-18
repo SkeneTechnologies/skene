@@ -144,9 +144,7 @@ class OpenAICompatibleClient(LLMClient):
                 tool_choice="auto" if api_tools else None,
             )
         except Exception as e:
-            raise RuntimeError(
-                f"Error calling {self.get_provider_name()} with tools: {e}"
-            ) from e
+            raise RuntimeError(f"Error calling {self.get_provider_name()} with tools: {e}") from e
 
         choice = response.choices[0].message
         text = (choice.content or "").strip() or None
@@ -156,9 +154,7 @@ class OpenAICompatibleClient(LLMClient):
                 args = json.loads(raw_tc.function.arguments or "{}")
             except json.JSONDecodeError:
                 args = {"_raw": raw_tc.function.arguments}
-            tool_calls.append(
-                ToolCall(id=raw_tc.id, name=raw_tc.function.name, arguments=args)
-            )
+            tool_calls.append(ToolCall(id=raw_tc.id, name=raw_tc.function.name, arguments=args))
 
         usage = getattr(response, "usage", None)
         usage_dict: dict[str, int] | None = None

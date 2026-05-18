@@ -14,20 +14,11 @@ def _build_repo(tmp_path: Path) -> Path:
     """Build a tiny synthetic repo. Reused across tests in this module."""
     (tmp_path / "src" / "api").mkdir(parents=True)
     (tmp_path / "src" / "api" / "signup.ts").write_text(
-        "export async function POST() {\n"
-        "  // create user\n"
-        "  await analytics.track('account_created');\n"
-        "}\n"
+        "export async function POST() {\n  // create user\n  await analytics.track('account_created');\n}\n"
     )
-    (tmp_path / "src" / "api" / "estimates.ts").write_text(
-        "export async function POST() {\n"
-        "  // create estimate\n"
-        "}\n"
-    )
+    (tmp_path / "src" / "api" / "estimates.ts").write_text("export async function POST() {\n  // create estimate\n}\n")
     (tmp_path / "node_modules").mkdir()
-    (tmp_path / "node_modules" / "junk.ts").write_text(
-        "// should be ignored\nanalytics.track('vendor')\n"
-    )
+    (tmp_path / "node_modules" / "junk.ts").write_text("// should be ignored\nanalytics.track('vendor')\n")
     (tmp_path / "README.md").write_text("# Test repo\n")
     return tmp_path
 
@@ -175,9 +166,7 @@ async def test_run_code_agent_with_scripted_llm(tmp_path: Path):
         def get_provider_name(self) -> str:
             return "scripted"
 
-        async def generate_with_tools(
-            self, messages: list[Message], tools: list[Tool]
-        ) -> AssistantTurn:
+        async def generate_with_tools(self, messages: list[Message], tools: list[Tool]) -> AssistantTurn:
             self._step += 1
             if self._step == 1:
                 return AssistantTurn(

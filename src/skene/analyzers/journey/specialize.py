@@ -55,9 +55,7 @@ class SpecializedStages(BaseModel):
     expansion: StageSpecialization
     virality: StageSpecialization
 
-    def to_stage_defs(
-        self, canonical: tuple[StageDef, ...] = STAGES
-    ) -> tuple[StageDef, ...]:
+    def to_stage_defs(self, canonical: tuple[StageDef, ...] = STAGES) -> tuple[StageDef, ...]:
         """Overlay specialized fields onto canonical id/order."""
         out: list[StageDef] = []
         for s in canonical:
@@ -130,11 +128,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
     if isinstance(out, str):
         try:
             data = json.loads(out)
-            keep = {
-                k: data.get(k)
-                for k in ("name", "description", "homepage", "keywords")
-                if data.get(k)
-            }
+            keep = {k: data.get(k) for k in ("name", "description", "homepage", "keywords") if data.get(k)}
             if keep:
                 return "package.json: " + json.dumps(keep, indent=2)
         except json.JSONDecodeError:
@@ -145,11 +139,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
         try:
             data = tomllib.loads(out)
             proj = data.get("project", {})
-            keep = {
-                k: proj.get(k)
-                for k in ("name", "description", "keywords")
-                if proj.get(k)
-            }
+            keep = {k: proj.get(k) for k in ("name", "description", "keywords") if proj.get(k)}
             if keep:
                 return "pyproject.toml: " + json.dumps(keep, indent=2)
         except (tomllib.TOMLDecodeError, AttributeError):
@@ -160,11 +150,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
         try:
             data = tomllib.loads(out)
             pkg = data.get("package", {})
-            keep = {
-                k: pkg.get(k)
-                for k in ("name", "description", "keywords")
-                if pkg.get(k)
-            }
+            keep = {k: pkg.get(k) for k in ("name", "description", "keywords") if pkg.get(k)}
             if keep:
                 return "Cargo.toml: " + json.dumps(keep, indent=2)
         except tomllib.TOMLDecodeError:
@@ -290,9 +276,5 @@ async def specialize_stages(
         return STAGES
 
     specialized = coerced.to_stage_defs(STAGES)
-    status(
-        "Step 0: stage specialization complete — names=["
-        + ", ".join(s.name for s in specialized)
-        + "]"
-    )
+    status("Step 0: stage specialization complete — names=[" + ", ".join(s.name for s in specialized) + "]")
     return specialized

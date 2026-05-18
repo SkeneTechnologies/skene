@@ -123,10 +123,7 @@ class SchemaToolset:
             confidence=confidence,
         )
         self._collector.append(cm)
-        debug(
-            f"schema tool: emit_milestone id={proposed_id} name={name!r} "
-            f"table={table} conf={confidence:.2f}"
-        )
+        debug(f"schema tool: emit_milestone id={proposed_id} name={name!r} table={table} conf={confidence:.2f}")
         return f"recorded {proposed_id}"
 
     # --- Tool bindings ---
@@ -199,8 +196,7 @@ class SchemaToolset:
             Tool(
                 name="describe_table",
                 description=(
-                    "Full detail for one table: columns (with types), "
-                    "primary key, foreign keys, and indexes."
+                    "Full detail for one table: columns (with types), primary key, foreign keys, and indexes."
                 ),
                 parameters={
                     "type": "object",
@@ -215,8 +211,7 @@ class SchemaToolset:
             Tool(
                 name="search_tables",
                 description=(
-                    "Case-insensitive substring search for tables across "
-                    "every schema file, internal schemas included."
+                    "Case-insensitive substring search for tables across every schema file, internal schemas included."
                 ),
                 parameters={
                     "type": "object",

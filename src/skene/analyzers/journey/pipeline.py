@@ -59,9 +59,7 @@ class JourneyPipelineConfig:
 
     def __post_init__(self) -> None:
         if self.repo_root is None and self.schema_dir is None:
-            raise ValueError(
-                "JourneyPipelineConfig requires at least one of repo_root or schema_dir"
-            )
+            raise ValueError("JourneyPipelineConfig requires at least one of repo_root or schema_dir")
 
 
 def _describe_mode(cfg: JourneyPipelineConfig) -> str:
@@ -75,10 +73,7 @@ def _describe_mode(cfg: JourneyPipelineConfig) -> str:
 async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Journey:
     """Run the full pipeline end-to-end and return a validated Journey."""
     mode = _describe_mode(cfg)
-    status(
-        f"Pipeline start: product={cfg.product_name} model={llm.get_model_name()} "
-        f"mode={mode}"
-    )
+    status(f"Pipeline start: product={cfg.product_name} model={llm.get_model_name()} mode={mode}")
     if mode != "code+schema":
         warning(
             f"running in {mode} mode — the LLM has only half the evidence, "
@@ -106,9 +101,7 @@ async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Jo
             )
         )
     if cfg.specialize and cfg.repo_root is not None:
-        specialize_task = asyncio.create_task(
-            specialize_stages(cfg.repo_root, cfg.product_name, llm=llm)
-        )
+        specialize_task = asyncio.create_task(specialize_stages(cfg.repo_root, cfg.product_name, llm=llm))
     elif cfg.specialize and cfg.repo_root is None:
         status("Step 0: skipped (schema-only mode) — using canonical stages")
     else:
@@ -121,10 +114,7 @@ async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Jo
     code_candidates = code_task.result() if code_task is not None else []
     stages = specialize_task.result() if specialize_task is not None else STAGES
 
-    status(
-        f"Steps 1+2 done: schema agent emitted {len(schema_candidates)}, "
-        f"code agent emitted {len(code_candidates)}"
-    )
+    status(f"Steps 1+2 done: schema agent emitted {len(schema_candidates)}, code agent emitted {len(code_candidates)}")
 
     status("Step 3: merging candidates (deterministic)")
     merged = merge_candidates(schema_candidates, code_candidates)
@@ -133,10 +123,7 @@ async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Jo
         f"code → {len(merged)} unique candidates"
     )
 
-    status(
-        f"Step 4: classifying {len(merged)} candidates "
-        f"(concurrency={cfg.classify_concurrency})"
-    )
+    status(f"Step 4: classifying {len(merged)} candidates (concurrency={cfg.classify_concurrency})")
     classified = await classify_all(
         merged,
         llm=llm,
@@ -147,15 +134,11 @@ async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Jo
     for cm in classified:
         if cm.stage_id:
             by_stage[cm.stage_id] = by_stage.get(cm.stage_id, 0) + 1
-    status(
-        "Step 4 done: classification — "
-        + (", ".join(f"{k}={v}" for k, v in sorted(by_stage.items())) or "(none)")
-    )
+    status("Step 4 done: classification — " + (", ".join(f"{k}={v}" for k, v in sorted(by_stage.items())) or "(none)"))
 
     status("Step 5: assembling Journey")
     journey = assemble_journey(classified, product_name=cfg.product_name, stages=stages)
     status(
-        f"Pipeline complete: stages={len(journey.stages)} "
-        f"milestones={sum(len(s.milestones) for s in journey.stages)}"
+        f"Pipeline complete: stages={len(journey.stages)} milestones={sum(len(s.milestones) for s in journey.stages)}"
     )
     return journey

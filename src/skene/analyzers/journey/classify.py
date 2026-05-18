@@ -71,9 +71,7 @@ no code fences:
 
 
 def _build_instructions(stages: tuple[StageDef, ...] = STAGES) -> str:
-    return _INSTRUCTIONS_TEMPLATE.format(
-        stages=stages_as_prompt(stages), ids=sorted(STAGE_IDS)
-    )
+    return _INSTRUCTIONS_TEMPLATE.format(stages=stages_as_prompt(stages), ids=sorted(STAGE_IDS))
 
 
 def _format_input(cm: CandidateMilestone) -> str:
@@ -101,15 +99,11 @@ async def classify_milestone(
     response = await llm.generate_content(prompt)
     parsed = parse_json(response)
     if parsed is None:
-        raise ValueError(
-            f"classifier returned non-JSON response for {cm.proposed_id}: {response[:200]!r}"
-        )
+        raise ValueError(f"classifier returned non-JSON response for {cm.proposed_id}: {response[:200]!r}")
     try:
         result = ClassificationResult.model_validate(parsed)
     except ValidationError as e:
-        raise ValueError(
-            f"classifier returned invalid result for {cm.proposed_id}: {e}"
-        ) from e
+        raise ValueError(f"classifier returned invalid result for {cm.proposed_id}: {e}") from e
     debug(
         f"classify LLM result ← {cm.proposed_id} stage_id={result.stage_id} "
         f"confidence={result.confidence:.2f} reason={result.reason!r}"
@@ -148,13 +142,9 @@ async def classify_all(
             stage_id = res.stage_id
             confidence = min(cm.confidence, res.confidence)
             if stage_id not in STAGE_IDS:
-                warning(
-                    f"classifier returned unknown stage_id {stage_id!r} for {cm.proposed_id}"
-                )
+                warning(f"classifier returned unknown stage_id {stage_id!r} for {cm.proposed_id}")
                 stage_id = "engagement"
                 confidence = min(confidence, 0.3)
-            return cm.model_copy(
-                update={"stage_id": stage_id, "confidence": confidence}
-            )
+            return cm.model_copy(update={"stage_id": stage_id, "confidence": confidence})
 
     return await asyncio.gather(*[_one(c) for c in candidates])

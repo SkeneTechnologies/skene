@@ -100,9 +100,7 @@ def _parse_loose(text: str) -> list[exp.Expression | None]:
     return out
 
 
-def _apply_statement(
-    stmt: exp.Expression, tables: dict[str, TableInfo], schema_file: str
-) -> None:
+def _apply_statement(stmt: exp.Expression, tables: dict[str, TableInfo], schema_file: str) -> None:
     if isinstance(stmt, exp.Create):
         kind = (stmt.args.get("kind") or "").upper()
         if kind == "TABLE":
@@ -117,9 +115,7 @@ def _apply_statement(
         return
 
 
-def _handle_create_table(
-    stmt: exp.Create, tables: dict[str, TableInfo], schema_file: str
-) -> None:
+def _handle_create_table(stmt: exp.Create, tables: dict[str, TableInfo], schema_file: str) -> None:
     table_expr = stmt.this
     table_name = _table_name(table_expr)
     if not table_name:
@@ -256,9 +252,7 @@ def _foreign_key_from_expr(fk: exp.ForeignKey) -> ForeignKey | None:
     ref_table = _table_name(ref_target)
     ref_cols: list[str] = []
     if isinstance(ref_target, exp.Schema):
-        ref_cols = [
-            _ident_name(e) for e in (ref_target.expressions or []) if _ident_name(e)
-        ]
+        ref_cols = [_ident_name(e) for e in (ref_target.expressions or []) if _ident_name(e)]
     if not ref_table:
         return None
     return ForeignKey(

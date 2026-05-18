@@ -11,7 +11,6 @@ from skene.llm.agent_loop import (
     Message,
     Tool,
     ToolCall,
-    run_agent,
 )
 from skene.llm.base import LLMClient
 
@@ -27,9 +26,7 @@ class _ScriptedClient(LLMClient):
         self._turns = list(turns)
         self.calls: list[tuple[list[Message], list[Tool]]] = []
 
-    async def generate_content_with_usage(
-        self, prompt: str
-    ) -> tuple[str, dict[str, int] | None]:
+    async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
         raise NotImplementedError
 
     async def generate_content_stream(self, prompt: str) -> AsyncGenerator[str, None]:
@@ -43,9 +40,7 @@ class _ScriptedClient(LLMClient):
     def get_provider_name(self) -> str:
         return "scripted"
 
-    async def generate_with_tools(
-        self, messages: list[Message], tools: list[Tool]
-    ) -> AssistantTurn:
+    async def generate_with_tools(self, messages: list[Message], tools: list[Tool]) -> AssistantTurn:
         # Snapshot the inputs so the test can inspect them later.
         self.calls.append(([Message(**m.__dict__) for m in messages], list(tools)))
         if not self._turns:

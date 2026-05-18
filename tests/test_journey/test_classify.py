@@ -24,9 +24,7 @@ class _FakeLLM(LLMClient):
         self._responses = list(responses)
         self.calls: list[str] = []
 
-    async def generate_content_with_usage(
-        self, prompt: str
-    ) -> tuple[str, dict[str, int] | None]:
+    async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
         self.calls.append(prompt)
         if not self._responses:
             raise AssertionError("fake LLM ran out of responses")
@@ -108,9 +106,7 @@ async def test_classify_all_assigns_stage_ids():
 @pytest.mark.asyncio
 async def test_classify_all_confidence_is_min_of_inputs():
     # Candidate confidence is 0.8; classifier confidence is 0.95 → result 0.8
-    llm = _FakeLLM(
-        [json.dumps({"stage_id": "discovery", "confidence": 0.95, "reason": "x"})]
-    )
+    llm = _FakeLLM([json.dumps({"stage_id": "discovery", "confidence": 0.95, "reason": "x"})])
     cm = _candidate("x")
     [out] = await classify_all([cm], llm)
     assert out.confidence == 0.8
@@ -118,9 +114,7 @@ async def test_classify_all_confidence_is_min_of_inputs():
 
 @pytest.mark.asyncio
 async def test_classify_all_falls_back_to_engagement_on_unknown_stage():
-    llm = _FakeLLM(
-        [json.dumps({"stage_id": "moon_phase", "confidence": 0.9, "reason": "?"})]
-    )
+    llm = _FakeLLM([json.dumps({"stage_id": "moon_phase", "confidence": 0.9, "reason": "?"})])
     [out] = await classify_all([_candidate("x")], llm)
     assert out.stage_id == "engagement"
     assert out.confidence <= 0.3

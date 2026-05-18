@@ -81,9 +81,7 @@ class LLMClient(ABC):
         :class:`AssistantTurn`. The default implementation raises so
         providers without tool support fail loudly.
         """
-        raise NotImplementedError(
-            f"{self.get_provider_name()} does not implement generate_with_tools yet"
-        )
+        raise NotImplementedError(f"{self.get_provider_name()} does not implement generate_with_tools yet")
 
     async def run_agent(
         self,
