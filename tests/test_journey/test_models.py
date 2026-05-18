@@ -11,7 +11,6 @@ from pydantic import ValidationError
 from skene.analyzers.journey.models import Journey
 from skene.analyzers.journey.serialize import to_json, to_yaml, write
 
-
 VALID_DOC: dict = {
     "product": {
         "name": "Ballpark",
@@ -118,18 +117,14 @@ def test_to_yaml_and_to_json_return_strings():
 
 def test_code_evidence_without_path_fails():
     doc = fresh_doc()
-    doc["stages"][0]["milestones"][0]["evidence"] = [
-        {"source": "code", "reason": "missing path"}
-    ]
+    doc["stages"][0]["milestones"][0]["evidence"] = [{"source": "code", "reason": "missing path"}]
     with pytest.raises(ValidationError, match="requires 'path'"):
         Journey.model_validate(doc)
 
 
 def test_db_evidence_without_table_fails():
     doc = fresh_doc()
-    doc["stages"][0]["milestones"][0]["evidence"] = [
-        {"source": "db", "reason": "missing table"}
-    ]
+    doc["stages"][0]["milestones"][0]["evidence"] = [{"source": "db", "reason": "missing table"}]
     with pytest.raises(ValidationError, match="requires 'table'"):
         Journey.model_validate(doc)
 

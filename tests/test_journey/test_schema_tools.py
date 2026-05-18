@@ -51,10 +51,12 @@ def _build_index() -> SchemaIndex:
         columns=[ColumnInfo(name="id", type="uuid", nullable=False)],
         primary_key=["id"],
     )
-    index = SchemaIndex(files={
-        "public.sql": [users, estimates],
-        "auth.sql": [auth_users],
-    })
+    index = SchemaIndex(
+        files={
+            "public.sql": [users, estimates],
+            "auth.sql": [auth_users],
+        }
+    )
     return index
 
 
@@ -175,9 +177,7 @@ async def test_run_schema_agent_against_fixture():
         def get_provider_name(self) -> str:
             return "scripted"
 
-        async def generate_with_tools(
-            self, messages: list[Message], tools: list[Tool]
-        ) -> AssistantTurn:
+        async def generate_with_tools(self, messages: list[Message], tools: list[Tool]) -> AssistantTurn:
             self._step += 1
             if self._step == 1:
                 return AssistantTurn(

@@ -36,7 +36,6 @@ from typing import Any
 
 from skene.output import debug, warning
 
-
 ToolHandler = Callable[[dict[str, Any]], Awaitable[str] | str]
 
 
@@ -181,9 +180,7 @@ async def run_agent(
         for tc in turn.tool_calls:
             tool = tools_by_name.get(tc.name)
             if tool is None:
-                result_str = json.dumps(
-                    {"error": f"unknown tool {tc.name!r}; available: {sorted(tools_by_name)}"}
-                )
+                result_str = json.dumps({"error": f"unknown tool {tc.name!r}; available: {sorted(tools_by_name)}"})
                 warning(f"agent called unknown tool {tc.name!r}")
             else:
                 try:

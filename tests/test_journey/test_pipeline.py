@@ -32,9 +32,7 @@ class _PipelineFakeLLM(LLMClient):
         self._schema_step = 0
         self._code_step = 0
 
-    async def generate_content_with_usage(
-        self, prompt: str
-    ) -> tuple[str, dict[str, int] | None]:
+    async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
         # Used by specialize (we'll force --no-specialize) and classify.
         # Always answer with a discovery classification.
         return (
@@ -59,9 +57,7 @@ class _PipelineFakeLLM(LLMClient):
     def get_provider_name(self) -> str:
         return "fake"
 
-    async def generate_with_tools(
-        self, messages: list[Message], tools: list[Tool]
-    ) -> AssistantTurn:
+    async def generate_with_tools(self, messages: list[Message], tools: list[Tool]) -> AssistantTurn:
         # Distinguish agents by the system prompt
         system = (messages[0].content or "") if messages else ""
         if "parsed database schema" in system:
@@ -133,9 +129,7 @@ def _build_repo(tmp_path: Path) -> Path:
 def _build_schema_dir(tmp_path: Path) -> Path:
     sdir = tmp_path / "schemas"
     sdir.mkdir()
-    (sdir / "public.sql").write_text(
-        "CREATE TABLE users (id uuid PRIMARY KEY, email text NOT NULL);\n"
-    )
+    (sdir / "public.sql").write_text("CREATE TABLE users (id uuid PRIMARY KEY, email text NOT NULL);\n")
     return sdir
 
 

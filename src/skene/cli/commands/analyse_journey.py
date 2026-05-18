@@ -47,10 +47,7 @@ def analyse_journey_cmd(
     schema_dir: Path | None = typer.Option(
         None,
         "--schema-dir",
-        help=(
-            "Directory of pre-exported *.sql files for the schema agent. "
-            "Required when no codebase path is given."
-        ),
+        help=("Directory of pre-exported *.sql files for the schema agent. Required when no codebase path is given."),
     ),
     output: Path = typer.Option(
         Path(f"{DEFAULT_OUTPUT_DIR}/journey.yaml"),

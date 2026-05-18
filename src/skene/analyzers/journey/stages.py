@@ -89,8 +89,7 @@ STAGES: tuple[StageDef, ...] = (
         6,
         "Expansion",
         "More Value",
-        "The user pays more or uses more of the product. Plan upgrades, "
-        "additional seats, premium features.",
+        "The user pays more or uses more of the product. Plan upgrades, additional seats, premium features.",
         [
             "Plan Tier Upgraded to Business",
             "White-Label Feature Activated",
@@ -102,8 +101,7 @@ STAGES: tuple[StageDef, ...] = (
         7,
         "Virality",
         "The Loop",
-        "The user brings other users to the product. Referrals, attribution "
-        "links, public sharing, invites.",
+        "The user brings other users to the product. Referrals, attribution links, public sharing, invites.",
         [
             "'Powered by' Link Active in Widget",
             "Referral Program Participation",
@@ -132,9 +130,5 @@ def stages_as_prompt(stages: tuple[StageDef, ...] = STAGES) -> str:
     blocks: list[str] = []
     for s in stages:
         examples = ", ".join(s.examples)
-        blocks.append(
-            f"- **{s.id}** ({s.name} — {s.subtitle})\n"
-            f"  {s.description}\n"
-            f"  Examples: {examples}"
-        )
+        blocks.append(f"- **{s.id}** ({s.name} — {s.subtitle})\n  {s.description}\n  Examples: {examples}")
     return "\n".join(blocks)

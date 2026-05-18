@@ -40,6 +40,4 @@ def write(journey: Journey, path: Path) -> None:
     elif path.suffix == ".json":
         path.write_text(to_json(journey) + "\n", encoding="utf-8")
     else:
-        raise ValueError(
-            f"unsupported file type: {path.suffix} (expected .yaml, .yml, or .json)"
-        )
+        raise ValueError(f"unsupported file type: {path.suffix} (expected .yaml, .yml, or .json)")
