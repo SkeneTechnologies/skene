@@ -83,6 +83,20 @@ func (m *Manager) CheckConfigs() []ConfigStatus {
 	return statuses
 }
 
+// ReloadConfig discards any in-memory edits and reloads the configuration
+// from disk. Used when re-entering screens that must reflect the saved
+// state (e.g. the "Existing Configuration Found" check after the user
+// abandoned a Reconfigure flow with Esc).
+func (m *Manager) ReloadConfig() error {
+	m.Config = &Config{
+		OutputDir:        constants.DefaultOutputDir,
+		Verbose:          true,
+		UseGrowth:        true,
+		TelemetryEnabled: true,
+	}
+	return m.LoadConfig()
+}
+
 // LoadConfig loads configuration from files.
 // User config is loaded first, then project config is merged on top
 // (project values take precedence), matching the Python CLI behaviour.
