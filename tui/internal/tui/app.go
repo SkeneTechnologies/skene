@@ -599,6 +599,20 @@ func (a *App) handleKeyPress(msg tea.KeyMsg) tea.Cmd {
 func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 	switch key {
 	case "enter":
+		// Always reload from disk so the ConfigCheck screen reflects the
+		// saved configuration, not whatever the user touched in memory
+		// during an abandoned Reconfigure flow. Also discard any
+		// half-built views from that flow so later back-navigation
+		// (e.g. from StateProjectDir) doesn't land on a stale API key
+		// or model screen that belongs to a provider the user backed
+		// out of.
+		_ = a.configMgr.ReloadConfig()
+		a.selectedProvider = nil
+		a.selectedModel = nil
+		a.apiKeyView = nil
+		a.modelView = nil
+		a.localModelView = nil
+		a.authView = nil
 		if a.configMgr.HasValidConfig() {
 			a.populateSelectedFromConfig()
 			providerName := a.configMgr.Config.Provider
