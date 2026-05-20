@@ -132,7 +132,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
             if keep:
                 return "package.json: " + json.dumps(keep, indent=2)
         except json.JSONDecodeError:
-            pass
+            pass  # malformed manifest — fall through to the next one
 
     out = ts._read_file("pyproject.toml", max_bytes=max_bytes)
     if isinstance(out, str):
@@ -143,7 +143,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
             if keep:
                 return "pyproject.toml: " + json.dumps(keep, indent=2)
         except (tomllib.TOMLDecodeError, AttributeError):
-            pass
+            pass  # malformed manifest — fall through to the next one
 
     out = ts._read_file("Cargo.toml", max_bytes=max_bytes)
     if isinstance(out, str):
@@ -154,7 +154,7 @@ def _gather_manifest(ts: FsToolset, max_bytes: int) -> str:
             if keep:
                 return "Cargo.toml: " + json.dumps(keep, indent=2)
         except tomllib.TOMLDecodeError:
-            pass
+            pass  # malformed manifest — fall through to the next one
 
     out = ts._read_file("go.mod", max_bytes=max_bytes)
     if isinstance(out, str):

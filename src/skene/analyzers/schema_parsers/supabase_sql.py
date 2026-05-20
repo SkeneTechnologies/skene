@@ -133,9 +133,8 @@ def _handle_create_table(stmt: exp.Create, tables: dict[str, TableInfo], schema_
         if isinstance(item, exp.ColumnDef):
             col = _column_def_to_info(item)
             columns.append(col)
-            for _c in item.find_all(exp.PrimaryKeyColumnConstraint):
-                if col.name not in primary_key:
-                    primary_key.append(col.name)
+            if any(item.find_all(exp.PrimaryKeyColumnConstraint)) and col.name not in primary_key:
+                primary_key.append(col.name)
             continue
 
         for inner in _unwrap_constraint(item):
