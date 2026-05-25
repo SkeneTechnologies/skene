@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed webapp/index.html
+//go:embed webapp/index.html webapp/skene-logo.svg
 var webappFS embed.FS
 
 // Server hosts a YAML visualizer on localhost.
@@ -43,6 +43,7 @@ func (s *Server) Start() (string, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/api/data", s.handleData)
+	mux.HandleFunc("/skene-logo.svg", s.handleLogo)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,
@@ -78,6 +79,17 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(data)
+}
+
+func (s *Server) handleLogo(w http.ResponseWriter, r *http.Request) {
+	data, err := webappFS.ReadFile("webapp/skene-logo.svg")
+	if err != nil {
+		http.Error(w, "logo not found", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(data)
 }
 

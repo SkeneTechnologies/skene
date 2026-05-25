@@ -64,10 +64,7 @@ const (
 	GrowthManifestFile       = "growth-manifest.json"
 	ProductDocsFile          = "product-docs.md"
 	ImplementationPromptFile = "implementation-prompt.md"
-	SchemaFile               = "schema.yaml"
-	EngineFile               = "engine.yaml"
-	UserJourneyFile          = "user-journey.yaml"
-	NewFeaturesFile          = "new-features.yaml"
+	JourneyFile              = "journey.yaml"
 	CompiledStateMachineFile = "compiled/state-machine.yaml"
 )
 
@@ -86,11 +83,8 @@ type DashboardFile struct {
 var DashboardFiles = []DashboardFile{
 	{ID: "manifest", DisplayName: "Growth Manifest", Filename: GrowthManifestFile, Description: FileDescManifest, InContext: true},
 	{ID: "template", DisplayName: "Growth Template", Filename: GrowthTemplateFile, Description: FileDescTemplate, InContext: true},
-	{ID: "new-features", DisplayName: "Planned Features", Filename: NewFeaturesFile, Description: FileDescNewFeatures, InContext: true},
 	{ID: "compiled", DisplayName: "State Machine", Filename: CompiledStateMachineFile, Description: FileDescCompiledYAML, InContext: false},
-	{ID: "user-journey", DisplayName: "User Journey", Filename: UserJourneyFile, Description: FileDescUserJourney, InContext: false},
-	{ID: "engine", DisplayName: "Growth Features", Filename: EngineFile, Description: FileDescEngine, InContext: false},
-	{ID: "schema", DisplayName: "Schema", Filename: SchemaFile, Description: FileDescSchema, InContext: false},
+	{ID: "journey", DisplayName: "Journey", Filename: JourneyFile, Description: FileDescUserJourney, InContext: false},
 	{ID: "plan", DisplayName: "Growth Plan", Filename: GrowthPlanFile, Description: FileDescPlan, InContext: true},
 }
 

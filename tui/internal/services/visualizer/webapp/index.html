@@ -3,163 +3,416 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skene — User Journey Visualizer</title>
+  <title>Skene — Journey Visualizer</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: #0d1117;
-      color: #c9d1d9;
+      background: #E1E1E1;
+      color: #141414;
     }
 
     .react-flow__node { font-family: inherit; }
 
-    /* Subject card */
-    .node-subject {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 14px 18px;
-      min-width: 180px;
+    .badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 300;
+      padding: 2px 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #FAF1E9;
     }
-    .node-subject .node-header {
+
+    /* Stage column header */
+    .node-stage {
+      background: #141414;
+      box-shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
+      border-radius: 10px;
+      padding: 22px 16px;
+      min-width: 360px;
+      max-width: 360px;
+    }
+    .node-stage > .badge {
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    .node-stage .node-title {
+      font-size: 22px;
+      font-weight: 400;
+      color: #FAF1E9;
+      margin-bottom: 6px;
+    }
+    .node-stage .node-subtitle {
+      font-size: 12px;
+      color: #737373;
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+    .node-stage .node-meta {
+      font-size: 11px;
+      color: #737373;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Milestone card */
+    .node-milestone {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      box-shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
+      border-radius: 10px;
+      padding: 22px 16px;
+      min-width: 360px;
+      max-width: 360px;
+    }
+    .node-milestone .node-header {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-bottom: 6px;
     }
-    .node-subject .node-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #e6edf3;
-      text-transform: capitalize;
-    }
-    .node-subject .node-meta {
-      font-size: 11px;
-      color: #7d8590;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .badge-actor  { background: #1f3a2d; color: #56d364; }
-    .badge-entity { background: #1c2a41; color: #79c0ff; }
-    .badge-ui     { background: #2d1f3a; color: #d2a8ff; }
-    .badge-milestone { background: #1f3a2d; color: #56d364; }
-    .badge-value  { background: #3d2a1f; color: #f0883e; }
-
-    .badge-stage-signup       { background: #1c2a41; color: #79c0ff; }
-    .badge-stage-activation   { background: #1f3a2d; color: #56d364; }
-    .badge-stage-engagement   { background: #2d1f3a; color: #d2a8ff; }
-    .badge-stage-monetization { background: #3d2a1f; color: #f0883e; }
-    .badge-stage-retention    { background: #3a1f2a; color: #ff7b72; }
-
-    /* Feature card */
-    .node-feature {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 16px 18px;
-      min-width: 260px;
-      max-width: 320px;
-    }
-    .node-feature .node-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-    .node-feature .node-title {
+    .node-milestone .node-title {
       font-size: 14px;
       font-weight: 600;
-      color: #e6edf3;
+      color: #1f2328;
       line-height: 1.3;
+      flex: 1;
+      min-width: 0;
     }
-    .node-feature .node-desc {
+    .milestone-order {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #EFEFEF;
+      border: 1px solid #D9D9D9;
+      color: #4A4A4A;
+      font-size: 11px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .node-milestone .node-desc {
       font-size: 12px;
-      color: #8b949e;
+      color: #656d76;
       line-height: 1.5;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      padding-left: 28px;
       display: -webkit-box;
       -webkit-line-clamp: 3;
+      line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .node-feature .node-source {
+    .node-milestone .node-meta {
       font-size: 11px;
-      color: #7d8590;
+      color: #656d76;
       font-family: 'SF Mono', 'Fira Code', monospace;
       margin-bottom: 8px;
+      padding-left: 28px;
     }
-    .node-feature .node-tags {
+    .node-milestone .evidence-list {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
+      margin-top: 4px;
+      padding-left: 28px;
     }
-    .tag {
+    .evidence-chip {
       display: inline-block;
       font-size: 10px;
       padding: 2px 7px;
       border-radius: 4px;
-      background: #1c2a41;
-      color: #79c0ff;
       font-family: 'SF Mono', 'Fira Code', monospace;
     }
+    .evidence-code { background: #ddf4ff; color: #0550ae; }
+    .evidence-db   { background: #dafbe1; color: #116329; }
+    .evidence-config { background: #fbefff; color: #6639ba; }
 
-    .badge-lifecycle {
-      background: #2d1f3a;
-      color: #d2a8ff;
-    }
-
-    /* Action card */
-    .node-action {
-      background: #161b22;
-      border: 1px solid #30363d;
+    /* Product banner */
+    .node-product {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      box-shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
       border-radius: 10px;
-      padding: 14px 18px;
-      min-width: 160px;
+      padding: 12px 18px;
+      min-width: 260px;
     }
-    .node-action .node-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
+    .node-product .node-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1f2328;
     }
-    .node-action .node-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #e6edf3;
-      text-transform: capitalize;
-    }
-    .node-action .node-meta {
+    .node-product .node-meta {
       font-size: 11px;
-      color: #7d8590;
+      color: #656d76;
+      margin-top: 4px;
     }
-
-    .badge-action { background: #3d2a1f; color: #f0883e; }
 
     /* Edge labels */
-    .react-flow__edge-textbg { fill: #161b22; }
-    .react-flow__edge-text { fill: #7d8590; font-size: 11px; }
+    .react-flow__edge-textbg { fill: #ffffff; }
+    .react-flow__edge-text { fill: #656d76; font-size: 11px; }
 
     /* Handles */
     .react-flow__handle {
       width: 8px;
       height: 8px;
+      background: #d0d7de;
+      border: 2px solid #8c959f;
+    }
+
+    /* Floating nav - dark theme */
+    .fnav {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 50;
+      width: 200px;
+      background: rgba(20, 20, 20, 0.80);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    .fnav__body {
+      padding: 12px;
+    }
+    .fnav__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .fnav__logo {
+      height: 18px;
+      width: auto;
+    }
+    .fnav__workspace {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #FAF1E9;
+      text-decoration: none;
+      transition: background 150ms ease;
+    }
+    .fnav__workspace:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .fnav__workspace svg {
+      width: 12px;
+      height: 12px;
+      color: #8b949e;
+    }
+    .fnav__items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fnav__item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #FAF1E9;
+      text-decoration: none;
+      transition: background 150ms ease;
+    }
+    .fnav__item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .fnav__item.is-active {
+      background: rgba(255, 255, 255, 0.15);
+      color: #FAF1E9;
+    }
+    .fnav__item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .fnav__label {
+      padding: 8px 10px 4px;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #8b949e;
+    }
+    .fnav__divider {
+      height: 1px;
       background: #30363d;
-      border: 2px solid #484f58;
+      margin: 6px 0;
+    }
+    .fnav__expand {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 200ms ease-in-out;
+    }
+    .fnav.is-open .fnav__expand {
+      grid-template-rows: 1fr;
+    }
+    .fnav__inner {
+      overflow: hidden;
+    }
+    .fnav__toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 6px 0;
+      margin-top: 4px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #8b949e;
+      transition: color 150ms ease;
+    }
+    .fnav__toggle:hover {
+      color: #FAF1E9;
+    }
+    .fnav__toggle svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 200ms ease;
+    }
+    .fnav.is-open .fnav__toggle svg {
+      transform: rotate(180deg);
     }
   </style>
 </head>
 <body>
+  <!-- Inline Lucide icons (ISC licensed) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="icon-layout-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+    </symbol>
+    <symbol id="icon-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>
+    </symbol>
+    <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>
+    </symbol>
+    <symbol id="icon-key-round" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="icon-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>
+    </symbol>
+    <symbol id="icon-log-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m6 9 6 6 6-6"/>
+    </symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 18 6-6-6-6"/>
+    </symbol>
+  </svg>
+
+  <!-- Floating nav -->
+  <nav id="floatingNav" class="fnav">
+    <div class="fnav__body">
+      <div class="fnav__header">
+        <img src="/skene-logo.svg" alt="Skene" class="fnav__logo" />
+      </div>
+
+      <a href="https://skene.ai/login" class="fnav__workspace" target="_blank" rel="noopener">
+        My Workspace
+        <svg><use href="#icon-chevron-right"/></svg>
+      </a>
+
+      <ul class="fnav__items">
+        <li>
+          <a href="https://skene.ai/login" class="fnav__item is-active" target="_blank" rel="noopener">
+            <svg><use href="#icon-layout-dashboard"/></svg>
+            Overview
+          </a>
+        </li>
+        <li>
+          <a href="https://skene.ai/login" class="fnav__item" target="_blank" rel="noopener">
+            <svg><use href="#icon-route"/></svg>
+            Journey
+          </a>
+        </li>
+      </ul>
+
+      <div class="fnav__expand">
+        <div class="fnav__inner">
+          <div class="fnav__divider"></div>
+
+          <div class="fnav__label">Manage</div>
+          <ul class="fnav__items">
+            <li>
+              <a href="https://skene.ai/login" class="fnav__item" target="_blank" rel="noopener">
+                <svg><use href="#icon-plug"/></svg>
+                Integrations
+              </a>
+            </li>
+          </ul>
+
+          <div class="fnav__divider"></div>
+
+          <div class="fnav__label">Account</div>
+          <ul class="fnav__items">
+            <li>
+              <a href="https://skene.ai/login" class="fnav__item" target="_blank" rel="noopener">
+                <svg><use href="#icon-key-round"/></svg>
+                API Keys
+              </a>
+            </li>
+            <li>
+              <a href="https://skene.ai/login" class="fnav__item" target="_blank" rel="noopener">
+                <svg><use href="#icon-settings"/></svg>
+                Settings
+              </a>
+            </li>
+          </ul>
+
+          <div class="fnav__divider"></div>
+
+          <ul class="fnav__items">
+            <li>
+              <a href="https://www.skene.ai/resources/docs/cloud" class="fnav__item" target="_blank" rel="noopener">
+                <svg><use href="#icon-library"/></svg>
+                Resources
+              </a>
+            </li>
+            <li>
+              <a href="https://skene.ai/login" class="fnav__item" target="_blank" rel="noopener">
+                <svg><use href="#icon-log-in"/></svg>
+                Log in
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <button type="button" id="navToggle" class="fnav__toggle" aria-expanded="false" aria-controls="floatingNav">
+        <svg><use href="#icon-chevron-down"/></svg>
+      </button>
+    </div>
+  </nav>
+
   <div id="root" style="width:100vw;height:100vh"></div>
 
   <script type="importmap">
@@ -177,7 +430,7 @@
   <link rel="stylesheet" href="https://esm.sh/@xyflow/react@12.10.2/dist/style.css" />
 
   <script type="module">
-    import React, { useState, useEffect } from 'react';
+    import React, { memo, useEffect, useMemo, useState } from 'react';
     import { createRoot } from 'react-dom/client';
     import {
       ReactFlow, Background, Controls, MiniMap, Handle, Position,
@@ -185,165 +438,162 @@
 
     const h = React.createElement;
 
-    function stageBadgeClass(stageId) {
-      const key = (stageId || '').replace(/^stage_/, '');
-      return `badge badge-stage-${key || 'signup'}`;
-    }
-
-    function SubjectNode({ data }) {
-      return h('div', { className: 'node-subject' },
-        h(Handle, { type: 'source', position: Position.Right }),
-        h('div', { className: 'node-header' },
-          h('span', { className: 'node-title' }, data.label),
-          h('span', { className: 'badge badge-entity' }, 'subject'),
-        ),
-        data.table ? h('div', { className: 'node-meta' }, data.table) : null,
+    const ProductNode = memo(function ProductNode({ data }) {
+      return h('div', { className: 'node-product' },
+        h('div', { className: 'node-title' }, data.name),
+        data.generatedAt ? h('div', { className: 'node-meta' }, `Generated ${data.generatedAt}`) : null,
+        data.layerLabel ? h('div', { className: 'node-meta', style: { marginTop: 4 } }, data.layerLabel) : null,
       );
-    }
+    });
 
-    function StepNode({ data }) {
-      const tags = [];
-      if (data.tableRef) tags.push(data.tableRef);
-      if (data.eventType) tags.push(data.eventType);
-      if (data.route) tags.push(data.route);
-
-      const kindBadge = data.kind === 'ui_step' ? 'badge badge-ui' : 'badge badge-milestone';
-      const kindLabel = data.kind === 'ui_step' ? 'UI' : 'milestone';
-
-      return h('div', { className: 'node-feature' },
+    const StageNode = memo(function StageNode({ data }) {
+      return h('div', { className: 'node-stage' },
+        h(Handle, { type: 'source', position: Position.Right }),
         h(Handle, { type: 'target', position: Position.Left }),
-        h(Handle, { type: 'source', position: Position.Right }),
-        h(Handle, { type: 'source', position: Position.Bottom, id: 'value' }),
-        h('div', { className: 'node-header' },
-          h('span', { className: 'node-title' }, data.label),
-          h('span', { className: kindBadge }, kindLabel),
+        h(Handle, { type: 'source', position: Position.Bottom, id: 'milestones' }),
+        h('span', { className: `badge badge-stage-${data.stageId || 'discovery'}` }, data.stageId),
+        h('div', { className: 'node-title' }, data.name),
+        data.subtitle ? h('div', { className: 'node-subtitle' }, data.subtitle) : null,
+        h('div', { className: 'node-meta' },
+          data.layerLabel ? h('span', null, data.layerLabel) : null,
+          h('span', { style: { marginLeft: 'auto' } }, `${data.count} milestone${data.count === 1 ? '' : 's'}`),
         ),
-        data.stageLabel ? h('div', { style: { marginBottom: 8 } },
-          h('span', { className: stageBadgeClass(data.stageId) }, data.stageLabel),
-        ) : null,
+      );
+    });
+
+    const MilestoneNode = memo(function MilestoneNode({ data }) {
+      return h('div', { className: 'node-milestone' },
+        h(Handle, { type: 'target', position: Position.Top }),
+        h(Handle, { type: 'source', position: Position.Bottom }),
+        h('div', { className: 'node-header' },
+          data.order != null ? h('span', { className: 'milestone-order' }, data.order) : null,
+          h('span', { className: 'node-title' }, data.name),
+        ),
         data.description ? h('div', { className: 'node-desc' }, data.description) : null,
-        data.component ? h('div', { className: 'node-source' }, data.component) : null,
-        tags.length > 0 ? h('div', { className: 'node-tags' },
-          ...tags.map((t, i) => h('span', { key: i, className: 'tag' }, t)),
-        ) : null,
+        data.trackedEvent ? h('div', { className: 'node-meta' }, `event: ${data.trackedEvent}`) : null,
+        typeof data.confidence === 'number'
+          ? h('div', { className: 'node-meta' }, `confidence: ${data.confidence.toFixed(2)}`)
+          : null,
+        data.evidence && data.evidence.length
+          ? h('div', { className: 'evidence-list' },
+              ...data.evidence.map((ev, i) => h('span', {
+                key: i,
+                className: `evidence-chip evidence-${ev.source}`,
+                title: ev.reason || '',
+              }, ev.label)),
+            )
+          : null,
       );
-    }
+    });
 
-    function ValueNode({ data }) {
-      return h('div', { className: 'node-action' },
-        h(Handle, { type: 'target', position: Position.Top, id: 'value' }),
-        h('div', { className: 'node-header' },
-          h('span', { className: 'node-title' }, data.label),
-          h('span', { className: 'badge badge-value' }, data.valueType || 'value'),
-        ),
-        data.timeToValue ? h('div', { className: 'node-meta' }, data.timeToValue) : null,
-        data.description ? h('div', { className: 'node-desc', style: { marginTop: 6 } }, data.description) : null,
-      );
-    }
+    const nodeTypes = { product: ProductNode, stage: StageNode, milestone: MilestoneNode };
+    const defaultEdgeOptions = { type: 'smoothstep' };
 
-    const nodeTypes = { subject: SubjectNode, step: StepNode, value: ValueNode };
-
-    // user-journey.yaml shape:
-    //   schema_analysis.ttv_journey_by_subject[].{subject_id, subject_label, subject_table,
-    //     ordered_nodes[], value_nodes[], ordered_edges[]}
+    // journey.yaml shape:
+    //   product.{name, generated_at, ...}
+    //   layers[].{id, name, spans_stages: [stage_id, ...]}
+    //   stages[].{id, order, name, subtitle, milestones[], kpis[]}
+    //     milestones[].{id, order, name, description, evidence[], tracked_event, confidence}
+    //       evidence[].{source: code|db|config, reason, path?, table?}
+    //   connectors[]  (empty in v1)
     function buildGraph(doc) {
       const nodes = [];
       const edges = [];
-      const journeys = doc?.schema_analysis?.ttv_journey_by_subject || [];
+      const stages = (doc?.stages || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const layers = doc?.layers || [];
+      const product = doc?.product || {};
 
-      const COL_SUBJECT = 0;
-      const COL_STEP_BASE = 340;
-      const COL_STEP_GAP = 320;
-      const STEP_Y = 0;
-      const VALUE_Y_OFFSET = 220;
-      const ROW_HEIGHT = 480;
+      // Map each stage_id -> layer name so we can show grouping.
+      const layerByStage = {};
+      layers.forEach((layer) => {
+        (layer.spans_stages || []).forEach((sid) => {
+          layerByStage[sid] = layer.name || layer.id;
+        });
+      });
 
-      journeys.forEach((journey, journeyIdx) => {
-        const subjectId = journey.subject_id;
-        const yBase = journeyIdx * ROW_HEIGHT;
-        const ns = (id) => (id === subjectId ? subjectId : `${subjectId}__${id}`);
+      const COL_WIDTH = 380;
+      const STAGE_Y = 0;
+      const MILESTONE_BASE_Y = 160;
+      const MILESTONE_GAP = 240;
+
+      // Product banner sits left of the first stage column.
+      nodes.push({
+        id: '__product',
+        type: 'product',
+        position: { x: -COL_WIDTH, y: STAGE_Y },
+        data: {
+          name: product.name || 'Product',
+          generatedAt: product.generated_at || '',
+          layerLabel: layers.length ? `${layers.length} layer${layers.length === 1 ? '' : 's'}, ${stages.length} stage${stages.length === 1 ? '' : 's'}` : '',
+        },
+      });
+
+      stages.forEach((stage, stageIdx) => {
+        const x = stageIdx * COL_WIDTH;
+        const milestones = stage.milestones || [];
+        const stageNodeId = `stage__${stage.id}`;
 
         nodes.push({
-          id: subjectId,
-          type: 'subject',
-          position: { x: COL_SUBJECT, y: yBase + STEP_Y },
+          id: stageNodeId,
+          type: 'stage',
+          position: { x, y: STAGE_Y },
           data: {
-            label: journey.subject_label || subjectId,
-            table: journey.subject_table || '',
+            stageId: stage.id,
+            name: stage.name || stage.id,
+            subtitle: stage.subtitle || '',
+            layerLabel: layerByStage[stage.id] || '',
+            count: milestones.length,
           },
         });
 
-        const stepXById = {};
-        (journey.ordered_nodes || []).forEach((node, i) => {
-          const nodeId = ns(node.id);
-          const x = COL_STEP_BASE + i * COL_STEP_GAP;
-          stepXById[node.id] = x;
-          const tableRef = node.is_ui_only
-            ? ''
-            : [node.schema, node.table].filter(Boolean).join('.');
-          nodes.push({
-            id: nodeId,
-            type: 'step',
-            position: { x, y: yBase + STEP_Y },
-            data: {
-              label: node.label || node.id,
-              kind: node.kind || 'milestone',
-              description: node.description || '',
-              stageId: node.lifecycle_stage_id || node.lifecycle?.stage_id || '',
-              stageLabel: node.lifecycle?.label || node.category || '',
-              tableRef,
-              eventType: node.event_type || '',
-              route: node.route || '',
-              component: node.component || '',
-            },
-          });
-        });
-
-        (journey.value_nodes || []).forEach((vn, i) => {
-          const valueId = ns(vn.id);
-          const linkedX = stepXById[vn.linked_from_node_id];
-          const x = linkedX !== undefined
-            ? linkedX
-            : COL_STEP_BASE + i * COL_STEP_GAP;
-          nodes.push({
-            id: valueId,
-            type: 'value',
-            position: { x, y: yBase + STEP_Y + VALUE_Y_OFFSET },
-            data: {
-              label: vn.label || vn.id,
-              valueType: vn.value_type || 'value',
-              timeToValue: vn.time_to_value_label || '',
-              description: vn.description || '',
-            },
-          });
-          if (vn.linked_from_node_id) {
-            edges.push({
-              id: `ev-${valueId}`,
-              source: ns(vn.linked_from_node_id),
-              sourceHandle: 'value',
-              target: valueId,
-              targetHandle: 'value',
-              type: 'smoothstep',
-              style: { stroke: '#f0883e', strokeWidth: 1.5, strokeDasharray: '4 4' },
-              label: vn.time_to_value_label || 'value',
-            });
-          }
-        });
-
-        (journey.ordered_edges || []).forEach((e, i) => {
-          const sourceId = ns(e.source);
-          const targetId = ns(e.target);
-          const label = e.data_change?.summary || e.label || '';
+        // Horizontal edge: stage -> next stage (left-to-right funnel).
+        if (stageIdx > 0) {
+          const prev = stages[stageIdx - 1];
           edges.push({
-            id: `e-${subjectId}-${i}`,
-            source: sourceId,
-            target: targetId,
-            type: 'smoothstep',
-            animated: e.is_required !== false,
-            style: { stroke: '#30a14e', strokeWidth: 1.5 },
-            label,
+            id: `e-stage-${prev.id}-${stage.id}`,
+            source: `stage__${prev.id}`,
+            target: stageNodeId,
+            style: { stroke: '#4A4A4A', strokeWidth: 1.5 },
           });
-        });
+        }
+
+        let prevMilestoneId = null;
+        milestones
+          .slice()
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .forEach((m, i) => {
+            const id = `m__${stage.id}__${m.id}`;
+            nodes.push({
+              id,
+              type: 'milestone',
+              position: { x, y: MILESTONE_BASE_Y + i * MILESTONE_GAP },
+              data: {
+                stageId: stage.id,
+                order: m.order,
+                name: m.name || m.id,
+                description: m.description || '',
+                trackedEvent: m.tracked_event || '',
+                confidence: typeof m.confidence === 'number' ? m.confidence : undefined,
+                evidence: (m.evidence || []).map((ev) => ({
+                  source: ev.source || 'code',
+                  label: ev.path || ev.table || ev.source || '',
+                  reason: ev.reason || '',
+                })),
+              },
+            });
+
+            // Vertical edge: stage -> first milestone, then milestone -> milestone.
+            const sourceId = prevMilestoneId || stageNodeId;
+            const sourceHandle = prevMilestoneId ? undefined : 'milestones';
+            edges.push({
+              id: `e-${sourceId}-${id}`,
+              source: sourceId,
+              sourceHandle,
+              target: id,
+              style: { stroke: '#4A4A4A20', strokeWidth: 1.5 },
+            });
+            prevMilestoneId = id;
+          });
       });
 
       return { nodes, edges };
@@ -360,10 +610,10 @@
           .catch(e => setError(e.message));
       }, []);
 
-      if (error) return h('div', { style: { padding: 40, color: '#f85149' } }, 'Error: ' + error);
-      if (!result) return h('div', { style: { padding: 40, color: '#8b949e' } }, 'Loading\u2026');
+      const graph = useMemo(() => (result ? buildGraph(result.data) : null), [result]);
 
-      const graph = buildGraph(result.data);
+      if (error) return h('div', { style: { padding: 40, color: '#cf222e' } }, 'Error: ' + error);
+      if (!graph) return h('div', { style: { padding: 40, color: '#656d76' } }, 'Loading\u2026');
 
       return h('div', { style: { width: '100vw', height: '100vh' } },
         h(ReactFlow, {
@@ -371,23 +621,40 @@
           defaultEdges: graph.edges,
           nodeTypes,
           fitView: true,
-          colorMode: 'dark',
+          colorMode: 'light',
           minZoom: 0.3,
-          defaultEdgeOptions: { type: 'smoothstep' },
+          defaultEdgeOptions,
           proOptions: { hideAttribution: true },
+          nodesDraggable: false,
+          nodesConnectable: false,
+          edgesReconnectable: false,
+          elementsSelectable: false,
         },
-          h(Background, { gap: 20, size: 1, color: '#21262d' }),
+          h(Background, { gap: 20, size: 2, color: '#C7C7C7' }),
           h(Controls, { showInteractive: false }),
           h(MiniMap, {
-            nodeColor: '#30363d',
-            maskColor: 'rgba(13, 17, 23, 0.7)',
-            style: { background: '#0d1117' },
+            nodeColor: '#d0d7de',
+            maskColor: 'rgba(246, 248, 250, 0.85)',
+            style: { background: '#f6f8fa' },
           }),
         )
       );
     }
 
     createRoot(document.getElementById('root')).render(h(App));
+  </script>
+
+  <!-- Floating nav behavior -->
+  <script>
+    (function() {
+      var nav = document.getElementById('floatingNav');
+      var toggle = document.getElementById('navToggle');
+
+      toggle.addEventListener('click', function() {
+        var isOpen = nav.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen);
+      });
+    })();
   </script>
 </body>
 </html>

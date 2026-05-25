@@ -1199,22 +1199,22 @@ func (a *App) openFileDetail(def *constants.DashboardFile) {
 
 func (a *App) openJourneyVisualizerIfExists() {
 	journeyDef := &constants.DashboardFile{
-		ID:          "user-journey",
-		DisplayName: "User Journey",
-		Filename:    constants.UserJourneyFile,
+		ID:          "journey",
+		DisplayName: "Journey",
+		Filename:    constants.JourneyFile,
 	}
 	a.openYAMLVisualizer(journeyDef)
 }
 
-// userJourneyFileExists reports whether user-journey.yaml is present in the
-// bundle (or legacy path).
+// userJourneyFileExists reports whether journey.yaml is present in the
+// bundle or context directory.
 func (a *App) userJourneyFileExists() bool {
-	primary := filepath.Join(a.getBundleOutputDir(), constants.UserJourneyFile)
+	primary := filepath.Join(a.getBundleOutputDir(), constants.JourneyFile)
 	if _, err := os.Stat(primary); err == nil {
 		return true
 	}
-	legacy := filepath.Join(a.getContextOutputDir(), constants.UserJourneyFile)
-	_, err := os.Stat(legacy)
+	ctx := filepath.Join(a.getContextOutputDir(), constants.JourneyFile)
+	_, err := os.Stat(ctx)
 	return err == nil
 }
 

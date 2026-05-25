@@ -33,10 +33,7 @@ const (
 	FileDescManifest     = "Detected tech stack, features, and growth opportunities."
 	FileDescTemplate     = "Actionable growth strategies for your stack."
 	FileDescPlan         = "Prioritized roadmap with implementation order."
-	FileDescSchema       = "Live schema introspected from your codebase."
-	FileDescEngine       = "Growth engine config: subjects, features, and triggers."
-	FileDescUserJourney  = "Compiled user journey: lifecycle stages, milestones, and value points."
-	FileDescNewFeatures  = "Feature backlog generated from the latest run."
+	FileDescUserJourney  = "Seven-stage user journey: milestones with code/db evidence."
 	FileDescCompiledYAML = "Edge function state machine for Supabase backend."
 )
 

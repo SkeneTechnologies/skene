@@ -42,7 +42,7 @@ type ProjectDirView struct {
 	existingAnalysis      ExistingAnalysisChoice
 	existingButtonGroup   *components.ButtonGroup
 	hasSkeneContext        bool
-	noSchemaDetected       bool // true when the last analyse-journey run didn't produce user-journey.yaml
+	noSchemaDetected       bool // true when the last analyse-journey run didn't produce journey.yaml
 
 	// Next steps modal (shown over the existing analysis prompt)
 	showNextSteps bool
@@ -288,8 +288,8 @@ func (v *ProjectDirView) HasWarning() bool {
 }
 
 // CheckForExistingAnalysis checks if a Skene bundle directory exists in the
-// selected directory (the new `skene/` name or the legacy `skene-context/`)
-// and transitions to the choice prompt if found.
+// selected directory (the canonical `skene-context/`) and transitions to the
+// choice prompt if found. A bare `skene/` folder is intentionally ignored.
 func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 	path := v.GetProjectDir()
 
@@ -307,29 +307,25 @@ func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 }
 
 // existingBundleDir returns the bundle directory name actually present under
-// projectDir, preferring the canonical `skene/` over the legacy `skene-context/`.
-// Returns "" when neither exists.
+// projectDir. Only the canonical `skene-context/` counts; a legacy `skene/`
+// directory is ignored so users can pick projects that already contain an
+// unrelated `skene/` folder.
 func existingBundleDir(projectDir string) string {
-	for _, name := range []string{constants.OutputDirName, constants.LegacyOutputDirName} {
-		if info, err := os.Stat(filepath.Join(projectDir, name)); err == nil && info.IsDir() {
-			return name
-		}
+	name := constants.OutputDirName
+	if info, err := os.Stat(filepath.Join(projectDir, name)); err == nil && info.IsDir() {
+		return name
 	}
 	return ""
 }
 
 // buildExistingButtons creates the button group based on which files exist.
-// When user-journey.yaml is present we expose the three primary actions
-// (view, re-run, deploy) directly so first-time users can reach
-// "Deploy to Skene Cloud" without opening the next-steps modal. When the
-// journey is missing we fall back to the two analysis options.
+// When journey.yaml is present we expose the three primary actions (view,
+// re-run, deploy) directly so first-time users can reach "Deploy to Skene
+// Cloud" without opening the next-steps modal. When the journey is
+// missing we fall back to the two analysis options.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
-	primary := filepath.Join(projectDir, constants.OutputDirName, constants.UserJourneyFile)
+	primary := filepath.Join(projectDir, constants.OutputDirName, constants.JourneyFile)
 	if _, err := os.Stat(primary); err == nil {
-		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirDeployToCloud, constants.ProjectDirRerunAnalysis)
-	}
-	legacy := filepath.Join(projectDir, constants.LegacyOutputDirName, constants.UserJourneyFile)
-	if _, err := os.Stat(legacy); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirDeployToCloud, constants.ProjectDirRerunAnalysis)
 	}
 	return components.NewButtonGroup(constants.ProjectDirRunAnalysis, constants.ProjectDirRunCodebaseAnalysis)
@@ -404,7 +400,7 @@ func (v *ProjectDirView) HasExistingAnalysis() bool {
 }
 
 // SetNoSchemaDetected marks that the last analyse-journey run did not produce
-// user-journey.yaml, so the prompt should explain the fallback.
+// journey.yaml, so the prompt should explain the fallback.
 func (v *ProjectDirView) SetNoSchemaDetected(detected bool) {
 	v.noSchemaDetected = detected
 }
