@@ -85,9 +85,14 @@ jobs:
           fi
           echo "All tables have RLS enabled."
 
-      - name: Seed all skills
+      - name: Install and seed all skills (fresh database)
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skene_test
+          # --seed runs migrations *and* seeds, so use a clean database to avoid
+          # re-running migrations against the already-migrated skene_test above.
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skene_seed_test
         run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE skene_seed_test;"
+          psql "$DATABASE_URL" -c "CREATE SCHEMA IF NOT EXISTS auth;"
+          psql "$DATABASE_URL" -c "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid AS \$\$ SELECT '00000000-0000-0000-0000-000000000000'::uuid; \$\$ LANGUAGE sql;"
           chmod +x skills/scripts/install.sh
           skills/scripts/install.sh --seed all
