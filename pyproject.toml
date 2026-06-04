@@ -1,6 +1,6 @@
 [project]
 name = "skene"
-version = "0.5.0rc1"
+version = "0.5.1"
 description = "PLG analysis toolkit for codebases - analyze code, detect growth opportunities, generate documentation"
 readme = "README.md"
 license = { text = "MIT" }
@@ -26,6 +26,7 @@ dependencies = [
     "loguru>=0.7.0",
     "jinja2>=3.0",
     "typer>=0.12",
+    "click>=8.0",
     "rich>=13.0",
     "google-genai>=1.0",
     "openai>=1.0",

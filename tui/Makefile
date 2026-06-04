@@ -6,7 +6,7 @@ BUILD_DIR=build
 
 # GitHub release settings (bump VERSION when cutting a new release)
 REPO=SkeneTechnologies/skene
-VERSION=tui-v0.4.1
+VERSION=tui-v0.5.1
 
 # Telemetry endpoint — injected at release time so forks don't ship with
 # Skene's Supabase credentials. Read from env (set by CI from GitHub

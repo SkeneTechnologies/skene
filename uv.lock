@@ -975,11 +975,12 @@ wheels = [
 
 [[package]]
 name = "skene"
-version = "0.4.1"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "anthropic" },
+    { name = "click" },
     { name = "google-genai" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -1011,6 +1012,7 @@ dev = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.0" },
     { name = "anthropic", specifier = ">=0.40" },
+    { name = "click", specifier = ">=8.0" },
     { name = "google-genai", specifier = ">=1.0" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "jinja2", specifier = ">=3.0" },
