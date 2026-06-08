@@ -1,0 +1,40 @@
+[project]
+name = "skened"
+version = "0.1.0"
+description = "Skene daemon — background analysis of git branches into user journey maps (POC)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "typer>=0.12",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+skene = "skened.cli:app"
+
+[project.optional-dependencies]
+# LLM-backed analysis (migration target). litellm gives one client across
+# OpenAI / Anthropic / Gemini / local models. Install with: uv sync --extra llm
+llm = [
+    "litellm>=1.40",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skened"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

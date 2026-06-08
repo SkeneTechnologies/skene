@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Skene</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --line:#272c38;
+    --text:#e6e9ef; --muted:#8b93a7; --accent:#5b8cff; --accent2:#3a6;
+    --green:#3fb950; --blue:#58a6ff; --red:#f85149; --gray:#6e7681; --amber:#d29922; --cyan:#39c5cf;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; align-items:center; gap:14px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header .logo { font-weight:700; letter-spacing:.5px; }
+  header .health { color:var(--muted); font-size:12px; }
+  header .spacer { flex:1; }
+  button { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.sm { padding:3px 7px; font-size:12px; }
+  input { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:13px; }
+  .layout { display:flex; height:calc(100vh - 49px); }
+  aside { width:300px; border-right:1px solid var(--line); background:var(--panel); padding:12px; overflow:auto; }
+  main { flex:1; padding:18px; overflow:auto; }
+  .addrow { display:flex; gap:6px; margin-bottom:12px; }
+  .addrow input { flex:1; }
+  .plist { list-style:none; margin:0; padding:0; }
+  .plist li { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:8px; margin-bottom:7px; cursor:pointer; background:var(--panel2); }
+  .plist li.active { border-color:var(--accent); }
+  .plist .pname { font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .plist .x { color:var(--muted); }
+  .muted { color:var(--muted); }
+  .empty { color:var(--muted); padding:40px; text-align:center; }
+  h2 { margin:0 0 2px; font-size:18px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:14px; word-break:break-all; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+  th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; font-size:12px; }
+  code { color:var(--muted); font-size:12px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; background:var(--panel2); border:1px solid var(--line); }
+  .badge.succeeded,.badge.matched { color:var(--green); border-color:var(--green); }
+  .badge.running { color:var(--blue); border-color:var(--blue); }
+  .badge.failed { color:var(--red); border-color:var(--red); }
+  .badge.queued { color:var(--gray); }
+  .badge.added { color:var(--green); border-color:var(--green); }
+  .badge.missing { color:var(--red); border-color:var(--red); }
+  .badge.changed { color:var(--cyan); border-color:var(--cyan); }
+  .badge.default { color:var(--accent); border-color:var(--accent); }
+  .morerow td { text-align:center; border-bottom:none; padding-top:10px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+  .ok { background:var(--green); } .stale { background:var(--amber); }
+  .section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:16px; }
+  .section h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+  #output:empty { display:none; }
+  .stage { margin-bottom:12px; }
+  .stage .sname { font-weight:600; margin-bottom:4px; }
+  .ms { padding:4px 0 4px 12px; border-left:2px solid var(--line); margin-bottom:3px; }
+  .ms .conf { color:var(--muted); font-size:11px; }
+  .delta { padding:4px 0; }
+  .err { color:var(--red); }
+  select { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 8px; }
+  .cov { font-size:22px; font-weight:700; }
+  /* settings modal */
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-start; justify-content:center; z-index:50; }
+  .modal .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; width:460px; max-width:92vw; margin-top:7vh; max-height:84vh; overflow:auto; }
+  .modal h3 { margin:0 0 14px; font-size:16px; }
+  .modal h4 { margin:16px 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+  .frow { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+  .frow > label:first-child { width:120px; color:var(--muted); flex-shrink:0; }
+  .frow input[type=text], .frow input[type=password], .frow select { flex:1; }
+  .chk { display:flex; align-items:center; gap:5px; color:var(--text); width:auto; }
+  .modal hr { border:none; border-top:1px solid var(--line); margin:14px 0; }
+  .modal .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .hint { color:var(--muted); font-size:11px; margin:-4px 0 10px 130px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">◆ SKENE</span>
+  <span class="health" id="health">connecting…</span>
+  <span class="spacer"></span>
+  <button class="sm" onclick="openSettings()">⚙ Settings</button>
+  <button class="sm" onclick="refreshAll()">↻ Refresh</button>
+</header>
+<div class="layout">
+  <aside>
+    <div class="addrow">
+      <input id="path" placeholder="/path/to/git/repo" onkeydown="if(event.key==='Enter')addProject()" />
+      <button class="primary" onclick="addProject()">Add</button>
+    </div>
+    <ul class="plist" id="plist"></ul>
+  </aside>
+  <main id="main"><div class="empty">Add or select a project.</div></main>
+</div>
+
+<div class="modal" id="settings">
+  <div class="card">
+    <h3>⚙ Settings</h3>
+
+    <h4>Working-branch monitor</h4>
+    <div class="frow"><label class="chk"><input type="checkbox" id="set_mon"> auto-analyze the checked-out branch</label></div>
+    <div class="frow"><label class="chk"><input type="checkbox" id="set_oncommit"> also on new commits (not just branch switch)</label></div>
+    <div class="frow"><label>Poll interval</label><input type="number" id="set_interval" step="0.5" min="0.5" style="width:90px"> <span class="muted">seconds</span></div>
+
+    <h4>Analysis backend</h4>
+    <div class="frow"><label>Backend</label>
+      <select id="set_backend"><option value="auto">auto</option><option value="heuristic">heuristic (offline)</option><option value="llm">llm</option></select>
+    </div>
+    <div class="frow"><label>LLM model</label><input type="text" id="set_model" placeholder="anthropic/claude-sonnet-4-6"></div>
+    <div class="hint">auto = LLM when a model is set, else offline heuristics</div>
+    <div class="frow"><label>API key</label><input type="password" id="set_key" placeholder="not set"></div>
+    <div class="frow"><label></label><label class="chk"><input type="checkbox" id="set_key_clear"> clear stored key</label></div>
+    <div class="frow"><label>Base URL</label><input type="text" id="set_baseurl" placeholder="(optional — local / OpenAI-compatible)"></div>
+    <div class="frow"><label>Temperature</label><input type="number" id="set_temp" step="0.1" min="0" style="width:90px"></div>
+
+    <div class="err" id="set_err"></div>
+    <div class="actions">
+      <button onclick="closeSettings()">Cancel</button>
+      <button class="primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const short = c => (c || '').slice(0, 8);
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    let detail; try { detail = (await r.json()).detail; } catch { detail = r.statusText; }
+    throw new Error(detail || ('HTTP ' + r.status));
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+const state = { projects: [], selected: null };
+
+async function loadHealth() {
+  try {
+    const h = await api('/health'); const a = h.analysis || {};
+    $('#health').textContent = `● ${h.status} · v${h.version} · analysis: ${a.backend}${a.model ? '/' + a.model : ''}`;
+  } catch { $('#health').textContent = '● daemon unreachable'; }
+}
+
+async function loadProjects() {
+  state.projects = await api('/projects');
+  const ul = $('#plist');
+  ul.innerHTML = state.projects.map(p => `
+    <li class="${p.id === state.selected ? 'active' : ''}" onclick="select('${p.id}')">
+      <span class="pname">${esc(p.name)}</span>
+      <span class="x" title="remove" onclick="removeProject('${p.id}', event)">✕</span>
+    </li>`).join('') || '<li class="muted" style="border:none;background:none">no projects</li>';
+}
+
+async function addProject() {
+  const path = $('#path').value.trim(); if (!path) return;
+  try {
+    await api('/projects', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ path }) });
+    $('#path').value = ''; await loadProjects(); select(state.projects.at(-1)?.id);
+  } catch (e) { alert('Add failed: ' + e.message); }
+}
+
+async function removeProject(id, ev) {
+  ev.stopPropagation();
+  if (!confirm('Remove this project?')) return;
+  await api('/projects/' + id, { method:'DELETE' });
+  if (state.selected === id) state.selected = null;
+  await loadProjects(); loadShell();
+}
+
+function select(id) { state.selected = id; loadProjects(); loadShell(); }
+
+const COLLAPSED_BRANCHES = 6;
+let branchesExpanded = false;
+
+function _branchRow(b) {
+  return `<tr>
+    <td>${b.is_current ? '★ ' : ''}${esc(b.name)}${b.is_default ? ' <span class="badge default">default</span>' : ''}</td>
+    <td><code>${short(b.head_commit)}</code></td>
+    <td>${b.status ? `<span class="badge ${b.status}">${b.status}</span>` : '<span class="muted">—</span>'}</td>
+    <td>${b.up_to_date ? '<span class="dot ok"></span>up to date'
+          : b.last_analyzed_commit ? '<span class="dot stale"></span>stale' : '<span class="muted">never</span>'}</td>
+    <td>
+      <button class="sm" onclick="act('analyze',{branch:'${esc(b.name)}'})">Analyze</button>
+      <button class="sm" onclick="showJourney('${esc(b.name)}')">Journey</button>
+      <button class="sm" onclick="showGap('${esc(b.name)}')">Gap</button>
+    </td></tr>`;
+}
+
+function branchRows(branches) {
+  // Backend already sorts: current, default, then most-recent commit first.
+  const expanded = branchesExpanded || branches.length <= COLLAPSED_BRANCHES;
+  const shown = expanded ? branches : branches.slice(0, COLLAPSED_BRANCHES);
+  let html = shown.map(_branchRow).join('');
+  if (branches.length > COLLAPSED_BRANCHES) {
+    const hidden = branches.length - COLLAPSED_BRANCHES;
+    const label = expanded ? 'View fewer branches' : `View ${hidden} more branch${hidden === 1 ? '' : 'es'}`;
+    html += `<tr class="morerow"><td colspan="5"><button class="sm" onclick="toggleBranches()">${label}</button></td></tr>`;
+  }
+  return html;
+}
+
+function toggleBranches() { branchesExpanded = !branchesExpanded; refreshTables(); }
+
+function runRows(runs) {
+  return runs.slice(0, 12).map(r => `<tr>
+    <td>${esc(r.branch)}</td><td><code>${short(r.commit)}</code></td>
+    <td><span class="badge ${r.status}">${r.status}</span></td>
+    <td class="err">${r.error ? esc(r.error.slice(0, 80)) : ''}</td></tr>`).join('') || '<tr><td class="muted">no runs yet</td></tr>';
+}
+
+// Build the project view ONCE (selects + output panel are stable across polls).
+async function loadShell() {
+  const id = state.selected;
+  branchesExpanded = false;  // reset collapse when switching projects
+  if (!id) { $('#main').innerHTML = '<div class="empty">Add or select a project.</div>'; return; }
+  const p = state.projects.find(x => x.id === id);
+  let branches = [], runs = [];
+  try { [branches, runs] = await Promise.all([api(`/projects/${id}/branches`), api(`/projects/${id}/runs`)]); }
+  catch (e) { $('#main').innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+  const opts = branches.map(b => `<option>${esc(b.name)}</option>`).join('');
+  $('#main').innerHTML = `
+    <h2>${esc(p.name)}</h2>
+    <div class="sub">${esc(p.path)} · default <code>${esc(p.default_branch)}</code></div>
+    <div class="toolbar">
+      <button class="primary" onclick="act('analyze',{all:true})">Analyze all branches</button>
+      <button onclick="act('gold')">Build gold from ${esc(p.default_branch)}</button>
+    </div>
+    <div class="section">
+      <h3>Branches</h3>
+      <table><thead><tr><th>Branch</th><th>HEAD</th><th>Status</th><th>Analyzed</th><th></th></tr></thead>
+      <tbody id="branchBody">${branchRows(branches)}</tbody></table>
+    </div>
+    <div class="section">
+      <h3>Drift (branch vs branch)</h3>
+      <div class="toolbar">
+        base <select id="dbase">${opts}</select>
+        head <select id="dhead">${opts}</select>
+        <button onclick="showDrift()">Compare</button>
+      </div>
+    </div>
+    <div class="section">
+      <h3>Recent runs</h3>
+      <table><tbody id="runBody">${runRows(runs)}</tbody></table>
+    </div>
+    <div class="section" id="output"></div>`;
+}
+
+// Poll-friendly: refresh only the status tables, leaving selects + output untouched.
+async function refreshTables() {
+  const id = state.selected; if (!id) return;
+  try {
+    const [branches, runs] = await Promise.all([api(`/projects/${id}/branches`), api(`/projects/${id}/runs`)]);
+    if ($('#branchBody')) $('#branchBody').innerHTML = branchRows(branches);
+    if ($('#runBody')) $('#runBody').innerHTML = runRows(runs);
+  } catch {}
+}
+
+async function act(kind, body) {
+  try {
+    if (kind === 'analyze') { await api(`/projects/${state.selected}/analyze`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }); refreshTables(); }
+    if (kind === 'gold') { await api(`/projects/${state.selected}/gold/from-branch`, { method:'POST', headers:{'content-type':'application/json'}, body:'{}' }); out('<div class="muted">Gold standard built.</div>'); }
+  } catch (e) { out(`<div class="err">${esc(e.message)}</div>`); }
+}
+
+function out(html) { const el = $('#output'); if (el) el.innerHTML = html; }
+
+async function showJourney(branch) {
+  try {
+    const j = await api(`/projects/${state.selected}/branches/${branch}/journey`);
+    out(`<h3>Journey — ${esc(branch)}</h3><div class="muted" style="margin-bottom:10px">${esc(j.product.description || '')}</div>` +
+      j.stages.map(s => `<div class="stage"><div class="sname">${esc(s.name)} <span class="muted">(${esc(s.id)})</span></div>` +
+        s.milestones.map(m => `<div class="ms">${esc(m.name)} <span class="conf">· ${(m.confidence*100).toFixed(0)}%${m.tracked_event ? ' · '+esc(m.tracked_event) : ''}</span><br>
+          <code>${m.evidence.map(e => esc(e.path || e.table)).join(', ')}</code></div>`).join('') + `</div>`).join(''));
+  } catch (e) { out(`<div class="err">${esc(e.message)}</div>`); }
+}
+
+function renderReport(rep) {
+  return `<div class="cov">${(rep.coverage*100).toFixed(0)}% <span class="muted" style="font-size:13px;font-weight:400">coverage</span></div>
+    <div class="muted" style="margin:4px 0 12px">${esc(rep.summary)}</div>` +
+    rep.deltas.filter(d => d.status !== 'matched').map(d => {
+      const stage = d.target_stage || d.candidate_stage || '?';
+      const ch = d.changes && d.changes.length ? ' <span class="muted">— ' + esc(d.changes.join('; ')) + '</span>' : '';
+      return `<div class="delta"><span class="badge ${d.status}">${d.status}</span> ${esc(stage)}/${esc(d.name)}${ch}</div>`;
+    }).join('') || '<div class="muted">no differences</div>';
+}
+
+async function showGap(branch) {
+  try { out(`<h3>Gap — ${esc(branch)} vs gold</h3>` + renderReport(await api(`/projects/${state.selected}/branches/${branch}/gap`))); }
+  catch (e) { out(`<div class="err">${esc(e.message)} ${/gold/.test(e.message) ? '(build a gold standard first)' : ''}</div>`); }
+}
+
+async function showDrift() {
+  const base = $('#dbase').value, head = $('#dhead').value;
+  try { out(`<h3>Drift — ${esc(base)} → ${esc(head)}</h3>` + renderReport(await api(`/projects/${state.selected}/drift?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`))); }
+  catch (e) { out(`<div class="err">${esc(e.message)}</div>`); }
+}
+
+// --- settings modal ---
+async function openSettings() {
+  try {
+    const s = await api('/settings');
+    $('#set_mon').checked = s.monitor_enabled;
+    $('#set_oncommit').checked = s.monitor_on_commit;
+    $('#set_interval').value = s.monitor_interval;
+    $('#set_backend').value = s.analysis_backend;
+    $('#set_model').value = s.llm_model || '';
+    $('#set_baseurl').value = s.llm_base_url || '';
+    $('#set_temp').value = s.llm_temperature;
+    $('#set_key').value = '';
+    $('#set_key').placeholder = s.llm_api_key_set ? '•••••••• set — leave blank to keep' : 'not set';
+    $('#set_key_clear').checked = false;
+    $('#set_err').textContent = '';
+    $('#settings').style.display = 'flex';
+  } catch (e) { alert('Could not load settings: ' + e.message); }
+}
+
+function closeSettings() { $('#settings').style.display = 'none'; }
+
+async function saveSettings() {
+  const body = {
+    monitor_enabled: $('#set_mon').checked,
+    monitor_on_commit: $('#set_oncommit').checked,
+    monitor_interval: parseFloat($('#set_interval').value),
+    analysis_backend: $('#set_backend').value,
+    llm_model: $('#set_model').value.trim(),
+    llm_base_url: $('#set_baseurl').value.trim(),
+    llm_temperature: parseFloat($('#set_temp').value),
+  };
+  // Only touch the key when clearing or entering a new one (blank = keep existing).
+  if ($('#set_key_clear').checked) body.llm_api_key = '';
+  else if ($('#set_key').value) body.llm_api_key = $('#set_key').value;
+  try {
+    await api('/settings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    closeSettings();
+    loadHealth();
+  } catch (e) { $('#set_err').textContent = e.message; }
+}
+
+// Close the modal when clicking the dimmed backdrop.
+document.getElementById('settings').addEventListener('click', e => { if (e.target.id === 'settings') closeSettings(); });
+
+async function refreshAll() { await loadHealth(); await loadProjects(); await loadShell(); }
+
+refreshAll();
+// Light polling keeps branch/run status fresh without disturbing the output panel or selects.
+setInterval(() => { loadHealth(); refreshTables(); }, 3000);
+</script>
+</body>
+</html>
