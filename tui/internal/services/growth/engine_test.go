@@ -54,6 +54,46 @@ func TestBuildEnvVarsIncludesSkeneOutputDir(t *testing.T) {
 	}
 }
 
+func hasArg(args []string, target string) bool {
+	for _, a := range args {
+		if a == target {
+			return true
+		}
+	}
+	return false
+}
+
+func TestJourneyArgsAppendsAutoPublishWhenLinked(t *testing.T) {
+	e := &Engine{config: EngineConfig{
+		ProjectDir:     "/tmp/project",
+		Provider:       "skene",
+		Upstream:       "https://www.skene.ai/workspace/my-app",
+		UpstreamAPIKey: "sk_token",
+	}}
+	if !hasArg(e.journeyArgs(), "--auto-publish") {
+		t.Fatalf("expected --auto-publish for a linked skene run; got %v", e.journeyArgs())
+	}
+}
+
+func TestJourneyArgsOmitsAutoPublishCases(t *testing.T) {
+	cases := []struct {
+		name   string
+		config EngineConfig
+	}{
+		{"non-skene provider", EngineConfig{ProjectDir: "/p", Provider: "openai", Upstream: "https://www.skene.ai/workspace/a", UpstreamAPIKey: "k"}},
+		{"skene without upstream", EngineConfig{ProjectDir: "/p", Provider: "skene", UpstreamAPIKey: "k"}},
+		{"skene without key", EngineConfig{ProjectDir: "/p", Provider: "skene", Upstream: "https://www.skene.ai/workspace/a"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &Engine{config: tc.config}
+			if hasArg(e.journeyArgs(), "--auto-publish") {
+				t.Fatalf("did not expect --auto-publish; got %v", e.journeyArgs())
+			}
+		})
+	}
+}
+
 func TestDefaultOutputDirConstant(t *testing.T) {
 	if constants.DefaultOutputDir != "./skene-context" {
 		t.Fatalf("DefaultOutputDir regressed; got %q", constants.DefaultOutputDir)

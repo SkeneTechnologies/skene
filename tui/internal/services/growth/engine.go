@@ -142,22 +142,27 @@ func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting journey analysis...")
 
-	bundle := e.bundleOutputDir()
-	args := []string{
-		constants.GrowthPackageSpec(), "analyse-journey", ".",
-		"-o", filepath.Join(bundle, constants.JourneyFile),
-	}
-
-	if err := e.runUVX(ctx, args); err != nil {
+	if err := e.runUVX(ctx, e.journeyArgs()); err != nil {
 		result.Error = fmt.Errorf("analyse-journey failed: %w", err)
 		return result
 	}
 
 	e.sendUpdate(PhaseGenerateDocs, 1.0, "Analysis complete")
 
-	result.Journey = loadFileContent(filepath.Join(bundle, constants.JourneyFile))
+	result.Journey = loadFileContent(filepath.Join(e.bundleOutputDir(), constants.JourneyFile))
 
 	return result
+}
+
+func (e *Engine) journeyArgs() []string {
+	args := []string{
+		constants.GrowthPackageSpec(), "analyse-journey", ".",
+		"-o", filepath.Join(e.bundleOutputDir(), constants.JourneyFile),
+	}
+	if e.config.Provider == "skene" && e.config.Upstream != "" && e.config.UpstreamAPIKey != "" {
+		args = append(args, "--auto-publish")
+	}
+	return args
 }
 
 // GeneratePlan spawns uvx skene plan
