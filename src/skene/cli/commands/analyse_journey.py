@@ -275,10 +275,7 @@ def _maybe_auto_publish(rc, project_root: Path, *, enabled: bool) -> None:
     if result.get("ok"):
         success("✓ Published journey to Skene Cloud.")
     else:
-        warning(
-            "Could not publish journey to Skene Cloud: "
-            f"{result.get('message', 'unknown error')}"
-        )
+        warning(f"Could not publish journey to Skene Cloud: {result.get('message', 'unknown error')}")
 
 
 def _infer_product_name(repo_root: Path | None, schema_dir: Path | None) -> str:

@@ -39,9 +39,7 @@ def patched(monkeypatch):
         calls["publish"].append((project_root, config, kwargs))
         return calls.get("publish_result", {"ok": True})
 
-    monkeypatch.setattr(
-        "skene.growth_loops.upstream.journey_exists_upstream", fake_exists
-    )
+    monkeypatch.setattr("skene.growth_loops.upstream.journey_exists_upstream", fake_exists)
     monkeypatch.setattr("skene.growth_loops.push.publish_bundle", fake_publish)
     return calls
 
