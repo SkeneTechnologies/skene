@@ -227,10 +227,10 @@ def analyse_journey_cmd(
 
     _render_summary(journey_path, journey)
 
-    _maybe_auto_publish(rc, config_root, enabled=auto_publish)
+    _maybe_auto_publish(rc, config_root, journey_path=journey_path, enabled=auto_publish)
 
 
-def _maybe_auto_publish(rc, project_root: Path, *, enabled: bool) -> None:
+def _maybe_auto_publish(rc, project_root: Path, *, journey_path: Path, enabled: bool) -> None:
     """Publish the freshly written journey.yaml to Skene Cloud on first run.
 
     Gated on (in order): the TUI-only ``--auto-publish`` opt-in, the skene
@@ -238,8 +238,15 @@ def _maybe_auto_publish(rc, project_root: Path, *, enabled: bool) -> None:
     a journey.yaml upstream. A failed or indeterminate presence check skips
     publishing silently — we never push unless skene.ai definitively reports no
     journey. Never raises: a publish failure must not fail journey analysis.
+
+    The push is anchored to ``journey_path``'s directory (where we just wrote the
+    journey), not ``config.output_dir`` — the latter can resolve to a stale legacy
+    ``skene/`` bundle and silently exclude the freshly written ``journey.yaml``.
     """
+    from skene.output import debug, success, warning
+
     if not enabled:
+        debug("auto-publish: skipped (flag not set; not a linked TUI run)")
         return
 
     from skene.config import resolve_upstream_token
@@ -248,26 +255,43 @@ def _maybe_auto_publish(rc, project_root: Path, *, enabled: bool) -> None:
         _api_base_from_upstream,
         journey_exists_upstream,
     )
-    from skene.output import success, warning
 
     config = rc.config
     if config.provider != "skene":
+        debug(f"auto-publish: skipped (provider is {config.provider!r}, not 'skene')")
         return
 
     upstream = config.upstream
     token = resolve_upstream_token(config)
     if not upstream or not token:
+        debug(
+            "auto-publish: skipped (not linked: "
+            f"upstream={'set' if upstream else 'missing'}, "
+            f"token={'set' if token else 'missing'})"
+        )
         return
 
     api_base = _api_base_from_upstream(upstream)
 
+    # The workspace is resolved server-side from the token (1:1), so a "present"
+    # result means *this token's* workspace already has a journey.yaml.
     present = journey_exists_upstream(api_base, token)
     if present is not False:
         # True (already published) or None (indeterminate) → leave it alone.
+        reason = "already present upstream" if present else "presence check indeterminate"
+        debug(f"auto-publish: skipped ({reason})")
         return
 
+    debug("auto-publish: publishing journey (workspace empty upstream)")
+
     try:
-        result = publish_bundle(project_root, config, upstream=upstream, token=token)
+        result = publish_bundle(
+            project_root,
+            config,
+            upstream=upstream,
+            token=token,
+            output_dir=str(journey_path.parent),
+        )
     except Exception as exc:  # noqa: BLE001 — auto-publish is best-effort
         warning(f"Could not publish journey to Skene Cloud: {exc}")
         return

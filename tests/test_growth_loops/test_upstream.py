@@ -224,3 +224,42 @@ class TestPushToUpstream:
         result = push_to_upstream(tmp_path, "https://x.com/workspace/w", "bad", [], 0)
         assert result["ok"] is False
         assert result["error"] == "auth"
+
+
+class TestPublishBundleOutputDirOverride:
+    """Regression: auto-publish must push the journey's own directory, never a
+    stale legacy ``skene/`` bundle (the cause of a 201 that omitted journey.yaml)."""
+
+    @patch("skene.growth_loops.upstream.httpx.post")
+    def test_output_dir_override_pushes_journey_not_legacy_skene(self, mock_post, tmp_path: Path):
+        from skene.config import Config
+        from skene.growth_loops.push import publish_bundle
+
+        # Stale legacy bundle (e.g. left over from an old run) ...
+        (tmp_path / "skene").mkdir(parents=True)
+        (tmp_path / "skene" / "growth-template.json").write_text('{"loops": []}\n')
+        # ... and the freshly written journey in the canonical bundle.
+        (tmp_path / "skene-context").mkdir(parents=True)
+        (tmp_path / "skene-context" / "journey.yaml").write_text("journey: {}\n")
+
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"commit_hash": "sha256:abc"}
+
+        cfg = Config()
+        cfg.set("provider", "skene")
+        cfg.set("upstream", "https://skene.ai/workspace/w")
+        # config.output_dir resolves to the legacy dir — the buggy condition.
+        cfg.set("output_dir", "./skene")
+
+        result = publish_bundle(
+            tmp_path,
+            cfg,
+            upstream="https://skene.ai/workspace/w",
+            token="sk_token",
+            output_dir=str(tmp_path / "skene-context"),
+        )
+
+        assert result["ok"] is True
+        paths = [f["path"] for f in mock_post.call_args.kwargs["json"]["files"]]
+        assert "skene-context/journey.yaml" in paths
+        assert "skene/growth-template.json" not in paths
