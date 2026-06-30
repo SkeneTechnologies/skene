@@ -86,8 +86,15 @@ def get_provider_models(provider: str) -> list[str]:
 
 
 def save_config(config_path: Path, provider: str, model: str, api_key: str, base_url: str | None = None) -> None:
-    """Save configuration to a TOML file."""
+    """Save configuration to a TOML file.
+
+    The API key is never written to the file in clear text (CWE-312). It is
+    stored in the OS keyring instead; ``load_config`` reads it back from there.
+    If no keyring backend is available the key is not persisted and the user is
+    advised to use the ``SKENE_API_KEY`` environment variable.
+    """
     from skene.config import load_toml
+    from skene.secret_store import delete_api_key, set_api_key
 
     # Read existing config if it exists
     existing_config = {}
@@ -97,14 +104,25 @@ def save_config(config_path: Path, provider: str, model: str, api_key: str, base
         except Exception:
             pass  # If we can't read it, start fresh
 
+    # Store the API key securely in the OS keyring, never in the config file.
+    if api_key:
+        if not set_api_key(api_key):
+            console.print(
+                "[yellow]Warning: could not store the API key securely (no OS keyring "
+                "available). Set the SKENE_API_KEY environment variable instead.[/yellow]"
+            )
+    else:
+        # Empty key means the user cleared it — drop any previously stored secret.
+        delete_api_key()
+
     # Write TOML file manually
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     lines = ["# skene configuration"]
     lines.append("# See: https://github.com/skene-technologies/skene")
     lines.append("")
-    lines.append("# API key for LLM provider (can also use SKENE_API_KEY env var)")
-    lines.append(f'api_key = "{api_key}"')
+    lines.append("# API key for the LLM provider is stored in the OS keyring,")
+    lines.append("# not in this file. You can also set the SKENE_API_KEY env var.")
     lines.append("")
     lines.append("# LLM provider to use")
     lines.append(f'provider = "{provider}"')
