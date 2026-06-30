@@ -297,6 +297,7 @@ def publish_bundle(
     *,
     upstream: str | None = None,
     token: str | None = None,
+    output_dir: str | None = None,
     warn: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Collect bundle artifacts + engine metadata and push them upstream.
@@ -305,6 +306,10 @@ def publish_bundle(
     passed explicitly, extracts trigger events / feature count from the engine
     document (if present), and delegates to :func:`push_to_upstream`. Returns
     the push result dict (``{"ok": bool, ...}``).
+
+    ``output_dir`` overrides ``config.output_dir`` for the uploaded bundle. Pass
+    it to anchor the push to a known directory (e.g. where ``journey.yaml`` was
+    just written) instead of the config's sticky/legacy resolution.
 
     Raises ``ValueError`` when no upstream token is available. When engine
     metadata cannot be read, ``warn`` (if given) is called and the push
@@ -323,7 +328,7 @@ def publish_bundle(
     if not resolved_token:
         raise ValueError("No upstream token. Run skene login to authenticate.")
 
-    out_dir = config.output_dir or DEFAULT_OUTPUT_DIR
+    out_dir = output_dir or config.output_dir or DEFAULT_OUTPUT_DIR
     engine_path = default_engine_path(project_root, out_dir)
 
     trigger_events: list[str] = []
