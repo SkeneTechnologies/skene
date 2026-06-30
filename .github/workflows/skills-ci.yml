@@ -25,7 +25,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install sqlfluff
-        run: pip install sqlfluff
+        run: pip install sqlfluff==4.2.2
 
       - name: Lint migration files
         run: sqlfluff lint skills/*/migration.sql --dialect postgres
