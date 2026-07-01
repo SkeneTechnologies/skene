@@ -49,7 +49,7 @@ skene validate MANIFEST
 
 skene analyse-journey [PATH]
    Generate a journey.yaml describing the user lifecycle using parallel code and schema agents.
-   Flags: --schema-dir, --db-url (PostgreSQL DSN, also SKENE_DB_URL env var), -o/--output, --product-name, --api-key, -p/--provider, -m/--model, --base-url, --schema-max-turns, --code-max-turns, --classify-concurrency, --no-specialize, -q/--quiet, --debug, --no-fallback
+    Flags: --schema-dir, --db-url (PostgreSQL DSN, also SKENE_DB_URL env var; introspects all user schemas excluding pg_catalog, information_schema, pg_toast, pg_*), -o/--output, --product-name, --api-key, -p/--provider, -m/--model, --base-url, --schema-max-turns, --code-max-turns, --classify-concurrency, --no-specialize, -q/--quiet, --debug, --no-fallback
 
 ## LLM Providers
 

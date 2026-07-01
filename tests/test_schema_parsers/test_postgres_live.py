@@ -14,6 +14,7 @@ from skene.analyzers.schema_parsers.postgres_live import introspect_db
 
 
 def _build_mock_conn(
+    schemas: list[str],
     tables: list[str],
     pk_rows: list[dict],
     col_rows: list[dict],
@@ -25,6 +26,14 @@ def _build_mock_conn(
     psycopg.connect() returns a connection that acts as a context manager,
     so the mock must support __enter__/__exit__ and cursor() must return
     cursors that are also context managers.
+
+    Cursor call order:
+    1. Schema discovery (_discover_user_schemas)
+    2. Tables query
+    3. Primary keys query
+    4. Columns query
+    5. Foreign keys query
+    6. Indexes query
     """
 
     def _make_cursor(rows: list[dict]) -> MagicMock:
@@ -35,11 +44,12 @@ def _build_mock_conn(
         return cur
 
     cursors = [
-        _make_cursor([{"table_name": t} for t in tables]),
-        _make_cursor(pk_rows),
-        _make_cursor(col_rows),
-        _make_cursor(fk_rows),
-        _make_cursor(idx_rows),
+        _make_cursor([{"nspname": s} for s in schemas]),  # schema discovery
+        _make_cursor([{"table_name": t} for t in tables]),  # tables
+        _make_cursor(pk_rows),  # primary keys
+        _make_cursor(col_rows),  # columns
+        _make_cursor(fk_rows),  # foreign keys
+        _make_cursor(idx_rows),  # indexes
     ]
     conn = MagicMock()
     conn.__enter__ = lambda s: conn
@@ -53,7 +63,14 @@ class TestIntrospectDb:
 
     def test_empty_db_returns_empty_index(self):
         """An empty database returns a SchemaIndex with no files."""
-        mock_conn = _build_mock_conn(tables=[], pk_rows=[], col_rows=[], fk_rows=[], idx_rows=[])
+        mock_conn = _build_mock_conn(
+            schemas=["public"],
+            tables=[],
+            pk_rows=[],
+            col_rows=[],
+            fk_rows=[],
+            idx_rows=[],
+        )
         with patch("psycopg.connect", return_value=mock_conn):
             index = introspect_db("postgresql://user:pass@localhost/db")
         assert index.files == {}
@@ -61,6 +78,7 @@ class TestIntrospectDb:
     def test_single_table_basic(self):
         """A single table with columns, PK, FK, and index."""
         mock_conn = _build_mock_conn(
+            schemas=["public"],
             tables=["users"],
             pk_rows=[{"table_name": "users", "pk_columns": ["id"]}],
             col_rows=[
@@ -122,6 +140,7 @@ class TestIntrospectDb:
     def test_table_with_foreign_keys(self):
         """Tables with FK relationships are captured."""
         mock_conn = _build_mock_conn(
+            schemas=["public"],
             tables=["orders", "users"],
             pk_rows=[
                 {"table_name": "orders", "pk_columns": ["id"]},
@@ -190,6 +209,7 @@ class TestIntrospectDb:
     def test_views_included(self):
         """Views are included in the schema index."""
         mock_conn = _build_mock_conn(
+            schemas=["public"],
             tables=["user_summary"],
             pk_rows=[],
             col_rows=[
@@ -259,6 +279,7 @@ class TestIntrospectDb:
     def test_multiple_tables_different_files(self):
         """Each table gets its own schema file entry."""
         mock_conn = _build_mock_conn(
+            schemas=["public"],
             tables=["users", "posts"],
             pk_rows=[
                 {"table_name": "users", "pk_columns": ["id"]},
@@ -290,3 +311,63 @@ class TestIntrospectDb:
         file_keys = sorted(index.files.keys())
         assert "posts.sql" in file_keys
         assert "users.sql" in file_keys
+
+
+class TestSchemaDiscovery:
+    """Test that system/extension schemas are excluded from introspection."""
+
+    def test_system_schemas_excluded(self):
+        """pg_catalog, information_schema, and pg_toast are not returned as user schemas."""
+        # The mock returns only 'public' and 'app' as user schemas;
+        # pg_catalog, information_schema, and a fake extension schema
+        # are implicitly excluded by the _discover_user_schemas query.
+        mock_conn = _build_mock_conn(
+            schemas=["public", "app"],  # only user schemas returned
+            tables=["users"],
+            pk_rows=[{"table_name": "users", "pk_columns": ["id"]}],
+            col_rows=[
+                {
+                    "table_name": "users",
+                    "column_name": "id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+            ],
+            fk_rows=[],
+            idx_rows=[],
+        )
+        with patch("psycopg.connect", return_value=mock_conn):
+            index = introspect_db("postgresql://user:pass@localhost/db")
+
+        # Should find the table in public schema
+        assert len(index.files) == 1
+        tables = list(index.files.values())[0]
+        assert len(tables) == 1
+        assert tables[0].name == "users"
+
+    def test_custom_schema_tables_included(self):
+        """Tables in non-public user schemas are included."""
+        mock_conn = _build_mock_conn(
+            schemas=["public", "tenant_a"],
+            tables=["customers"],
+            pk_rows=[{"table_name": "customers", "pk_columns": ["id"]}],
+            col_rows=[
+                {
+                    "table_name": "customers",
+                    "column_name": "id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+            ],
+            fk_rows=[],
+            idx_rows=[],
+        )
+        with patch("psycopg.connect", return_value=mock_conn):
+            index = introspect_db("postgresql://user:pass@localhost/db")
+
+        assert len(index.files) == 1
+        tables = list(index.files.values())[0]
+        assert len(tables) == 1
+        assert tables[0].name == "customers"

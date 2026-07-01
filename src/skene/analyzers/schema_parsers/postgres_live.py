@@ -27,6 +27,24 @@ from skene.output import debug
 # relkind filter: ordinary tables, views, materialized views.
 _RELKIND_FILTER = "('r', 'v', 'm')"
 
+# System schemas to exclude from introspection.
+_SYSTEM_SCHEMAS = ("pg_catalog", "information_schema", "pg_toast")
+
+
+def _discover_user_schemas(cur: Any) -> list[str]:
+    """Return user-defined schema names, excluding system and extension schemas."""
+    cur.execute(
+        """\
+        SELECT nspname
+        FROM pg_namespace
+        WHERE nspname NOT IN %s
+          AND nspname NOT LIKE 'pg_%%'
+        ORDER BY nspname
+    """,
+        (_SYSTEM_SCHEMAS,),
+    )
+    return [row["nspname"] for row in cur.fetchall()]
+
 
 def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
     """Connect to *db_url*, introspect the schema, return a :class:`SchemaIndex`.
@@ -43,35 +61,24 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
     with psycopg.connect(db_url, connect_timeout=connect_timeout, row_factory=dict_row) as conn:
         tables_by_file: dict[str, dict[str, TableInfo]] = {}
 
-        # --- 1. Collect tables (names + primary keys) ---
-        tables_query = """\
-            SELECT c.relname AS table_name,
-                   i.indisprimary AS is_pk,
-                   array_agg(a.attname ORDER BY array_position(i.indkey, a.attnum)) AS pk_columns
-            FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            JOIN pg_index i ON i.indrelid = c.oid
-            JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey)
-            WHERE c.relkind IN _RELKIND_PLACEHOLDER
-              AND n.nspname = 'public'
-            GROUP BY c.relname, i.indisprimary, a.attname
-        """
-        # We need a different approach because array_agg with ORDER BY
-        # inside a GROUP BY on indisprimary creates ambiguity.
-        # Use a simpler query and handle PK columns separately.
+        # --- 0. Discover user schemas (exclude pg_*, information_schema) ---
+        with conn.cursor() as cur:
+            user_schemas = _discover_user_schemas(cur)
 
+        if not user_schemas:
+            return index
+
+        # --- 1. Collect tables (names + primary keys) ---
         tables_query = """\
             SELECT DISTINCT c.relname AS table_name
             FROM pg_class c
             JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE c.relkind IN _RELKIND_PLACEHOLDER
-              AND n.nspname = 'public'
+            WHERE c.relkind IN %s
+              AND n.nspname = ANY(%s)
             ORDER BY c.relname
         """
-        tables_query = tables_query.replace("_RELKIND_PLACEHOLDER", _RELKIND_FILTER)
-
         with conn.cursor() as cur:
-            cur.execute(tables_query)
+            cur.execute(tables_query, (_RELKIND_FILTER, user_schemas))
             table_names: list[str] = [row["table_name"] for row in cur.fetchall()]
 
         if not table_names:
@@ -88,11 +95,11 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
             JOIN pg_index ix ON ix.indrelid = c.oid AND ix.indisprimary
             JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(ix.indkey)
             WHERE c.relname = ANY(%s)
-              AND n.nspname = 'public'
+              AND n.nspname = ANY(%s)
             GROUP BY c.relname
         """
         with conn.cursor() as cur:
-            cur.execute(pk_query, (table_names,))
+            cur.execute(pk_query, (table_names, user_schemas))
             pk_map: dict[str, list[str]] = {row["table_name"]: row["pk_columns"] for row in cur.fetchall()}
 
         # 2b. Columns per table
@@ -100,11 +107,11 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
             SELECT table_name, column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
             WHERE table_name = ANY(%s)
-              AND table_schema = 'public'
+              AND table_schema = ANY(%s)
             ORDER BY table_name, ordinal_position
         """
         with conn.cursor() as cur:
-            cur.execute(col_query, (table_names,))
+            cur.execute(col_query, (table_names, user_schemas))
             # Group by table
             cols_by_table: dict[str, list[dict[str, Any]]] = {}
             for row in cur.fetchall():
@@ -125,11 +132,11 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
              AND ccu.table_schema = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
               AND tc.table_name = ANY(%s)
-              AND tc.table_schema = 'public'
+              AND tc.table_schema = ANY(%s)
             GROUP BY tc.table_name, ccu.table_name
         """
         with conn.cursor() as cur:
-            cur.execute(fk_query, (table_names,))
+            cur.execute(fk_query, (table_names, user_schemas))
             fk_map: dict[str, list[dict[str, Any]]] = {}
             for row in cur.fetchall():
                 fk_map.setdefault(row["table_name"], []).append(row)
@@ -145,14 +152,13 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
             JOIN pg_index ix ON ix.indexrelid = i.oid
             JOIN pg_namespace n ON n.oid = t.relnamespace
             JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-            WHERE t.relkind IN _IDXRELKIND_PLACEHOLDER
+            WHERE t.relkind IN %s
               AND t.relname = ANY(%s)
-              AND n.nspname = 'public'
+              AND n.nspname = ANY(%s)
             GROUP BY t.relname, i.relname, ix.indisunique
         """
-        idx_query = idx_query.replace("_IDXRELKIND_PLACEHOLDER", "('r', 'v', 'm')")
         with conn.cursor() as cur:
-            cur.execute(idx_query, (table_names,))
+            cur.execute(idx_query, ((_RELKIND_FILTER,), table_names, user_schemas))
             idx_map: dict[str, list[dict[str, Any]]] = {}
             for row in cur.fetchall():
                 idx_map.setdefault(row["table_name"], []).append(row)
