@@ -97,3 +97,33 @@ def test_empty_key_deletes_stored_secret(fake_keyring, tmp_path):
     config_manager.save_config(config_path, "openai", "gpt-4o", "")
 
     assert secret_store.get_api_key() is None
+
+
+def test_real_keyring_round_trip(monkeypatch):
+    """Exercise the real OS keyring backend (no fake) on every platform.
+
+    Where a backend exists (e.g. Windows Credential Manager on CI), assert a
+    full set -> get -> delete round-trip. Where none exists (e.g. a headless
+    Linux runner), assert the graceful-degradation contract instead: the
+    wrappers return False/None rather than raising. Either way this validates
+    real behaviour, not the in-memory fake used elsewhere.
+
+    A throwaway service/account is used so a developer's real stored key is
+    never read, overwritten, or deleted by the test.
+    """
+    monkeypatch.setattr(secret_store, "KEYRING_SERVICE", "skene-test-ci")
+    monkeypatch.setattr(secret_store, "API_KEY_ACCOUNT", "roundtrip")
+
+    stored = secret_store.set_api_key("sk-ci-roundtrip")
+    try:
+        if stored:
+            # A usable backend is present: the secret must round-trip.
+            assert secret_store.get_api_key() == "sk-ci-roundtrip"
+        else:
+            # No backend available: must degrade quietly, not leak a value.
+            assert secret_store.get_api_key() is None
+    finally:
+        secret_store.delete_api_key()
+
+    # Cleanup is effective regardless of platform.
+    assert secret_store.get_api_key() is None
