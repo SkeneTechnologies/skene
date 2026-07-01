@@ -8,6 +8,7 @@ from skene.analyzers.schema_parsers.models import (
     SchemaIndex,
     TableInfo,
 )
+from skene.analyzers.schema_parsers.postgres_live import introspect_db
 from skene.analyzers.schema_parsers.supabase_sql import (
     is_supabase_internal,
     parse_schema_dir,
@@ -20,6 +21,7 @@ __all__ = [
     "SchemaFileInfo",
     "SchemaIndex",
     "TableInfo",
+    "introspect_db",
     "is_supabase_internal",
     "parse_schema_dir",
 ]

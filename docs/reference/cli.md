@@ -59,6 +59,62 @@ See the [analyze guide](../guides/analyze.md) for detailed usage.
 
 ---
 
+## `analyse-journey`
+
+Generate a `journey.yaml` describing the user lifecycle of a product.
+
+Uses two parallel LLM agents — one analyzing the codebase filesystem, one analyzing the database schema — to discover user-facing milestones and assemble them into a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
+
+```
+skene analyse-journey [PATH] [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `PATH` | `.` | Path to codebase directory to analyse (omit for current directory) |
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--schema-dir PATH` | | | Directory of pre-exported `*.sql` files for the schema agent |
+| `--db-url TEXT` | | | PostgreSQL connection string for live schema introspection (alternative to `--schema-dir`; also `SKENE_DB_URL` env var) |
+| `--output PATH` | `-o` | `./skene-context/journey.yaml` | Output path for `journey.yaml` |
+| `--product-name TEXT` | | | Product name in the output (default: inferred from repo directory name, DB name, or schema dir name) |
+| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
+| `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic`, `skene` |
+| `--model TEXT` | `-m` | provider default | LLM model name |
+| `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for API endpoint |
+| `--schema-max-turns INT` | | `150` | Maximum agent turns for the schema agent (range: 1–500) |
+| `--code-max-turns INT` | | `200` | Maximum agent turns for the code agent (range: 1–500) |
+| `--classify-concurrency INT` | | `8` | Parallel classifier requests (range: 1–64) |
+| `--no-specialize` | | `false` | Skip stage specialization; use canonical stage vocabulary |
+| `--quiet` | `-q` | `false` | Suppress status messages; show only errors and final results |
+| `--debug` | | `false` | Show diagnostic messages and log all LLM input/output |
+| `--no-fallback` | | `false` | Disable model fallback on rate limits; retry same model instead |
+
+### Schema sources
+
+The schema agent requires one of two inputs — **never both**:
+
+- **SQL files** (`--schema-dir`): Provide a directory of pre-exported `*.sql` files defining tables, views, constraints, and indexes.
+- **Live database** (`--db-url`): Connect directly to a running PostgreSQL database. Skene introspects all user-defined schemas at runtime (excluding `pg_catalog`, `information_schema`, `pg_toast`, and any schema prefixed with `pg_`). Credentials are never stored.
+
+`--schema-dir` and `--db-url` are mutually exclusive. At least one of `PATH`, `--schema-dir`, or `--db-url` must be provided.
+
+### Behavior notes
+
+- Requires a configured LLM (API key + provider). Local providers (`lmstudio`, `ollama`, `generic`) do not require an API key.
+- The `generic` provider requires `--base-url`.
+- When `--db-url` is used without `--product-name`, the database name is extracted from the connection string for the product name.
+- When run from the TUI with a linked Skene Cloud workspace, the journey is automatically published on first run.
+
+See the CLI help output (`skene analyse-journey --help`) for detailed usage.
+
+---
+
 ## `plan`
 
 Generate a growth plan using the Council of Growth Engineers methodology.
@@ -367,12 +423,13 @@ See the [features guide](../guides/features.md) for detailed usage.
 
 | Variable | Used by | Description |
 |----------|---------|-------------|
-| `SKENE_API_KEY` | `analyze`, `plan`, `build`, `status` | API key for the LLM provider. Equivalent to `--api-key`. |
-| `SKENE_BASE_URL` | `analyze`, `plan`, `build` | Base URL for OpenAI-compatible endpoints. Equivalent to `--base-url`. |
+| `SKENE_API_KEY` | `analyze`, `plan`, `build`, `status`, `analyse-journey` | API key for the LLM provider. Equivalent to `--api-key`. |
+| `SKENE_BASE_URL` | `analyze`, `plan`, `build`, `analyse-journey` | Base URL for OpenAI-compatible endpoints. Equivalent to `--base-url`. |
 | `SKENE_PROVIDER` | config loading | LLM provider override at the environment level. |
 | `SKENE_OUTPUT_DIR` | all commands | Override `output_dir` for commands that have no dedicated flag (primarily `push`). |
 | `SKENE_UPSTREAM_API_KEY` | `push`, `login` | API key for upstream authentication. |
 | `SKENE_DEBUG` | all commands | Enable debug mode (`true`/`false`). |
+| `SKENE_DB_URL` | `analyse-journey` | PostgreSQL connection string for live schema introspection. Equivalent to `--db-url`. |
 
 ---
 
@@ -431,4 +488,13 @@ uvx skene features export --format markdown -o features.md
 
 # Quick preview (no API key, just run analyze without a key)
 uvx skene analyze .
+
+# Analyse user journey with SQL schema files
+uvx skene analyse-journey ./my-app --schema-dir ./schemas
+
+# Analyse user journey with a live database
+uvx skene analyse-journey --db-url "postgresql://user:pass@localhost:5432/mydb"
+
+# Journey analysis with custom output
+uvx skene analyse-journey ./my-app --schema-dir ./schemas -o ./output/journey.yaml
 ```

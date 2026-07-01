@@ -45,7 +45,11 @@ skene config
   Manage configuration. --init creates config file, --show displays current values, no flags for interactive editing.
 
 skene validate MANIFEST
-  Validate a growth-manifest.json against the schema.
+   Validate a growth-manifest.json against the schema.
+
+skene analyse-journey [PATH]
+   Generate a journey.yaml describing the user lifecycle using parallel code and schema agents.
+    Flags: --schema-dir, --db-url (PostgreSQL DSN, also SKENE_DB_URL env var; introspects all user schemas excluding pg_catalog, information_schema, pg_toast, pg_*), -o/--output, --product-name, --api-key, -p/--provider, -m/--model, --base-url, --schema-max-turns, --code-max-turns, --classify-concurrency, --no-specialize, -q/--quiet, --debug, --no-fallback
 
 ## LLM Providers
 
@@ -65,7 +69,7 @@ Priority: user config < project config < env vars < CLI flags
 
 Options: api_key, provider, model, base_url, output_dir, debug, exclude_folders, upstream
 
-Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_OUTPUT_DIR, SKENE_DEBUG, SKENE_UPSTREAM_API_KEY, LMSTUDIO_BASE_URL, OLLAMA_BASE_URL
+Environment variables: SKENE_API_KEY, SKENE_PROVIDER, SKENE_BASE_URL, SKENE_OUTPUT_DIR, SKENE_DEBUG, SKENE_UPSTREAM_API_KEY, SKENE_DB_URL, LMSTUDIO_BASE_URL, OLLAMA_BASE_URL
 
 ## Output Files
 

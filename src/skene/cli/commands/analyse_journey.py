@@ -22,6 +22,7 @@ from skene.analyzers.journey.pipeline import (
     run_journey_pipeline,
 )
 from skene.analyzers.journey.serialize import write as write_journey
+from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.cli._journey_runner import (
     build_llm,
     require_llm_credentials,
@@ -30,7 +31,7 @@ from skene.cli._journey_runner import (
     resolve_cli_config,
 )
 from skene.cli.app import app
-from skene.output import console, error
+from skene.output import console, error, status
 from skene.output_paths import DEFAULT_OUTPUT_DIR
 
 
@@ -47,7 +48,17 @@ def analyse_journey_cmd(
     schema_dir: Path | None = typer.Option(
         None,
         "--schema-dir",
-        help=("Directory of pre-exported *.sql files for the schema agent. Required when no codebase path is given."),
+        help=("Directory of pre-exported *.sql files for the schema agent."),
+    ),
+    db_url: str | None = typer.Option(
+        None,
+        "--db-url",
+        envvar="SKENE_DB_URL",
+        help=(
+            "PostgreSQL connection string to introspect for the schema agent, "
+            "as an alternative to --schema-dir. Must be a complete connection "
+            "string. Never stored. Example: postgresql://user:pass@host:5432/db"
+        ),
     ),
     output: Path = typer.Option(
         Path(f"{DEFAULT_OUTPUT_DIR}/journey.yaml"),
@@ -159,10 +170,16 @@ def analyse_journey_cmd(
         skene analyse-journey ./my-app --schema-dir ./supabase-schemas
         skene analyse-journey --schema-dir ./schemas -o journey.json
         skene analyse-journey ./my-app  # code-only mode (no SQL)
+        skene analyse-journey --db-url postgresql://user:pass@host:5432/db
     """
+    # --schema-dir and --db-url are mutually exclusive.
+    if schema_dir is not None and db_url is not None:
+        error("--schema-dir and --db-url are mutually exclusive")
+        raise typer.Exit(2)
+
     # At least one input is required.
-    if path is None and schema_dir is None:
-        error("at least one of PATH or --schema-dir is required")
+    if path is None and schema_dir is None and db_url is None:
+        error("at least one of PATH, --schema-dir, or --db-url is required")
         raise typer.Exit(2)
 
     base_path = resolve_base_path(path) if path is not None else None
@@ -191,11 +208,27 @@ def analyse_journey_cmd(
     journey_path = resolve_artifact_path(output, "journey.yaml")
     journey_path.parent.mkdir(parents=True, exist_ok=True)
 
-    resolved_product_name = product_name or _infer_product_name(base_path, schema_path)
+    # Introspect live DB if --db-url is set.
+    live_schema_index: SchemaIndex | None = None
+    db_display: str | None = None
+    if db_url is not None:
+        from skene.analyzers.schema_parsers.postgres_live import introspect_db
+
+        db_display = _redact_db_url(db_url)
+        status(f"Introspecting database: {db_display}")
+        try:
+            live_schema_index = introspect_db(db_url)
+        except Exception as e:  # noqa: BLE001 — never leak connection details
+            error(f"Failed to introspect database: {e}")
+            raise typer.Exit(1) from e
+        status(f"Introspection complete: {sum(len(t) for t in live_schema_index.files.values())} tables found")
+
+    resolved_product_name = product_name or _infer_product_name(base_path, schema_path, db_url)
 
     cfg = JourneyPipelineConfig(
         repo_root=base_path,
         schema_dir=schema_path,
+        schema_index=live_schema_index,
         product_name=resolved_product_name,
         classify_concurrency=classify_concurrency,
         schema_max_turns=schema_max_turns,
@@ -207,6 +240,7 @@ def analyse_journey_cmd(
         title="skene · analyse-journey",
         base_path=base_path,
         schema_dir=schema_path,
+        db_display=db_display,
         rc=rc,
         product_name=resolved_product_name,
         journey_path=journey_path,
@@ -302,12 +336,61 @@ def _maybe_auto_publish(rc, project_root: Path, *, journey_path: Path, enabled: 
         warning(f"Could not publish journey to Skene Cloud: {result.get('message', 'unknown error')}")
 
 
-def _infer_product_name(repo_root: Path | None, schema_dir: Path | None) -> str:
+def _infer_product_name(
+    repo_root: Path | None,
+    schema_dir: Path | None,
+    db_url: str | None = None,
+) -> str:
     if repo_root is not None:
         return repo_root.name or "Product"
+    if db_url is not None:
+        # Extract database name from DSN: postgresql://user:pass@host:port/dbname
+        try:
+            # Remove scheme
+            rest = db_url.split("://", 1)[-1]
+            # Skip credentials (user:pass@)
+            if "@" in rest:
+                rest = rest.split("@")[-1]
+            # After host:port/, the next segment is the database name
+            path_part = rest.split("/", 1)
+            if len(path_part) > 1 and path_part[1]:
+                return path_part[1].split("?")[0].split("&")[0] or "Product"
+        except Exception:  # noqa: BLE001
+            pass
+        return "Product"
     if schema_dir is not None:
-        return schema_dir.parent.name or schema_dir.name or "Product"
+        return schema_dir.name or "Product"
     return "Product"
+
+
+def _redact_db_url(url: str) -> str:
+    """Return a display-safe version of a DB URL with password redacted.
+
+    Examples::
+
+        postgresql://user:secret@host:5432/mydb  →  postgresql://user:***@host:5432/mydb
+        postgresql://user@host/mydb              →  postgresql://user@host/mydb
+    """
+    try:
+        if "://" not in url:
+            return "<redacted>"
+
+        scheme, rest = url.split("://", 1)
+
+        if "@" in rest:
+            creds, remainder = rest.split("@", 1)
+            if ":" in creds and not creds.endswith(":"):
+                # Has a password — redact it
+                user = creds.split(":", 1)[0]
+                rest = f"{user}:***@{remainder}"
+            else:
+                rest = f"{creds}@{remainder}"
+        else:
+            rest = rest
+
+        return f"{scheme}://{rest}"
+    except Exception:  # noqa: BLE001
+        return "<redacted>"
 
 
 def _render_kickoff(
@@ -315,15 +398,24 @@ def _render_kickoff(
     title: str,
     base_path: Path | None,
     schema_dir: Path | None,
+    db_display: str | None,
     rc,
     product_name: str,
     journey_path: Path,
     specialize: bool,
 ) -> None:
+    # Build schema display: DB URL takes precedence, then schema_dir.
+    if db_display is not None:
+        schema_display = f"[dim]{db_display}[/dim]"
+    elif schema_dir is not None:
+        schema_display = str(schema_dir)
+    else:
+        schema_display = "[dim](none)[/dim]"
+
     lines = [
         f"[bold]Product[/bold]    {product_name}",
         f"[bold]Repo[/bold]       {base_path or '[dim](none)[/dim]'}",
-        f"[bold]Schema[/bold]     {schema_dir or '[dim](none)[/dim]'}",
+        f"[bold]Schema[/bold]     {schema_display}",
         f"[bold]Output[/bold]     {journey_path}",
         f"[bold]Provider[/bold]   {rc.provider} · [dim]{rc.model}[/dim]",
         f"[bold]Specialize[/bold] {'yes' if specialize else 'no'}",

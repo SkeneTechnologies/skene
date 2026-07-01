@@ -32,6 +32,7 @@ from skene.analyzers.journey.models import Journey
 from skene.analyzers.journey.schema_agent import run_schema_agent
 from skene.analyzers.journey.specialize import specialize_stages
 from skene.analyzers.journey.stages import STAGES, StageDef
+from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.llm.base import LLMClient
 from skene.output import status, warning
 
@@ -47,23 +48,31 @@ class JourneyPipelineConfig:
     - **code only** (``schema_dir is None``): skip schema agent.
     - **schema only** (``repo_root is None``): skip code agent AND skip
       stage specialization (no README to read). Stages stay canonical.
+
+    ``schema_index`` is an optional pre-built :class:`SchemaIndex` from a
+    live database (via ``--db-url``). When set, it replaces ``schema_dir``
+    as the schema source.
     """
 
     repo_root: Path | None
-    schema_dir: Path | None
-    product_name: str
+    schema_dir: Path | None = None
+    schema_index: SchemaIndex | None = None
+    product_name: str = "Product"
     classify_concurrency: int = 8
     schema_max_turns: int = 150
     code_max_turns: int = 200
     specialize: bool = True
 
     def __post_init__(self) -> None:
-        if self.repo_root is None and self.schema_dir is None:
-            raise ValueError("JourneyPipelineConfig requires at least one of repo_root or schema_dir")
+        if self.repo_root is None and self.schema_dir is None and self.schema_index is None:
+            raise ValueError("JourneyPipelineConfig requires at least one of repo_root, schema_dir, or schema_index")
+        if self.schema_dir is not None and self.schema_index is not None:
+            raise ValueError("JourneyPipelineConfig: schema_dir and schema_index are mutually exclusive")
 
 
 def _describe_mode(cfg: JourneyPipelineConfig) -> str:
-    if cfg.repo_root is not None and cfg.schema_dir is not None:
+    has_schema = cfg.schema_dir is not None or cfg.schema_index is not None
+    if cfg.repo_root is not None and has_schema:
         return "code+schema"
     if cfg.repo_root is not None:
         return "code-only"
@@ -90,6 +99,14 @@ async def run_journey_pipeline(cfg: JourneyPipelineConfig, llm: LLMClient) -> Jo
                 cfg.schema_dir,
                 llm=llm,
                 max_turns=cfg.schema_max_turns,
+            )
+        )
+    elif cfg.schema_index is not None:
+        schema_task = asyncio.create_task(
+            run_schema_agent(
+                llm=llm,
+                max_turns=cfg.schema_max_turns,
+                schema_index=cfg.schema_index,
             )
         )
     if cfg.repo_root is not None:
