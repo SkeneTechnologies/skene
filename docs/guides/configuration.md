@@ -123,6 +123,7 @@ exclude_folders = ["tests", "vendor"]
 | `SKENE_OUTPUT_DIR` | Overrides config `output_dir` (sticky detection skipped when set) | `./skene-context` |
 | `SKENE_DEBUG` | Enable debug mode | `true` |
 | `SKENE_UPSTREAM_API_KEY` | API key for upstream authentication | `sk-upstream-...` |
+| `SKENE_DB_URL` | PostgreSQL connection string for `analyse-journey` live schema introspection | `postgresql://user:pass@localhost:5432/mydb` |
 | `LMSTUDIO_BASE_URL` | LM Studio server URL | `http://localhost:1234/v1` |
 | `OLLAMA_BASE_URL` | Ollama server URL | `http://localhost:11434/v1` |
 
