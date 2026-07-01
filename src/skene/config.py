@@ -332,4 +332,12 @@ def load_config() -> Config:
     if output_dir := os.environ.get("SKENE_OUTPUT_DIR"):
         config.set("output_dir", output_dir)
 
+    # Fall back to the OS keyring for the API key when it was not provided by an
+    # environment variable or a (legacy clear-text) config file.
+    if not config.get("api_key"):
+        from skene.secret_store import get_api_key
+
+        if keyring_api_key := get_api_key():
+            config.set("api_key", keyring_api_key)
+
     return config
