@@ -36,6 +36,7 @@ dependencies = [
     "tree-sitter>=0.23",
     "tree-sitter-javascript>=0.23",
     "tree-sitter-typescript>=0.23",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]
