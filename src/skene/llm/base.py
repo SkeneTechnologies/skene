@@ -2,11 +2,12 @@
 Abstract base class for LLM clients.
 """
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, AsyncGenerator
 
 if TYPE_CHECKING:
-    from skene.llm.agent_loop import AgentRunResult, AssistantTurn, Message, Tool
+    from skene.llm.agent_loop import AgentRunResult, AgentStreamEvent, AssistantTurn, Message, Tool
 
 
 class LLMClient(ABC):
@@ -89,6 +90,7 @@ class LLMClient(ABC):
         tools: "list[Tool]",
         initial_input: str,
         max_turns: int = 20,
+        abort: asyncio.Event | None = None,
     ) -> "AgentRunResult":
         """Run an agent loop, dispatching tool calls until the model stops.
 
@@ -105,4 +107,30 @@ class LLMClient(ABC):
             tools=tools,
             initial_input=initial_input,
             max_turns=max_turns,
+            abort=abort,
+        )
+
+    def run_agent_stream(
+        self,
+        instructions: str,
+        tools: "list[Tool]",
+        initial_input: str,
+        max_turns: int = 20,
+        abort: asyncio.Event | None = None,
+    ) -> "AsyncGenerator[AgentStreamEvent, None]":
+        """Run the agent loop, yielding progress events; see
+        :func:`skene.llm.agent_loop.run_agent_stream`.
+
+        The server's session runner consumes this to persist message parts
+        and publish bus events while the agent works.
+        """
+        from skene.llm.agent_loop import run_agent_stream
+
+        return run_agent_stream(
+            self,
+            instructions=instructions,
+            tools=tools,
+            initial_input=initial_input,
+            max_turns=max_turns,
+            abort=abort,
         )
