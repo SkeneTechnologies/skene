@@ -9,7 +9,13 @@ This module defines:
   API.
 - :class:`AgentRunResult` — what the loop returns: the final assistant
   text, the full message history, and aggregate usage.
-- :func:`run_agent` — the default loop. Providers can override
+- :func:`run_agent_stream` — the default loop, as an async generator that
+  yields :data:`AgentStreamEvent` items (turn boundaries, assistant text,
+  tool-call start/finish) while it runs, ending with :class:`RunFinished`.
+  This is what the server's session runner consumes to persist parts and
+  publish bus events.
+- :func:`run_agent` — drains the stream and returns the final
+  :class:`AgentRunResult`. Providers can override
   :meth:`LLMClient.run_agent` if they need different semantics, but the
   default is shared.
 
@@ -18,7 +24,10 @@ that raises has its exception caught and stringified back to the model as
 the tool result, so the agent can recover. The loop stops when:
 
 - The model returns an assistant turn with no tool calls, OR
-- ``max_turns`` is reached (counted from 1 per LLM call).
+- ``max_turns`` is reached (counted from 1 per LLM call), OR
+- the ``abort`` event is set (checked before each LLM call and before each
+  tool dispatch — a cheap cooperative cancel; in-flight awaits are not
+  interrupted, cancel the task for that).
 
 We deliberately do NOT expose a "this tool terminates the loop" hook —
 journeygen relies on the model deciding it has nothing more to do. The
@@ -30,7 +39,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -112,8 +121,57 @@ class AgentRunResult:
     final_text: str | None
     messages: list[Message]
     turns: int
-    stopped_reason: str  # "no_tool_calls" | "max_turns"
+    stopped_reason: str  # "no_tool_calls" | "max_turns" | "aborted"
     usage: dict[str, int] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Stream events
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TurnStarted:
+    """About to make LLM call number ``turn`` (1-based)."""
+
+    turn: int
+
+
+@dataclass
+class AssistantText:
+    """The model produced text this turn (may accompany tool calls)."""
+
+    turn: int
+    text: str
+
+
+@dataclass
+class ToolCallStarted:
+    """About to dispatch a tool handler."""
+
+    turn: int
+    call: ToolCall
+
+
+@dataclass
+class ToolCallFinished:
+    """A tool handler returned (or failed — ``error`` is True and ``result``
+    is the stringified error the model will see)."""
+
+    turn: int
+    call: ToolCall
+    result: str
+    error: bool = False
+
+
+@dataclass
+class RunFinished:
+    """Always the last event of a stream."""
+
+    result: AgentRunResult
+
+
+AgentStreamEvent = TurnStarted | AssistantText | ToolCallStarted | ToolCallFinished | RunFinished
 
 
 async def _invoke_handler(handler: ToolHandler, arguments: dict[str, Any]) -> str:
@@ -129,17 +187,22 @@ async def _invoke_handler(handler: ToolHandler, arguments: dict[str, Any]) -> st
     return result
 
 
-async def run_agent(
+async def run_agent_stream(
     client: Any,  # LLMClient — typed as Any to avoid circular import
     instructions: str,
     tools: list[Tool],
     initial_input: str,
     max_turns: int = 20,
-) -> AgentRunResult:
-    """Run the agent loop until the model stops calling tools.
+    abort: asyncio.Event | None = None,
+) -> AsyncGenerator[AgentStreamEvent, None]:
+    """Run the agent loop, yielding events as it goes.
 
     ``client`` must implement ``generate_with_tools(messages, tools)``. The
     handlers in ``tools`` are dispatched here; the client never sees them.
+
+    The last event is always :class:`RunFinished`. When ``abort`` is set the
+    run finishes with ``stopped_reason="aborted"``; the message history may
+    then end on an assistant turn whose tool calls were never answered.
     """
     tools_by_name = {t.name: t for t in tools}
     if len(tools_by_name) != len(tools):
@@ -153,7 +216,27 @@ async def run_agent(
     agg_usage: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
     seen_any_usage = False
 
+    def _finish(final_text: str | None, turns: int, stopped_reason: str) -> RunFinished:
+        return RunFinished(
+            AgentRunResult(
+                final_text=final_text,
+                messages=messages,
+                turns=turns,
+                stopped_reason=stopped_reason,
+                usage=agg_usage if seen_any_usage else None,
+            )
+        )
+
+    def _aborted() -> bool:
+        return abort is not None and abort.is_set()
+
     for turn_idx in range(1, max_turns + 1):
+        if _aborted():
+            debug(f"agent loop aborted before turn {turn_idx}")
+            yield _finish(None, turn_idx - 1, "aborted")
+            return
+
+        yield TurnStarted(turn_idx)
         turn: AssistantTurn = await client.generate_with_tools(messages, tools)
 
         if turn.usage:
@@ -171,22 +254,27 @@ async def run_agent(
                 tool_calls=list(turn.tool_calls),
             )
         )
+        if turn.text:
+            yield AssistantText(turn_idx, turn.text)
 
         if not turn.tool_calls:
             debug(f"agent loop done after {turn_idx} turn(s): no tool calls")
-            return AgentRunResult(
-                final_text=turn.text,
-                messages=messages,
-                turns=turn_idx,
-                stopped_reason="no_tool_calls",
-                usage=agg_usage if seen_any_usage else None,
-            )
+            yield _finish(turn.text, turn_idx, "no_tool_calls")
+            return
 
         # Dispatch each tool call sequentially. Order matches what the model emitted.
         for tc in turn.tool_calls:
+            if _aborted():
+                debug(f"agent loop aborted during turn {turn_idx}")
+                yield _finish(None, turn_idx, "aborted")
+                return
+
+            yield ToolCallStarted(turn_idx, tc)
+            is_error = False
             tool = tools_by_name.get(tc.name)
             if tool is None:
                 result_str = json.dumps({"error": f"unknown tool {tc.name!r}; available: {sorted(tools_by_name)}"})
+                is_error = True
                 warning(f"agent called unknown tool {tc.name!r}")
             else:
                 try:
@@ -196,6 +284,8 @@ async def run_agent(
                 except Exception as e:  # noqa: BLE001 — tool errors are recoverable
                     warning(f"tool {tc.name} raised: {e}")
                     result_str = json.dumps({"error": f"{type(e).__name__}: {e}"})
+                    is_error = True
+            yield ToolCallFinished(turn_idx, tc, result_str, error=is_error)
             messages.append(
                 Message(
                     role="tool",
@@ -206,10 +296,30 @@ async def run_agent(
             )
 
     warning(f"agent loop hit max_turns={max_turns} without finishing")
-    return AgentRunResult(
-        final_text=None,
-        messages=messages,
-        turns=max_turns,
-        stopped_reason="max_turns",
-        usage=agg_usage if seen_any_usage else None,
-    )
+    yield _finish(None, max_turns, "max_turns")
+
+
+async def run_agent(
+    client: Any,  # LLMClient — typed as Any to avoid circular import
+    instructions: str,
+    tools: list[Tool],
+    initial_input: str,
+    max_turns: int = 20,
+    abort: asyncio.Event | None = None,
+) -> AgentRunResult:
+    """Run the agent loop to completion and return only the final result.
+
+    Convenience wrapper over :func:`run_agent_stream` for callers that don't
+    need progress events (the batch CLI path, tests).
+    """
+    async for event in run_agent_stream(
+        client,
+        instructions=instructions,
+        tools=tools,
+        initial_input=initial_input,
+        max_turns=max_turns,
+        abort=abort,
+    ):
+        if isinstance(event, RunFinished):
+            return event.result
+    raise RuntimeError("agent stream ended without RunFinished")
