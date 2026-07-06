@@ -42,6 +42,13 @@ from skene.schema.message import (
     ToolStateRunning,
     UserMessage,
 )
+from skene.schema.request import (
+    JourneyAnalyseAccepted,
+    JourneyAnalyseRequest,
+    MessageWithParts,
+    PromptRequest,
+    SessionCreateRequest,
+)
 from skene.schema.session import Project, Session, SessionStatus
 
 __all__ = [
@@ -50,18 +57,23 @@ __all__ = [
     "ArtifactPart",
     "AssistantMessage",
     "Event",
+    "JourneyAnalyseAccepted",
+    "JourneyAnalyseRequest",
     "Message",
     "MessageCreated",
     "MessageUpdated",
+    "MessageWithParts",
     "MilestonePart",
     "Part",
     "PartCreated",
     "PartUpdated",
     "Project",
+    "PromptRequest",
     "ReasoningPart",
     "ServerConnected",
     "ServerHeartbeat",
     "Session",
+    "SessionCreateRequest",
     "SessionCreated",
     "SessionError",
     "SessionIdle",

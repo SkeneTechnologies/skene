@@ -1,12 +1,12 @@
 # Skene Backend Server — Design
 
-Status: in progress (2026-07-06) — phase 1 implemented, phases 2-5 pending.
+Status: in progress (2026-07-06) — phases 1-2 implemented, phases 3-5 pending.
 Work lands on feature branches targeting the `v1.0` integration branch.
 
 | Phase | Status | Where |
 |---|---|---|
 | 1. Schema + streaming loop | **done** | `feat/server-phase1` |
-| 2. Server MVP | pending | |
+| 2. Server MVP | **done** | `feat/server-phase2` |
 | 3. Agentic flow | pending | |
 | 4. TUI cutover | pending | |
 | 5. Hardening & growth | pending | |
@@ -337,6 +337,48 @@ phases build on:
 - **Deliberate loose end**: `MilestonePart.milestone` is `dict[str, Any]`.
   Phase 3 moves `CandidateMilestone`/`Evidence` into `skene/schema` (analyzers
   re-export) and types it — do this when recasting the agents, not before.
+
+### Phase 2 — as built (notes for phase 3+)
+
+What exists after phase 2 (`feat/server-phase2`), and the contracts phase 3
+builds on:
+
+- **`skene/core`**: `bus.py` (in-process pub/sub; events publish with an
+  optional `directory` — subscribers with a directory filter get matching +
+  server-wide events), `store.py` (aiosqlite, WAL, one global DB; rows keep
+  the full wire JSON in a `data` column plus query columns; `save_message`/
+  `save_part` are upserts), `sessions.py` (`SessionService`), `journey.py`
+  (the canned run), `services.py` (`create_services` wiring; `SKENE_DB_PATH`
+  overrides the DB location), `embedded.py` (in-process entry for the CLI),
+  `redact.py` (DSN redaction).
+- **Run coordinator**: `SessionService.consume_stream(session, message,
+  stream)` maps phase-1 stream events → parts exactly as specified and is
+  the piece phase 3 reuses for subagent runs. `start_run` registers any
+  coroutine as a session's abortable background task; `abort()` sets the
+  cooperative event *and* cancels the task (fan-out to child sessions is
+  phase 3's job). Tool inputs and user text are DSN-redacted before persist.
+- **Prompt runs are placeholder chat** (no tools, generic instructions in
+  `sessions._CHAT_INSTRUCTIONS`). Phase 3 swaps in the agent registry +
+  task tool here; everything else (parts, events, abort) stays.
+- **Journey runs** (`POST /journey/analyse` and the CLI) wrap the untouched
+  deterministic pipeline in a session with coarse parts: one
+  `journey_pipeline` ToolPart (running → completed/error), then milestone /
+  artifact / summary-text parts from the result. Live-DB introspection runs
+  inside the run via `asyncio.to_thread`; `db_url` is never persisted.
+  Phase 3 replaces this wrapper with the main-agent flow — parity check
+  against golden `journey.yaml` fixtures before deleting it.
+- **Server**: `skene.server.create_app(services=None, *, db_path,
+  llm_factory, auth_token)` — pass prebuilt services (tests/embedded) or
+  let the lifespan own them (`skene serve`). Routes as designed except
+  `GET /agent`, `GET /provider`, `GET/PATCH /config` (deferred: registry is
+  phase 3, config surface phase 5). Optional bearer auth; `skene serve`
+  refuses non-local binds without a token. `/doc` returns openapi.json.
+- **CLI**: `skene serve` (new), `skene analyse-journey` now runs through
+  `core.embedded.run_journey_embedded` — same UX (pipeline `status()` lines
+  still print), but every CLI run persists a session trace in the skene DB.
+- **Testing note**: httpx's `ASGITransport` buffers whole responses, so SSE
+  tests drive the generator directly or speak raw ASGI (see
+  `tests/test_server/test_sse.py`).
 
 ---
 
