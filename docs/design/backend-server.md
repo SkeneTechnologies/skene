@@ -55,7 +55,7 @@ close enough to opencode's that a TS rewrite could slot in under the same client
 | Sessions/messages/tagged-union parts with streaming `ToolState` | **Take** | Copy shapes from `packages/schema/src/session-message.ts` |
 | SSE `/event` bus with heartbeat + directory filtering | **Take** | Copy semantics from `handlers/event.ts` |
 | Subagents = child sessions spawned by a `task` tool | **Take** | This *is* requirement #1 |
-| Permission `ask` flow (tool pauses, client answers via HTTP) | **Take** (phase 2) | Needed for db-write tools later |
+| Permission `ask` flow (tool pauses, client answers via HTTP) | **Take** (phase 5) | Needed for db-write tools later |
 | Per-request workspace routing (`x-opencode-directory` header) | **Take** | One server, many projects |
 | `serve` / `run` / `attach` CLI lifecycle | **Take** | Same three verbs |
 | SQLite persistence | **Take, simplified** | Plain relational state + event feed, not full event sourcing |
@@ -353,10 +353,31 @@ builds on:
   `redact.py` (DSN redaction).
 - **Run coordinator**: `SessionService.consume_stream(session, message,
   stream)` maps phase-1 stream events → parts exactly as specified and is
-  the piece phase 3 reuses for subagent runs. `start_run` registers any
-  coroutine as a session's abortable background task; `abort()` sets the
-  cooperative event *and* cancels the task (fan-out to child sessions is
-  phase 3's job). Tool inputs and user text are DSN-redacted before persist.
+  the piece phase 3 reuses for subagent runs. It returns the final
+  `AgentRunResult`; the *caller* owns session status transitions and the
+  assistant message's finish/tokens bookkeeping (see `_chat_run` for the
+  canonical sequence). `start_run` registers any coroutine as a session's
+  abortable background task. Tool inputs and user text are DSN-redacted
+  before persist (`core/redact.py`).
+- **Child-session plumbing already exists**: `SessionService.create_session`
+  takes `parent_id` (validated against the store), `SessionCreateRequest`
+  carries `parentId`, and `GET /session/{id}/children` is live. Phase 3's
+  task tool is: create a child session with `parent_id`, `start_run` a
+  subagent run in it, wait, and surface the result to the parent.
+- **One run per session** (`SessionBusyError` on concurrent prompt).
+  Parallel subagents = one child session each; each `start_run` is an
+  independent entry in `SessionService._runs`. Use `sessions.wait(id)` to
+  join a run (that's how the embedded CLI and the tests do it).
+- **Abort does NOT fan out yet**: child runs are independent asyncio tasks,
+  so cancelling a parent's task does not cancel its children. `abort()`
+  sets the cooperative event and cancels that one session's task. Phase 3
+  must make the parent's abort walk the child-session tree (either the
+  task tool holds child session ids and aborts them in its cancellation
+  path, or `abort()` recurses over `store.list_children`).
+- **`llm_factory` is one global factory** (provider/model resolved once at
+  `skene serve` startup, or the CLI's client in embedded mode). Per-agent
+  model overrides (`AgentInfo.model` is already on the wire) are a phase-3
+  registry concern — thread them through the registry, not the factory.
 - **Prompt runs are placeholder chat** (no tools, generic instructions in
   `sessions._CHAT_INSTRUCTIONS`). Phase 3 swaps in the agent registry +
   task tool here; everything else (parts, events, abort) stays.
@@ -365,8 +386,21 @@ builds on:
   `journey_pipeline` ToolPart (running → completed/error), then milestone /
   artifact / summary-text parts from the result. Live-DB introspection runs
   inside the run via `asyncio.to_thread`; `db_url` is never persisted.
-  Phase 3 replaces this wrapper with the main-agent flow — parity check
-  against golden `journey.yaml` fixtures before deleting it.
+  Phase 3 replaces this wrapper (`core/journey.py`) with the main-agent
+  flow — parity check against golden `journey.yaml` fixtures before
+  deleting it. Contract to preserve for clients: the route returns
+  `{sessionId}` immediately, and a finished run has an `artifact` part
+  pointing at `journey.yaml` plus `session.idle`/`session.error` on the bus.
+  These sessions use `agent="journey"`; phase 3's canned-prompt sessions
+  will be `agent="skene"` — nothing keys off the string yet, but the TUI
+  shouldn't either.
+- **MilestonePart shape mismatch to resolve in phase 3**: the phase-2
+  wrapper emits *final* `Milestone` dumps (post-classification, with a
+  `stage_id` key), because that's what the pipeline returns. Phase 3's
+  live `emit_milestone` parts will be `CandidateMilestone`s (no stage yet)
+  per the phase-1 loose-end note. When typing `MilestonePart.milestone`,
+  pick the candidate shape and drop the phase-2 form with the wrapper —
+  don't try to support both.
 - **Server**: `skene.server.create_app(services=None, *, db_path,
   llm_factory, auth_token)` — pass prebuilt services (tests/embedded) or
   let the lifespan own them (`skene serve`). Routes as designed except
