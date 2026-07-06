@@ -141,9 +141,9 @@ async def test_as_tools_handlers_dispatch(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_run_code_agent_with_scripted_llm(tmp_path: Path):
-    """Smoke test the code agent against a fake LLM that emits one milestone."""
-    from skene.analyzers.journey.code_agent import run_code_agent
+async def test_code_agent_loop_with_scripted_llm(tmp_path: Path):
+    """Smoke test the code-agent prompt + toolset through the agent loop."""
+    from skene.analyzers.journey.code_agent import CODE_AGENT_INSTRUCTIONS
     from skene.llm.agent_loop import AssistantTurn, Message, Tool, ToolCall
     from skene.llm.base import LLMClient
 
@@ -195,7 +195,13 @@ async def test_run_code_agent_with_scripted_llm(tmp_path: Path):
             return AssistantTurn(text="done")
 
     client = _Scripted()
-    candidates = await run_code_agent(repo, client, max_turns=10)
+    candidates: list = []
+    await client.run_agent(
+        instructions=CODE_AGENT_INSTRUCTIONS,
+        tools=FsToolset(repo, candidates).as_tools(),
+        initial_input="Begin exploring the repo. Emit one milestone per user action.",
+        max_turns=10,
+    )
     assert len(candidates) == 1
     assert candidates[0].proposed_id == "signup"
     assert candidates[0].evidence[0].source.value == "code"

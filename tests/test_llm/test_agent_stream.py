@@ -81,24 +81,25 @@ async def test_stream_event_sequence_for_tool_run():
     )
     events = await _drain(client.run_agent_stream(instructions="", tools=[_echo_tool()], initial_input="go"))
 
+    # A turn's tool calls dispatch concurrently: Started events come first
+    # (emitted order), Finished events follow (completion order).
     assert [type(e).__name__ for e in events] == [
         "TurnStarted",
         "AssistantText",
         "ToolCallStarted",
-        "ToolCallFinished",
         "ToolCallStarted",
+        "ToolCallFinished",
         "ToolCallFinished",
         "TurnStarted",
         "AssistantText",
         "RunFinished",
     ]
-    first_started = events[2]
-    assert isinstance(first_started, ToolCallStarted)
-    assert first_started.call.id == "c1"
-    first_finished = events[3]
-    assert isinstance(first_finished, ToolCallFinished)
-    assert first_finished.result == "echo: a"
-    assert first_finished.error is False
+    started = [e for e in events if isinstance(e, ToolCallStarted)]
+    assert [s.call.id for s in started] == ["c1", "c2"]
+    finished = {e.call.id: e for e in events if isinstance(e, ToolCallFinished)}
+    assert finished["c1"].result == "echo: a"
+    assert finished["c2"].result == "echo: b"
+    assert finished["c1"].error is False
     text = events[1]
     assert isinstance(text, AssistantText)
     assert text.text == "thinking" and text.turn == 1
@@ -145,12 +146,12 @@ async def test_abort_before_first_turn():
     assert client._turns
 
 
-async def test_abort_between_tool_calls():
+async def test_abort_during_tool_batch_stops_after_the_turn():
     abort = asyncio.Event()
 
     def _tripwire() -> Tool:
         async def handler(args: dict[str, Any]) -> str:
-            abort.set()  # abort while the first tool of the turn runs
+            abort.set()  # abort while the turn's tools run
             return "ran"
 
         return Tool(name="trip", description="", parameters={"type": "object", "properties": {}}, handler=handler)
@@ -169,10 +170,13 @@ async def test_abort_between_tool_calls():
     events = await _drain(
         client.run_agent_stream(instructions="", tools=[_tripwire()], initial_input="go", abort=abort)
     )
-    # First call dispatched, second one never started.
+    # The batch dispatches concurrently, so both calls run; the abort is
+    # honoured right after the batch — no second LLM call happens.
     assert [type(e).__name__ for e in events] == [
         "TurnStarted",
         "ToolCallStarted",
+        "ToolCallStarted",
+        "ToolCallFinished",
         "ToolCallFinished",
         "RunFinished",
     ]
@@ -180,6 +184,7 @@ async def test_abort_between_tool_calls():
     assert isinstance(finished, RunFinished)
     assert finished.result.stopped_reason == "aborted"
     assert finished.result.turns == 1
+    assert client._turns  # the second scripted turn was never requested
 
 
 async def test_stream_ends_with_run_finished_on_max_turns():

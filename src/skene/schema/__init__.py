@@ -42,6 +42,12 @@ from skene.schema.message import (
     ToolStateRunning,
     UserMessage,
 )
+from skene.schema.milestone import (
+    ID_PATTERN,
+    CandidateMilestone,
+    Evidence,
+    EvidenceSource,
+)
 from skene.schema.request import (
     JourneyAnalyseAccepted,
     JourneyAnalyseRequest,
@@ -56,7 +62,11 @@ __all__ = [
     "AgentMode",
     "ArtifactPart",
     "AssistantMessage",
+    "CandidateMilestone",
     "Event",
+    "Evidence",
+    "EvidenceSource",
+    "ID_PATTERN",
     "JourneyAnalyseAccepted",
     "JourneyAnalyseRequest",
     "Message",

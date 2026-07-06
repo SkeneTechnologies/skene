@@ -21,7 +21,7 @@ from skene import __version__
 from skene.core.services import CoreServices, create_services
 from skene.core.sessions import LLMFactory
 from skene.server.deps import require_auth
-from skene.server.routes import event, journey, session
+from skene.server.routes import agent, event, journey, session
 
 
 def create_app(
@@ -56,6 +56,7 @@ def create_app(
     app.include_router(session.router, dependencies=protected)
     app.include_router(event.router, dependencies=protected)
     app.include_router(journey.router, dependencies=protected)
+    app.include_router(agent.router, dependencies=protected)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:

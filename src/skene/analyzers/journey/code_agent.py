@@ -1,18 +1,13 @@
-"""Step 2 — Code agent.
+"""The code subagent's system prompt.
 
 Mirror image of the schema agent: walks the target repo through the FS
 tools (``list_directory``, ``read_file``, ``search_files``) and emits
-candidate milestones via ``emit_milestone``.
+candidate milestones via ``emit_milestone``. Registered as the ``code``
+subagent in :mod:`skene.core.agents`; runs happen in child sessions
+through the task tool (:mod:`skene.core.tasks`).
 """
 
 from __future__ import annotations
-
-from pathlib import Path
-
-from skene.analyzers.journey.candidate import CandidateMilestone
-from skene.analyzers.journey.tools.fs_tools import FsToolset
-from skene.llm.base import LLMClient
-from skene.output import status
 
 CODE_AGENT_INSTRUCTIONS = r"""You explore a codebase and emit candidate user-journey milestones. Be
 THOROUGH — err on the side of MORE milestones, not fewer. A later step
@@ -62,23 +57,3 @@ When you have searched every priority pattern and emitted every
 milestone you can justify, reply with a brief plain-text summary (no
 tool call) and stop.
 """
-
-
-async def run_code_agent(
-    repo_root: Path,
-    llm: LLMClient,
-    max_turns: int = 200,
-) -> list[CandidateMilestone]:
-    """Run the code agent. Returns the list of emitted candidates."""
-    collector: list[CandidateMilestone] = []
-    toolset = FsToolset(repo_root, collector)
-    tools = toolset.as_tools()
-    status(f"Code agent: starting LLM exploration of {repo_root} (model={llm.get_model_name()} max_turns={max_turns})")
-    result = await llm.run_agent(
-        instructions=CODE_AGENT_INSTRUCTIONS,
-        tools=tools,
-        initial_input="Begin exploring the repo. Emit one milestone per user action.",
-        max_turns=max_turns,
-    )
-    status(f"Code agent: emitted {len(collector)} candidate(s) (turns={result.turns}, stopped={result.stopped_reason})")
-    return collector

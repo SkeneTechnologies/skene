@@ -13,11 +13,11 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-class EvidenceSource(str, Enum):
-    code = "code"
-    db = "db"
-    config = "config"
+# Evidence moved to the wire-model package in phase 3 (it rides on
+# MilestonePart); re-exported here so journey.yaml code keeps its imports.
+from skene.schema.milestone import ID_PATTERN as ID_PATTERN
+from skene.schema.milestone import Evidence as Evidence
+from skene.schema.milestone import EvidenceSource as EvidenceSource
 
 
 class TriggerType(str, Enum):
@@ -43,9 +43,6 @@ class KpiUnit(str, Enum):
     currency = "currency"
 
 
-# Lowercase snake_case identifier, must start with a letter.
-ID_PATTERN = r"^[a-z][a-z0-9_]*$"
-
 # "<stage_id>.<milestone_id>"
 STAGE_REF_PATTERN = r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
 
@@ -54,29 +51,6 @@ CONNECTOR_TARGET_PATTERN = r"^([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*|unknown)$"
 
 # Layer IDs are L1, L2, L3, ...
 LAYER_ID_PATTERN = r"^L[0-9]+$"
-
-
-class Evidence(BaseModel):
-    """A pointer back to the code path or DB table that justifies a milestone."""
-
-    source: EvidenceSource
-    reason: str = Field(min_length=1)
-    path: str | None = Field(
-        default=None,
-        description="Required when source == 'code'. File path inside the repo.",
-    )
-    table: str | None = Field(
-        default=None,
-        description="Required when source == 'db'. Table or collection name.",
-    )
-
-    @model_validator(mode="after")
-    def check_source_fields(self) -> "Evidence":
-        if self.source == EvidenceSource.code and not self.path:
-            raise ValueError("evidence.source='code' requires 'path'")
-        if self.source == EvidenceSource.db and not self.table:
-            raise ValueError("evidence.source='db' requires 'table'")
-        return self
 
 
 class KpiDerivation(BaseModel):

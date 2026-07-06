@@ -19,14 +19,19 @@ This module defines:
   :meth:`LLMClient.run_agent` if they need different semantics, but the
   default is shared.
 
-Tools are run sequentially in the order the model emitted them. A handler
-that raises has its exception caught and stringified back to the model as
-the tool result, so the agent can recover. The loop stops when:
+All tool calls in a turn are dispatched concurrently (this is what lets
+the main agent fan out several ``task`` subagents in one turn);
+``ToolCallStarted`` events are yielded in the order the model emitted the
+calls, ``ToolCallFinished`` in completion order, and the tool-result
+messages are appended to the history in emitted order so provider replays
+stay deterministic. A handler that raises has its exception caught and
+stringified back to the model as the tool result, so the agent can
+recover. The loop stops when:
 
 - The model returns an assistant turn with no tool calls, OR
 - ``max_turns`` is reached (counted from 1 per LLM call), OR
-- the ``abort`` event is set (checked before each LLM call and before each
-  tool dispatch — a cheap cooperative cancel; in-flight awaits are not
+- the ``abort`` event is set (checked before each LLM call and after each
+  turn's tool batch — a cheap cooperative cancel; in-flight awaits are not
   interrupted, cancel the task for that).
 
 We deliberately do NOT expose a "this tool terminates the loop" hook —
@@ -262,30 +267,38 @@ async def run_agent_stream(
             yield _finish(turn.text, turn_idx, "no_tool_calls")
             return
 
-        # Dispatch each tool call sequentially. Order matches what the model emitted.
-        for tc in turn.tool_calls:
-            if _aborted():
-                debug(f"agent loop aborted during turn {turn_idx}")
-                yield _finish(None, turn_idx, "aborted")
-                return
-
-            yield ToolCallStarted(turn_idx, tc)
-            is_error = False
+        # Dispatch the turn's tool calls concurrently; Started events in
+        # emitted order, Finished events in completion order.
+        async def _dispatch(tc: ToolCall) -> tuple[ToolCall, str, bool]:
             tool = tools_by_name.get(tc.name)
             if tool is None:
-                result_str = json.dumps({"error": f"unknown tool {tc.name!r}; available: {sorted(tools_by_name)}"})
-                is_error = True
                 warning(f"agent called unknown tool {tc.name!r}")
-            else:
-                try:
-                    result_str = await _invoke_handler(tool.handler, tc.arguments)
-                except asyncio.CancelledError:
-                    raise
-                except Exception as e:  # noqa: BLE001 — tool errors are recoverable
-                    warning(f"tool {tc.name} raised: {e}")
-                    result_str = json.dumps({"error": f"{type(e).__name__}: {e}"})
-                    is_error = True
-            yield ToolCallFinished(turn_idx, tc, result_str, error=is_error)
+                return tc, json.dumps({"error": f"unknown tool {tc.name!r}; available: {sorted(tools_by_name)}"}), True
+            try:
+                return tc, await _invoke_handler(tool.handler, tc.arguments), False
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:  # noqa: BLE001 — tool errors are recoverable
+                warning(f"tool {tc.name} raised: {e}")
+                return tc, json.dumps({"error": f"{type(e).__name__}: {e}"}), True
+
+        dispatched: list[asyncio.Task[tuple[ToolCall, str, bool]]] = []
+        for tc in turn.tool_calls:
+            yield ToolCallStarted(turn_idx, tc)
+            dispatched.append(asyncio.create_task(_dispatch(tc), name=f"tool-{tc.name}-{tc.id}"))
+        try:
+            for done in asyncio.as_completed(dispatched):
+                tc, result_str, is_error = await done
+                yield ToolCallFinished(turn_idx, tc, result_str, error=is_error)
+        except (Exception, asyncio.CancelledError):
+            for task in dispatched:
+                task.cancel()
+            await asyncio.gather(*dispatched, return_exceptions=True)
+            raise
+        # Tool-result messages go into the history in emitted order, so
+        # provider replays don't depend on completion timing.
+        for task in dispatched:
+            tc, result_str, _ = task.result()
             messages.append(
                 Message(
                     role="tool",
@@ -294,6 +307,11 @@ async def run_agent_stream(
                     name=tc.name,
                 )
             )
+
+        if _aborted():
+            debug(f"agent loop aborted during turn {turn_idx}")
+            yield _finish(None, turn_idx, "aborted")
+            return
 
     warning(f"agent loop hit max_turns={max_turns} without finishing")
     yield _finish(None, max_turns, "max_turns")

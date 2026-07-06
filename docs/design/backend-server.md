@@ -1,13 +1,13 @@
 # Skene Backend Server — Design
 
-Status: in progress (2026-07-06) — phases 1-2 implemented, phases 3-5 pending.
+Status: in progress (2026-07-06) — phases 1-3 implemented, phases 4-5 pending.
 Work lands on feature branches targeting the `v1.0` integration branch.
 
 | Phase | Status | Where |
 |---|---|---|
 | 1. Schema + streaming loop | **done** | `feat/server-phase1` |
 | 2. Server MVP | **done** | `feat/server-phase2` |
-| 3. Agentic flow | pending | |
+| 3. Agentic flow | **done** | `feat/server-phase3` |
 | 4. TUI cutover | pending | |
 | 5. Hardening & growth | pending | |
 
@@ -413,6 +413,76 @@ builds on:
 - **Testing note**: httpx's `ASGITransport` buffers whole responses, so SSE
   tests drive the generator directly or speak raw ASGI (see
   `tests/test_server/test_sse.py`).
+
+### Phase 3 — as built (notes for phase 4+)
+
+What exists after phase 3 (`feat/server-phase3`), and the contracts the
+TUI cutover builds on:
+
+- **Agent registry** (`core/agents.py`): `AgentDef` is pure metadata
+  (name, mode, description, instructions, max_turns, optional model) —
+  skene (primary) + code/schema (subagents). Toolset binding is by name
+  in `core/tasks.py::_build_subagent_tools` because toolsets need per-run
+  inputs; adding a subagent = registry entry + toolset binding (the task
+  tool's description self-updates from the registry). `GET /agent` is
+  live; `AgentInfo.model` is on the wire but no built-in agent sets it —
+  honoring per-agent models is still a factory-side TODO (phase 5).
+- **Concurrent tool dispatch**: `agent_loop.run_agent_stream` now runs a
+  turn's tool calls concurrently — `ToolCallStarted` events in emitted
+  order, `ToolCallFinished` in completion order, tool-result messages
+  appended in emitted order (deterministic provider replays). The
+  cooperative abort is checked before each LLM call and after each tool
+  batch. This is what makes two `task` calls in one turn run subagents
+  in parallel.
+- **Run bookkeeping is centralized**: `SessionService.execute_run` owns
+  the assistant message + running/aborted/error recording for every run
+  kind. On success it leaves the session `running` and returns — the
+  caller picks the terminal status (the canned journey run turns
+  "finished without an artifact" into `session.error`).
+- **Prompt dispatch**: `create_services` wires
+  `SessionService.run_factory` → `core.journey.make_run_factory`.
+  Sessions whose agent is a registered *primary* get the main-agent flow
+  with workspace defaults (repo = workspace dir, no schema source);
+  anything else falls back to the tool-less chat run.
+- **Task tool** (`core/tasks.py`): creates the child session
+  (`parent_id`), runs the subagent via `execute_run`, returns
+  `{sessionId, agent, milestonesEmitted, turns, stoppedReason, summary}`
+  as the tool result. Candidate milestones persist live as
+  `MilestonePart`s in the *child* session. A failed toolset binding
+  (e.g. no schema source) errors the tool call without creating a child.
+- **MilestonePart is typed**: `milestone` is `CandidateMilestone`
+  (camelCase on the wire: `proposedId`, `trackedEvent`, `stageId=null`
+  pre-classification). `CandidateMilestone`/`Evidence` live in
+  `skene/schema/milestone.py`; analyzers re-export. **Old dev DBs**: the
+  phase-2 wrapper's milestone parts (final `Milestone` dumps) no longer
+  validate — reading such a session 500s. Pre-1.0, by design (the doc
+  said don't support both shapes); wipe `~/.local/share/skene/skene.db`
+  if it bites.
+- **finalize_journey** (`core/journey.py`): collects milestone parts
+  from child sessions (bucket = `child.agent == "schema"` → schema,
+  everything else → code), then specialize (unless disabled) → merge →
+  classify → assemble → write yaml → `ArtifactPart` in the parent.
+  Idempotent — a re-run overwrites the artifact.
+- **Abort fans out**: `SessionService.abort` walks the child-session
+  tree (parent first, then stored children), and the task handler's
+  cancellation path aborts the child it is waiting on. Corollary:
+  aborting a *child* session directly also takes down the parent's
+  in-flight run (its `await` on the child raises CancelledError).
+- **Parity + retirement**: the phase-2 wrapper, `pipeline.py`, and the
+  `run_code_agent`/`run_schema_agent` runners are gone. The golden
+  fixture `tests/fixtures/parity/journey.golden.yaml` was generated from
+  the old pipeline with `tests.fakes.JourneyFakeLLM`;
+  `test_journey_output_matches_pipeline_golden` pins the agentic flow to
+  it. `db_url` introspection now happens lazily in
+  `JourneyRunContext.schema_index()` (off-loop, never persisted).
+- **Client contract for the TUI** (unchanged + extended):
+  `POST /journey/analyse` → `{sessionId}`, progress on `/event`, child
+  sessions via `GET /session/{id}/children`, milestones stream as
+  `part.created` with `type=milestone` in child sessions, the finished
+  run has an `artifact` part in the parent and `session.idle` /
+  `session.error` on the bus. Canned sessions are `agent="skene"`.
+  Still deferred to phase 5: `GET /provider`, `GET/PATCH /config`,
+  permission asks.
 
 ---
 
