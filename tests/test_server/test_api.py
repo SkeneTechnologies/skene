@@ -21,6 +21,21 @@ async def test_doc_serves_openapi(client):
     assert "/session/{session_id}/message" in response.json()["paths"]
 
 
+async def test_doc_includes_sse_event_schemas(client):
+    # The /event route streams, so FastAPI can't type it — the Event union
+    # is injected by hand so generated clients (Go TUI) get the SSE types.
+    spec = (await client.get("/doc")).json()
+    schemas = spec["components"]["schemas"]
+    assert "Event" in schemas
+    for model in ("SessionCreated", "SessionError", "PartUpdated", "ServerHeartbeat"):
+        assert model in schemas, model
+    stream = spec["paths"]["/event"]["get"]["responses"]["200"]["content"]["text/event-stream"]
+    assert stream["schema"] == {"$ref": "#/components/schemas/Event"}
+    # Parts (incl. the typed milestone payload) are reachable from the spec.
+    assert "MilestonePart" in schemas
+    assert "CandidateMilestone" in schemas
+
+
 async def test_session_crud_and_wire_shape(client):
     created = await client.post("/session", json={"title": "hello", "agent": "skene"})
     assert created.status_code == 201

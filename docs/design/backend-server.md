@@ -484,6 +484,60 @@ TUI cutover builds on:
   Still deferred to phase 5: `GET /provider`, `GET/PATCH /config`,
   permission asks.
 
+### Phase 4 — pointers for the TUI cutover
+
+Everything the cutover needs to know about the as-built server, in one
+place:
+
+- **Getting the spec / generating the client**: no CI job publishes it
+  yet — add one (or a `tui/Makefile` target) that dumps the schema and
+  runs `oapi-codegen`:
+  `uv run python -c "import json; from skene.server import create_app; print(json.dumps(create_app().openapi()))" > openapi.json`
+  (equivalently, `GET /doc` on a running server). The SSE `Event` union
+  can't be derived from the streaming route, so `create_app` injects it
+  by hand: it appears as `components.schemas.Event` (plus each concrete
+  event model) and as the `text/event-stream` content schema of
+  `GET /event` — the generated Go types cover events too; only the SSE
+  *reader* is hand-written.
+- **Server lifecycle**: `skene serve` listens on `127.0.0.1:4906` by
+  default. Non-local binds require `--token` / `SKENE_SERVER_TOKEN`;
+  clients then send `Authorization: Bearer <token>`. `/health`
+  (`{status, version}`) is unauthenticated for probes. The server starts
+  fine *without* LLM credentials — `POST /journey/analyse` returns 503
+  with the reason, so the TUI can surface "configure credentials"
+  instead of failing at spawn. The TUI may own the process (spawn
+  `skene serve`, poll `/health`) or attach to a running one.
+- **Workspace routing**: REST routes scope by `x-skene-directory`
+  (fallback: the *server's* cwd — the TUI should always send the header).
+  `GET /event` differs: with the header it delivers that workspace's
+  events plus server-wide ones; without it the stream is unfiltered.
+- **SSE framing**: `data: <event JSON>\n\n` frames only — no `event:` or
+  `id:` lines. The first frame is `server.connected`; after 10 s of
+  *silence* (not fixed cadence) a `server.heartbeat` is emitted. Event
+  JSON is `{id, type, properties}` (`skene/schema/event.py`).
+- **Rendering model**: messages and parts are upserts keyed by `id` —
+  `message.updated` / `part.updated` carry the full replacement object,
+  so a client can just overwrite. Tool parts transition
+  `running → completed|error` via `part.updated`.
+  `PartUpdated.properties.delta` is per-turn text, not token-level (see
+  the phase-1 note). Milestone parts live in the *child* sessions: the
+  TUI learns about subagents from `session.created` events whose
+  `parentId` is set (or `GET /session/{id}/children`) and keys every
+  message/part event by its `sessionId` to build the per-subagent
+  progress tree that replaces stdout scraping.
+- **The analyse flow**: `POST /journey/analyse` (body mirrors the CLI
+  flags, camelCase) → `202 {sessionId}`; watch events until
+  `session.idle` for that session (the `artifact` part carries the
+  journey.yaml path) or `session.error` (`properties.error` is the
+  message). Cancel = `POST /session/{id}/abort` — takes down the whole
+  child tree.
+- **Visualizer**: `GET /journey` returns the workspace's journey.yaml
+  parsed to JSON (first match across the bundle dirs), 404 until a run
+  has produced one — replaces the TUI reading the file itself.
+- **No interactive prompts**: the journey flow never asks questions, so
+  `engine.go`'s stdin-prompt machinery is deleted without replacement;
+  the ask/answer flow arrives with phase 5's permissions.
+
 ---
 
 ## 9. Resolved questions (2026-07-06)

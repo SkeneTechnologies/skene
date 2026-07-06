@@ -16,10 +16,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI
+from pydantic import TypeAdapter
 
 from skene import __version__
 from skene.core.services import CoreServices, create_services
 from skene.core.sessions import LLMFactory
+from skene.schema import Event
 from skene.server.deps import require_auth
 from skene.server.routes import agent, event, journey, session
 
@@ -66,5 +68,32 @@ def create_app(
     async def doc() -> dict[str, Any]:
         """The OpenAPI document (alias of ``/openapi.json``, per the design)."""
         return app.openapi()
+
+    _default_openapi = app.openapi
+
+    def openapi_with_events() -> dict[str, Any]:
+        """Inject the SSE ``Event`` union into the spec.
+
+        ``GET /event`` streams, so FastAPI can't derive a response model for
+        it — but generated clients (the Go TUI) still need the event types.
+        The union goes in as ``components.schemas.Event`` and as the
+        ``text/event-stream`` content schema of the route; definitions
+        FastAPI already emitted for the REST routes are left untouched.
+        """
+        if app.openapi_schema:
+            return app.openapi_schema
+        spec = _default_openapi()
+        event_schema = TypeAdapter(Event).json_schema(ref_template="#/components/schemas/{model}")
+        schemas = spec.setdefault("components", {}).setdefault("schemas", {})
+        for name, definition in event_schema.pop("$defs", {}).items():
+            schemas.setdefault(name, definition)
+        schemas["Event"] = event_schema
+        spec["paths"]["/event"]["get"]["responses"]["200"]["content"] = {
+            "text/event-stream": {"schema": {"$ref": "#/components/schemas/Event"}}
+        }
+        app.openapi_schema = spec
+        return spec
+
+    app.openapi = openapi_with_events  # type: ignore[method-assign]
 
     return app
