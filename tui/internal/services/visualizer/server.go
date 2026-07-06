@@ -16,20 +16,41 @@ import (
 //go:embed webapp/index.html webapp/skene-logo.svg
 var webappFS embed.FS
 
+// DataFunc supplies the document the webapp renders. It is called on every
+// /api/data request so refreshing the browser picks up new runs.
+type DataFunc func() (interface{}, error)
+
 // Server hosts a YAML visualizer on localhost.
 type Server struct {
 	httpServer *http.Server
 	port       int
-	filePath   string
 	title      string
+	source     DataFunc
 }
 
-// NewServer creates a visualizer server for the given YAML file.
-func NewServer(filePath, title string) *Server {
+// NewServer creates a visualizer backed by an arbitrary data source (e.g.
+// the skene server's GET /journey).
+func NewServer(title string, source DataFunc) *Server {
 	return &Server{
-		filePath: filePath,
-		title:    title,
+		title:  title,
+		source: source,
 	}
+}
+
+// NewFileServer creates a visualizer that reads and parses a YAML file on
+// each request.
+func NewFileServer(filePath, title string) *Server {
+	return NewServer(title, func() (interface{}, error) {
+		raw, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("file not found")
+		}
+		var yamlData interface{}
+		if err := yaml.Unmarshal(raw, &yamlData); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML")
+		}
+		return convertYAMLToJSON(yamlData), nil
+	})
 }
 
 // Start begins serving on a random available port.
@@ -97,23 +118,21 @@ func (s *Server) handleData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 
-	raw, err := os.ReadFile(s.filePath)
+	data, err := s.source()
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "file not found"})
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-
-	var yamlData interface{}
-	if err := yaml.Unmarshal(raw, &yamlData); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to parse YAML"})
+	if data == nil {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "no data available"})
 		return
 	}
 
 	response := map[string]interface{}{
 		"title": s.title,
-		"data":  convertYAMLToJSON(yamlData),
+		"data":  data,
 	}
 	_ = json.NewEncoder(w).Encode(response)
 }

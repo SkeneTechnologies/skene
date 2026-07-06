@@ -29,11 +29,6 @@ type AnalyzingView struct {
 	done        bool
 	failMessage string
 	currentIdx  int
-
-	promptActive      bool
-	promptQuestion    string
-	promptOptions     []string
-	promptSelectedIdx int
 }
 
 // NewAnalyzingView creates a new analysis progress view
@@ -117,7 +112,7 @@ func (v *AnalyzingView) UpdatePhaseByName(phaseName string, progress float64, me
 			break
 		}
 	}
-	
+
 	if !found {
 		// Create new phase
 		v.phases = append(v.phases, AnalysisPhase{
@@ -133,16 +128,16 @@ func (v *AnalyzingView) UpdatePhaseByName(phaseName string, progress float64, me
 		phase.Active = progress < 1.0
 		phase.Done = progress >= 1.0
 	}
-	
+
 	// Deactivate all other phases
 	for i := range v.phases {
 		if i != phaseIdx {
 			v.phases[i].Active = false
 		}
 	}
-	
+
 	v.currentIdx = phaseIdx
-	
+
 	// Log the message to terminal output
 	if message != "" {
 		v.terminal.AddLine(message)
@@ -195,46 +190,6 @@ func (v *AnalyzingView) AllPhasesDone() bool {
 // HasFailed returns true if analysis failed
 func (v *AnalyzingView) HasFailed() bool {
 	return v.failed
-}
-
-// ShowPrompt displays an interactive prompt with selectable options
-func (v *AnalyzingView) ShowPrompt(question string, options []string) {
-	v.promptActive = true
-	v.promptQuestion = question
-	v.promptOptions = options
-	v.promptSelectedIdx = 0
-}
-
-// DismissPrompt hides the interactive prompt
-func (v *AnalyzingView) DismissPrompt() {
-	v.promptActive = false
-	v.promptQuestion = ""
-	v.promptOptions = nil
-	v.promptSelectedIdx = 0
-}
-
-// IsPromptActive returns true if an interactive prompt is showing
-func (v *AnalyzingView) IsPromptActive() bool {
-	return v.promptActive
-}
-
-// HandlePromptUp moves selection up in the prompt
-func (v *AnalyzingView) HandlePromptUp() {
-	if v.promptSelectedIdx > 0 {
-		v.promptSelectedIdx--
-	}
-}
-
-// HandlePromptDown moves selection down in the prompt
-func (v *AnalyzingView) HandlePromptDown() {
-	if v.promptSelectedIdx < len(v.promptOptions)-1 {
-		v.promptSelectedIdx++
-	}
-}
-
-// GetSelectedOptionIndex returns the 1-based index of the selected prompt option
-func (v *AnalyzingView) GetSelectedOptionIndex() int {
-	return v.promptSelectedIdx + 1
 }
 
 // ScrollUp scrolls the terminal output up
@@ -299,21 +254,9 @@ func (v *AnalyzingView) Render() string {
 	// Terminal output
 	termOutput := v.terminal.Render(sectionWidth)
 
-	// Prompt overlay (if active)
-	var promptSection string
-	if v.promptActive && len(v.promptOptions) > 0 {
-		promptSection = v.renderPrompt(sectionWidth)
-	}
-
 	// Footer
 	var footerContent string
-	if v.promptActive {
-		footerContent = components.FooterHelp([]components.HelpItem{
-			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
-			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
-			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}, v.width)
-	} else if v.failed {
+	if v.failed {
 		footerContent = components.FooterHelp([]components.HelpItem{
 			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},
 			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
@@ -342,19 +285,13 @@ func (v *AnalyzingView) Render() string {
 		Render(footerContent)
 
 	// Combine
-	contentParts := []string{
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
 		wizHeader,
 		"",
 		statusLine,
 		"",
 		termOutput,
-	}
-	if promptSection != "" {
-		contentParts = append(contentParts, "", promptSection)
-	}
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		contentParts...,
 	)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
@@ -370,41 +307,8 @@ func (v *AnalyzingView) Render() string {
 	return centered + "\n" + footer
 }
 
-func (v *AnalyzingView) renderPrompt(width int) string {
-	question := styles.Accent.Render(v.promptQuestion)
-
-	var items []string
-	for i, opt := range v.promptOptions {
-		if i == v.promptSelectedIdx {
-			items = append(items, styles.ListItemSelected.Render(opt))
-		} else {
-			items = append(items, styles.ListItem.Render(opt))
-		}
-		if i < len(v.promptOptions)-1 {
-			items = append(items, "")
-		}
-	}
-
-	list := lipgloss.JoinVertical(lipgloss.Left, items...)
-	inner := lipgloss.JoinVertical(lipgloss.Left, question, "", list)
-
-	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.MutedColor).
-		Padding(0, 1).
-		Width(width - 2).
-		Render(inner)
-}
-
 // GetHelpItems returns context-specific help
 func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
-	if v.promptActive {
-		return []components.HelpItem{
-			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
-			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
-			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-		}
-	}
 	if v.failed {
 		return []components.HelpItem{
 			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},

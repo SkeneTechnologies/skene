@@ -8,12 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"skene/internal/constants"
 	"skene/internal/game"
 	"skene/internal/outputdirs"
 	"skene/internal/services/auth"
+	"skene/internal/services/backend"
 	"skene/internal/services/config"
 	"skene/internal/services/growth"
 	"skene/internal/services/telemetry"
@@ -75,6 +77,14 @@ type AnalysisPhaseMsg struct {
 	Update growth.PhaseUpdate
 }
 
+// JourneyProgressMsg carries structured progress from a server-driven
+// journey run. Phase (optional) names the coarse step; Message is a
+// per-agent/per-tool log line.
+type JourneyProgressMsg struct {
+	Phase   string
+	Message string
+}
+
 // NextStepOutputMsg is sent when a next-step command produces output
 type NextStepOutputMsg struct {
 	Line string
@@ -83,13 +93,6 @@ type NextStepOutputMsg struct {
 // NextStepDoneMsg is sent when a next-step command finishes
 type NextStepDoneMsg struct {
 	Error error
-}
-
-// PromptMsg is sent when uvx asks an interactive question
-type PromptMsg struct {
-	Question string
-	Options  []string
-	Response chan string
 }
 
 // LocalModelDetectMsg is sent with local model detection results
@@ -171,6 +174,11 @@ type App struct {
 	// Visualizer
 	visualizerServer *visualizer.Server
 
+	// Backend skene server (spawned lazily for journey analysis and the
+	// journey visualizer; nil until first needed)
+	backendMu     sync.Mutex
+	backendServer *backend.Server
+
 	// Auth state
 	authCountdown  int
 	callbackServer *auth.CallbackServer
@@ -183,9 +191,6 @@ type App struct {
 
 	// Error state
 	currentError *views.ErrorInfo
-
-	// Interactive prompt state
-	pendingPromptResponse chan string
 
 	// Telemetry: last view name for exit event
 	lastView string
@@ -429,10 +434,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.analyzingView.UpdatePhase(-1, 0, msg.Line)
 		}
 
-	case PromptMsg:
+	case JourneyProgressMsg:
 		if a.analyzingView != nil {
-			a.analyzingView.ShowPrompt(msg.Question, msg.Options)
-			a.pendingPromptResponse = msg.Response
+			if msg.Phase != "" {
+				a.analyzingView.UpdatePhaseByName(msg.Phase, 0.5, msg.Message)
+			} else {
+				a.analyzingView.UpdatePhase(-1, 0, msg.Message)
+			}
+		}
+		// Update game progress if game is active
+		if a.state == StateGame && a.game != nil && a.analyzingView != nil {
+			currentPhase := a.analyzingView.GetCurrentPhase()
+			if currentPhase == "" {
+				currentPhase = constants.StatusInProgress
+			}
+			a.game.SetProgressInfo(currentPhase, false, false)
 		}
 
 	case NextStepDoneMsg:
@@ -1007,23 +1023,6 @@ func (a *App) handleProjectDirNextStepsKeys(key string) tea.Cmd {
 }
 
 func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
-	if a.analyzingView != nil && a.analyzingView.IsPromptActive() {
-		switch key {
-		case "up", "k":
-			a.analyzingView.HandlePromptUp()
-		case "down", "j":
-			a.analyzingView.HandlePromptDown()
-		case "enter":
-			idx := a.analyzingView.GetSelectedOptionIndex()
-			a.analyzingView.DismissPrompt()
-			if a.pendingPromptResponse != nil {
-				a.pendingPromptResponse <- fmt.Sprintf("%d", idx)
-				a.pendingPromptResponse = nil
-			}
-		}
-		return nil
-	}
-
 	switch key {
 	case "up", "k":
 		if a.analyzingView != nil {
@@ -1228,13 +1227,40 @@ func (a *App) openYAMLVisualizer(def *constants.DashboardFile) {
 		a.visualizerServer.Stop()
 	}
 
-	a.visualizerServer = visualizer.NewServer(filePath, def.DisplayName)
+	if def.Filename == constants.JourneyFile {
+		// The journey visualizer reads the server's GET /journey instead of
+		// parsing journey.yaml itself.
+		a.visualizerServer = visualizer.NewServer(def.DisplayName, a.journeyDataSource())
+	} else {
+		a.visualizerServer = visualizer.NewFileServer(filePath, def.DisplayName)
+	}
 	url, err := a.visualizerServer.Start()
 	if err != nil {
 		return
 	}
 	_ = browser.OpenURL(url)
 	a.telemetry.Track(constants.EventVisualizerOpened, nil)
+}
+
+// journeyDataSource returns a visualizer data source that serves the parsed
+// journey from the skene server (spawning it on first use). It captures the
+// current project directory; runs on visualizer HTTP handler goroutines.
+func (a *App) journeyDataSource() visualizer.DataFunc {
+	projectDir := a.configMgr.Config.ProjectDir
+	if projectDir == "" {
+		projectDir, _ = os.Getwd()
+	}
+	cfg := a.buildBackendConfig()
+
+	return func() (interface{}, error) {
+		server, err := a.ensureBackend(context.Background(), cfg, nil)
+		if err != nil {
+			return nil, err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return server.JourneyJSON(ctx, projectDir)
+	}
 }
 
 func (a *App) handleFileDetailKeys(key string) tea.Cmd {
@@ -1639,34 +1665,72 @@ func (a *App) startSimpleAnalysis() tea.Cmd {
 	return a.startSimpleAnalysisCmd(a.program)
 }
 
+// startSimpleAnalysisCmd runs the journey analysis through the skene server:
+// it ensures a server is up, POSTs /journey/analyse, and renders the SSE
+// event stream as structured per-agent progress. Cancelling aborts the whole
+// child-session tree server-side.
 func (a *App) startSimpleAnalysisCmd(p *tea.Program) tea.Cmd {
-	cfg := a.buildEngineConfig()
+	cfg := a.buildBackendConfig()
+	projectDir := a.configMgr.Config.ProjectDir
+	if projectDir == "" {
+		projectDir, _ = os.Getwd()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancelFunc = cancel
 
 	return func() tea.Msg {
-		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
+		defer cancel()
+		send := func(phase, message string) {
 			if p != nil {
-				p.Send(AnalysisPhaseMsg{Update: update})
+				p.Send(JourneyProgressMsg{Phase: phase, Message: message})
 			}
-		})
-		engine.SetPromptHandler(func(prompt growth.InteractivePrompt) {
-			if p != nil {
-				p.Send(PromptMsg{
-					Question: prompt.Question,
-					Options:  prompt.Options,
-					Response: prompt.Response,
-				})
-			}
-		})
-
-		result := engine.RunJourney(ctx)
-		if result.Error != nil {
-			return AnalysisDoneMsg{Error: result.Error, Result: result}
 		}
-		return AnalysisDoneMsg{Error: nil, Result: result}
+
+		server, err := a.ensureBackend(ctx, cfg, func(line string) { send("", line) })
+		if err != nil {
+			if ctx.Err() != nil {
+				err = ctx.Err()
+			}
+			return AnalysisDoneMsg{Error: err}
+		}
+
+		result := server.RunJourney(ctx, projectDir, func(update backend.Update) {
+			send(update.Phase, update.Message)
+		})
+		if result.Milestones > 0 {
+			send("", fmt.Sprintf("%d candidate milestones collected", result.Milestones))
+		}
+		return AnalysisDoneMsg{Error: result.Err}
 	}
+}
+
+// buildBackendConfig maps the wizard configuration to the LLM settings the
+// spawned skene server needs.
+func (a *App) buildBackendConfig() backend.Config {
+	ec := a.buildEngineConfig()
+	return backend.Config{
+		Provider: ec.Provider,
+		Model:    ec.Model,
+		APIKey:   ec.APIKey,
+		BaseURL:  ec.BaseURL,
+	}
+}
+
+// ensureBackend returns the shared backend server, spawning it on first use.
+// Safe to call from tea.Cmd and HTTP-handler goroutines.
+func (a *App) ensureBackend(ctx context.Context, cfg backend.Config, onStatus func(string)) (*backend.Server, error) {
+	a.backendMu.Lock()
+	defer a.backendMu.Unlock()
+	if a.backendServer != nil {
+		return a.backendServer, nil
+	}
+	server, err := backend.Connect(ctx, cfg, onStatus)
+	if err != nil {
+		return nil, err
+	}
+	a.backendServer = server
+	return server, nil
 }
 
 func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
@@ -1679,15 +1743,6 @@ func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
 				p.Send(AnalysisPhaseMsg{Update: update})
-			}
-		})
-		engine.SetPromptHandler(func(prompt growth.InteractivePrompt) {
-			if p != nil {
-				p.Send(PromptMsg{
-					Question: prompt.Question,
-					Options:  prompt.Options,
-					Response: prompt.Response,
-				})
 			}
 		})
 
@@ -1735,15 +1790,6 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
 				p.Send(NextStepOutputMsg{Line: update.Message})
-			}
-		})
-		engine.SetPromptHandler(func(prompt growth.InteractivePrompt) {
-			if p != nil {
-				p.Send(PromptMsg{
-					Question: prompt.Question,
-					Options:  prompt.Options,
-					Response: prompt.Response,
-				})
 			}
 		})
 
@@ -2173,6 +2219,12 @@ func (a *App) Cleanup() {
 		a.visualizerServer.Stop()
 		a.visualizerServer = nil
 	}
+	a.backendMu.Lock()
+	if a.backendServer != nil {
+		a.backendServer.Stop()
+		a.backendServer = nil
+	}
+	a.backendMu.Unlock()
 	if a.telemetry != nil {
 		a.telemetry.Track(constants.EventTUIExited, map[string]string{
 			"last_view":        a.lastView,

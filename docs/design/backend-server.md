@@ -1,6 +1,6 @@
 # Skene Backend Server — Design
 
-Status: in progress (2026-07-06) — phases 1-3 implemented, phases 4-5 pending.
+Status: in progress (2026-07-06) — phases 1-4 implemented, phase 5 pending.
 Work lands on feature branches targeting the `v1.0` integration branch.
 
 | Phase | Status | Where |
@@ -8,7 +8,7 @@ Work lands on feature branches targeting the `v1.0` integration branch.
 | 1. Schema + streaming loop | **done** | `feat/server-phase1` |
 | 2. Server MVP | **done** | `feat/server-phase2` |
 | 3. Agentic flow | **done** | `feat/server-phase3` |
-| 4. TUI cutover | pending | |
+| 4. TUI cutover | **done** | `feat/server-phase4` |
 | 5. Hardening & growth | pending | |
 
 Goal: turn skene into a client/server system where a **main skene agent** orchestrates
@@ -537,6 +537,59 @@ place:
 - **No interactive prompts**: the journey flow never asks questions, so
   `engine.go`'s stdin-prompt machinery is deleted without replacement;
   the ask/answer flow arrives with phase 5's permissions.
+
+### Phase 4 — as built (notes for phase 5+)
+
+What exists after phase 4 (`feat/server-phase4`), and what the hardening
+phase should know:
+
+- **Generated client**: `tui/internal/api/client.gen.go` (oapi-codegen
+  v2.5.0, models + client) from `tui/internal/api/openapi.json`.
+  Regenerate with `make -C tui generate`. The checked-in spec is
+  **downgraded to OpenAPI 3.0** by `tui/scripts/dump_openapi.py` because
+  oapi-codegen can't consume FastAPI's 3.1 output: nullable `anyOf`
+  collapses to `nullable: true`, and single-value-enum properties (the
+  `type`/`role`/`status` discriminator literals) are force-marked
+  `required` so the generated union helpers compile. The `Event` union
+  came through without discriminator dispatch — `internal/api/sse.go`
+  (`EventEnvelope.Decode`) does typed dispatch by peeking `type`; the
+  part/tool-state unions kept their generated `Discriminator()` helpers.
+  There is still no CI job — regeneration is manual when the API changes.
+- **SSE reader**: `internal/api/sse.go` — `data:`-only framing per the
+  contract, 16 MiB frame cap, unknown event types skipped (forward
+  compatible). Unit-tested in `sse_test.go`.
+- **Backend service** (`tui/internal/services/backend`): `Connect`
+  attaches to `SKENE_SERVER_URL` (honouring `SKENE_SERVER_TOKEN`) or
+  spawns `uvx <GrowthPackageSpec()> serve --port <free>` — env-driven
+  LLM config (`SKENE_API_KEY/PROVIDER/MODEL/BASE_URL`), /health polled
+  up to 120 s (cold uvx cache), last 30 output lines kept for error
+  reports, `Stop()` = SIGINT then SIGKILL. `RunJourney` subscribes to
+  `/event` *before* POSTing `/journey/analyse`, folds the stream into
+  per-agent progress lines + three coarse phases via `runTracker`
+  (which keys child sessions off `session.created.parentId` and ignores
+  other session trees in the same workspace), and maps ctx cancellation
+  to `POST /session/{id}/abort`. Live tests (`live_test.go`, env-gated:
+  `SKENE_SERVER_URL`, `SKENE_LIVE_SPAWN`, `SKENE_LIVE_FULL`) cover
+  attach, spawn, and a full end-to-end analysis.
+- **TUI wiring**: the app owns one lazily-connected `backend.Server`
+  (`ensureBackend`, mutex-guarded — also reached from visualizer HTTP
+  handlers), stopped in `Cleanup()`. The journey visualizer serves
+  `GET /journey` through that server; other dashboard files still read
+  local files (`visualizer.NewFileServer`). Stdout parsing, the stall
+  timer, and the stdin-prompt machinery (engine + `PromptMsg` +
+  analyzing-view overlay) are gone.
+- **Legacy commands still spawn uvx**: `analyze`, `plan`, `build`,
+  `validate`, `push` run through a simplified line-streaming
+  `growth.Engine` (display-only; no parsing). Moving them server-side
+  is phase-5+ scope, as is per-run `schema_dir`/`db_url` input from the
+  TUI (the analyse POST currently sends an empty body = workspace
+  defaults).
+- **Auto-publish gap**: the old TUI journey run appended
+  `--auto-publish` for linked skene-provider workspaces. The server's
+  `JourneyAnalyseRequest` has no such flag, so the cutover drops it —
+  publish stays available as the explicit "Deploy to Skene Cloud" push
+  step. If implicit publish should return, add it to the analyse route,
+  not the client.
 
 ---
 

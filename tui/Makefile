@@ -1,4 +1,4 @@
-.PHONY: build run run-local run-local-dev clean install dev test lint fmt release
+.PHONY: build run run-local run-local-dev clean install dev test lint fmt release generate
 
 # Binary name
 BINARY_NAME=skene
@@ -23,6 +23,18 @@ HAS_GO := $(shell which go >/dev/null 2>&1 && echo yes || echo no)
 
 # Default target
 all: build
+
+# Regenerate the Go API client from the Python server's OpenAPI spec.
+# Dumps the spec (downgraded to OpenAPI 3.0 for oapi-codegen) from the
+# skene package in the parent directory, then regenerates
+# internal/api/client.gen.go. Requires uv; the generated code is checked
+# in, so this only needs re-running when the server API changes.
+OAPI_CODEGEN_VERSION=v2.5.0
+generate:
+	uv run --project .. python scripts/dump_openapi.py > internal/api/openapi.json
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) \
+		-config internal/api/oapi-codegen.yaml internal/api/openapi.json
+	gofmt -w internal/api/client.gen.go
 
 # Build the application -- uses Go if available, otherwise downloads pre-built binary
 ifeq ($(HAS_GO),yes)
