@@ -1,4 +1,4 @@
-"""Wiring for the core services (store + bus + session service).
+"""Wiring for the core services (store + bus + sessions + agent registry).
 
 Both entry points build this the same way: the HTTP server constructs it
 in its lifespan, the embedded CLI constructs it directly and calls core
@@ -11,7 +11,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from skene.core.agents import AgentRegistry
 from skene.core.bus import Bus
+from skene.core.journey import make_run_factory
 from skene.core.sessions import LLMFactory, SessionService
 from skene.core.store import DEFAULT_DB_PATH, Store
 
@@ -40,6 +42,7 @@ class CoreServices:
     store: Store
     bus: Bus
     sessions: SessionService
+    registry: AgentRegistry
 
     async def close(self) -> None:
         await self.store.close()
@@ -48,8 +51,11 @@ class CoreServices:
 async def create_services(
     db_path: Path | str | None = None,
     llm_factory: LLMFactory | None = None,
+    registry: AgentRegistry | None = None,
 ) -> CoreServices:
     store = await Store.open(resolve_db_path(db_path))
     bus = Bus()
+    registry = registry or AgentRegistry()
     sessions = SessionService(store, bus, llm_factory or _no_llm_configured())
-    return CoreServices(store=store, bus=bus, sessions=sessions)
+    sessions.run_factory = make_run_factory(sessions, registry)
+    return CoreServices(store=store, bus=bus, sessions=sessions, registry=registry)

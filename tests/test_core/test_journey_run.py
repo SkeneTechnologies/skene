@@ -1,101 +1,139 @@
-"""Tests for the canned journey run (session wrapper around the pipeline)."""
+"""Tests for the canned journey run (main agent + task tool + finalize)."""
 
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 import yaml
 
-import skene.core.journey as journey_module
 from skene.core.embedded import run_journey_embedded
-from skene.core.journey import JourneyRequestError, start_journey_run
+from skene.core.journey import JourneyRequestError, JourneyRunError, start_journey_run
 from skene.schema import (
     ArtifactPart,
     JourneyAnalyseRequest,
     MilestonePart,
     ToolPart,
 )
-from tests.fakes import ScriptedClient, make_journey
+from tests.fakes import JourneyFakeLLM, ScriptedClient, turn
+
+PARITY = Path(__file__).parent.parent / "fixtures" / "parity"
 
 
-@pytest.fixture
-def fake_pipeline(monkeypatch):
-    """Replace the real (LLM-driven) pipeline with an instant fake."""
-    calls = []
-
-    async def fake(cfg, llm):
-        calls.append(cfg)
-        return make_journey()
-
-    monkeypatch.setattr(journey_module, "run_journey_pipeline", fake)
-    return calls
+def _parity_request(output: Path) -> JourneyAnalyseRequest:
+    return JourneyAnalyseRequest(
+        path=str(PARITY / "repo"),
+        schema_dir=str(PARITY / "schemas"),
+        product_name="ParityProduct",
+        output=str(output),
+        specialize=False,
+        classify_concurrency=2,
+    )
 
 
-async def test_journey_run_emits_parts_and_artifact(services, workspace, fake_pipeline):
-    request = JourneyAnalyseRequest(path=str(workspace))
-    handle = await start_journey_run(services.sessions, str(workspace), request, llm=ScriptedClient([]))
+async def test_journey_run_spawns_subagents_and_emits_artifact(services, workspace, tmp_path):
+    output = tmp_path / "out" / "journey.yaml"
+    handle = await start_journey_run(
+        services.sessions, services.registry, str(workspace), _parity_request(output), llm=JourneyFakeLLM()
+    )
     journey = await asyncio.wait_for(handle.result, timeout=5)
     await services.sessions.wait(handle.session.id)
 
-    assert journey.product.name == "TestProduct"
-    output = workspace / "skene-context" / "journey.yaml"
+    assert journey.product.name == "ParityProduct"
     assert output.is_file()
-    assert yaml.safe_load(output.read_text())["product"]["name"] == "TestProduct"
 
     session = await services.store.get_session(handle.session.id)
     assert session.status == "idle"
-    assert session.agent == "journey"
+    assert session.agent == "skene"
 
+    # Parent trace: canned prompt, then task × 2 + finalize + artifact.
     messages = await services.store.list_messages(session.id)
     assert [type(m).__name__ for m, _ in messages] == ["UserMessage", "AssistantMessage"]
     assistant, parts = messages[1]
-    assert assistant.finish == "completed"
-
+    assert assistant.finish == "no_tool_calls"
     tool_parts = [p for p in parts if isinstance(p, ToolPart)]
-    assert len(tool_parts) == 1
-    assert tool_parts[0].state.status == "completed"
-
-    milestones = [p for p in parts if isinstance(p, MilestonePart)]
-    assert len(milestones) == 1
-    assert milestones[0].milestone["stage_id"] == "onboarding"
-    assert milestones[0].milestone["id"] == "signs_up"
-
+    assert sorted(p.tool for p in tool_parts) == ["finalize_journey", "task", "task"]
+    assert all(p.state.status == "completed" for p in tool_parts)
     artifacts = [p for p in parts if isinstance(p, ArtifactPart)]
     assert len(artifacts) == 1
     assert artifacts[0].path == str(output)
 
-    # Config passed through to the pipeline.
-    (cfg,) = fake_pipeline
-    assert cfg.repo_root == workspace.resolve()
-    assert cfg.product_name == workspace.name
+    # Child sessions: one per subagent, idle, holding the milestone parts.
+    children = await services.store.list_children(session.id)
+    assert sorted(c.agent for c in children) == ["code", "schema"]
+    assert all(c.status == "idle" for c in children)
+    milestones_by_agent = {}
+    for child in children:
+        child_parts = [p for _, ps in await services.store.list_messages(child.id) for p in ps]
+        milestones_by_agent[child.agent] = [p.milestone for p in child_parts if isinstance(p, MilestonePart)]
+    assert [m.proposed_id for m in milestones_by_agent["code"]] == ["landing_page"]
+    assert [m.proposed_id for m in milestones_by_agent["schema"]] == ["account_created", "invite_sent"]
+    # Live parts carry the *candidate* shape: no stage yet, camelCase wire form.
+    candidate = milestones_by_agent["schema"][0]
+    assert candidate.stage_id is None
+    assert '"proposedId"' in candidate.model_dump_json()
 
 
-async def test_journey_run_records_pipeline_failure(services, workspace, monkeypatch):
-    async def explode(cfg, llm):
-        raise RuntimeError("pipeline exploded")
+async def test_journey_output_matches_pipeline_golden(services, workspace, tmp_path):
+    """Parity check that retired the deterministic pipeline.
 
-    monkeypatch.setattr(journey_module, "run_journey_pipeline", explode)
+    ``journey.golden.yaml`` was produced by the phase-2
+    ``run_journey_pipeline`` with the same fake LLM and inputs; the
+    agentic flow must reproduce it (modulo the generation timestamp).
+    """
+    output = tmp_path / "journey.yaml"
     handle = await start_journey_run(
-        services.sessions, str(workspace), JourneyAnalyseRequest(path=str(workspace)), llm=ScriptedClient([])
+        services.sessions, services.registry, str(workspace), _parity_request(output), llm=JourneyFakeLLM()
     )
-    with pytest.raises(RuntimeError, match="pipeline exploded"):
+    await asyncio.wait_for(handle.result, timeout=5)
+    await services.sessions.wait(handle.session.id)
+
+    produced = yaml.safe_load(output.read_text())
+    golden = yaml.safe_load((PARITY / "journey.golden.yaml").read_text())
+    produced["product"]["generated_at"] = golden["product"]["generated_at"]
+    assert produced == golden
+
+
+async def test_journey_run_errors_when_agent_never_finalizes(services, workspace):
+    llm = ScriptedClient([turn(text="I have nothing to do.")])
+    handle = await start_journey_run(
+        services.sessions, services.registry, str(workspace), JourneyAnalyseRequest(path=str(workspace)), llm=llm
+    )
+    with pytest.raises(JourneyRunError, match="without calling finalize_journey"):
+        await asyncio.wait_for(handle.result, timeout=5)
+    await services.sessions.wait(handle.session.id)
+    assert (await services.store.get_session(handle.session.id)).status == "error"
+
+
+async def test_journey_run_records_run_failure(services, workspace):
+    class ExplodingLLM(ScriptedClient):
+        async def generate_with_tools(self, messages, tools):
+            raise RuntimeError("provider exploded")
+
+    handle = await start_journey_run(
+        services.sessions,
+        services.registry,
+        str(workspace),
+        JourneyAnalyseRequest(path=str(workspace)),
+        llm=ExplodingLLM([]),
+    )
+    with pytest.raises(RuntimeError, match="provider exploded"):
         await asyncio.wait_for(handle.result, timeout=5)
     await services.sessions.wait(handle.session.id)
 
     session = await services.store.get_session(handle.session.id)
     assert session.status == "error"
-    assistant, parts = (await services.store.list_messages(session.id))[-1]
+    assistant = (await services.store.list_messages(session.id))[-1][0]
     assert assistant.finish == "error"
-    tool_part = next(p for p in parts if isinstance(p, ToolPart))
-    assert tool_part.state.status == "error"
-    assert "pipeline exploded" in tool_part.state.error
+    assert "provider exploded" in assistant.error
 
 
 async def test_journey_request_validation(services, workspace):
     with pytest.raises(JourneyRequestError, match="not a directory"):
         await start_journey_run(
             services.sessions,
+            services.registry,
             str(workspace),
             JourneyAnalyseRequest(path=str(workspace / "missing")),
             llm=ScriptedClient([]),
@@ -103,41 +141,46 @@ async def test_journey_request_validation(services, workspace):
     with pytest.raises(JourneyRequestError, match="mutually exclusive"):
         await start_journey_run(
             services.sessions,
+            services.registry,
             str(workspace),
             JourneyAnalyseRequest(schema_dir=str(workspace), db_url="postgresql://u:p@h/db"),
             llm=ScriptedClient([]),
         )
 
 
-async def test_journey_user_prompt_never_contains_db_password(services, workspace, fake_pipeline, monkeypatch):
-    monkeypatch.setattr(journey_module.asyncio, "to_thread", lambda fn, *a: _fake_index())
-    request = JourneyAnalyseRequest(path=str(workspace), db_url="postgresql://user:hunter2@db:5432/app")
-    handle = await start_journey_run(services.sessions, str(workspace), request, llm=ScriptedClient([]))
+async def test_journey_run_never_persists_db_password(services, workspace, tmp_path, monkeypatch):
+    from skene.analyzers.schema_parsers import postgres_live
+    from skene.analyzers.schema_parsers.models import SchemaIndex
+
+    monkeypatch.setattr(postgres_live, "introspect_db", lambda url: SchemaIndex(files={}))
+    request = JourneyAnalyseRequest(
+        path=str(PARITY / "repo"),
+        db_url="postgresql://user:hunter2@db:5432/app",
+        product_name="ParityProduct",
+        output=str(tmp_path / "journey.yaml"),
+        specialize=False,
+    )
+    handle = await start_journey_run(
+        services.sessions, services.registry, str(workspace), request, llm=JourneyFakeLLM()
+    )
     await asyncio.wait_for(handle.result, timeout=5)
     await services.sessions.wait(handle.session.id)
 
-    for message, parts in await services.store.list_messages(handle.session.id):
-        for part in parts:
-            assert "hunter2" not in part.model_dump_json()
+    session_ids = [handle.session.id] + [c.id for c in await services.store.list_children(handle.session.id)]
+    for session_id in session_ids:
+        for message, parts in await services.store.list_messages(session_id):
+            assert "hunter2" not in message.model_dump_json()
+            for part in parts:
+                assert "hunter2" not in part.model_dump_json()
 
 
-async def _fake_index():
-    from skene.analyzers.schema_parsers.models import SchemaIndex
-
-    return SchemaIndex(files={})
-
-
-async def test_embedded_runner_round_trip(workspace, tmp_path, monkeypatch):
-    async def fake(cfg, llm):
-        return make_journey()
-
-    monkeypatch.setattr(journey_module, "run_journey_pipeline", fake)
+async def test_embedded_runner_round_trip(workspace, tmp_path):
     output = tmp_path / "out" / "journey.yaml"
     journey = await run_journey_embedded(
-        JourneyAnalyseRequest(path=str(workspace), output=str(output)),
-        ScriptedClient([]),
+        _parity_request(output),
+        JourneyFakeLLM(),
         directory=workspace,
         db_path=tmp_path / "embedded.db",
     )
-    assert journey.product.name == "TestProduct"
+    assert journey.product.name == "ParityProduct"
     assert output.is_file()

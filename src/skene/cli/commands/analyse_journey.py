@@ -1,12 +1,13 @@
 """Generate a journey.yaml from a repo's codebase and its SQL schema.
 
-Replaces the legacy schema/growth/plan pipeline. Two LLM agents explore
-in parallel — one over a directory of pre-exported SQL files, one over
-the repo filesystem — and emit candidate milestones. The pipeline merges
-them, classifies each into one of seven canonical lifecycle stages, and
+Replaces the legacy schema/growth/plan pipeline. The main skene agent
+spawns two subagents in parallel — one over a directory of pre-exported
+SQL files (or a live database), one over the repo filesystem — which emit
+candidate milestones; its ``finalize_journey`` tool merges them,
+classifies each into one of seven canonical lifecycle stages, and
 assembles a validated Journey written to ``journey.yaml``.
 
-See :mod:`skene.analyzers.journey.pipeline` for the algorithm.
+See :mod:`skene.core.journey` for the flow.
 """
 
 from __future__ import annotations
@@ -149,7 +150,7 @@ def analyse_journey_cmd(
     Generate a journey.yaml describing the user lifecycle of the target product.
 
     Provide a codebase path, a ``--schema-dir`` of *.sql files, or both. The
-    pipeline runs two parallel agents:
+    main agent runs two subagents in parallel:
 
     \b
       - Schema agent: walks the parsed SQL schema and emits a milestone for
@@ -243,7 +244,7 @@ def analyse_journey_cmd(
     try:
         journey = asyncio.run(run_journey_embedded(request, llm, directory=config_root))
     except Exception as e:  # noqa: BLE001 — surface any failure to the user
-        error(f"pipeline failed: {e}")
+        error(f"analysis failed: {e}")
         raise typer.Exit(1) from e
 
     _render_summary(journey_path, journey)

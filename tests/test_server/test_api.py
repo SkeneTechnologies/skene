@@ -21,6 +21,21 @@ async def test_doc_serves_openapi(client):
     assert "/session/{session_id}/message" in response.json()["paths"]
 
 
+async def test_doc_includes_sse_event_schemas(client):
+    # The /event route streams, so FastAPI can't type it — the Event union
+    # is injected by hand so generated clients (Go TUI) get the SSE types.
+    spec = (await client.get("/doc")).json()
+    schemas = spec["components"]["schemas"]
+    assert "Event" in schemas
+    for model in ("SessionCreated", "SessionError", "PartUpdated", "ServerHeartbeat"):
+        assert model in schemas, model
+    stream = spec["paths"]["/event"]["get"]["responses"]["200"]["content"]["text/event-stream"]
+    assert stream["schema"] == {"$ref": "#/components/schemas/Event"}
+    # Parts (incl. the typed milestone payload) are reachable from the spec.
+    assert "MilestonePart" in schemas
+    assert "CandidateMilestone" in schemas
+
+
 async def test_session_crud_and_wire_shape(client):
     created = await client.post("/session", json={"title": "hello", "agent": "skene"})
     assert created.status_code == 201
@@ -111,28 +126,37 @@ async def test_journey_analyse_validates_request(client, workspace):
     assert both.status_code == 400
 
 
-async def test_journey_analyse_starts_session(client, services, workspace, monkeypatch):
-    import skene.core.journey as journey_module
-    from tests.fakes import make_journey
+async def test_journey_analyse_starts_session(client, services, workspace):
+    from tests.fakes import JourneyFakeLLM
 
-    async def fake(cfg, llm):
-        return make_journey()
+    services.sessions.llm_factory = lambda: JourneyFakeLLM()
+    # The fake code subagent emits a milestone whose evidence path must exist.
+    (workspace / "index.tsx").write_text("export default () => null;\n")
 
-    monkeypatch.setattr(journey_module, "run_journey_pipeline", fake)
-    services.sessions.llm_factory = lambda: ScriptedClient([])
-
-    accepted = await client.post("/journey/analyse", json={"path": str(workspace)})
+    accepted = await client.post("/journey/analyse", json={"path": str(workspace), "specialize": False})
     assert accepted.status_code == 202
     session_id = accepted.json()["sessionId"]
     await services.sessions.wait(session_id)
 
     session = (await client.get(f"/session/{session_id}")).json()
     assert session["status"] == "idle"
-    assert session["agent"] == "journey"
+    assert session["agent"] == "skene"
+
+    # The subagent child sessions are visible over HTTP.
+    children = (await client.get(f"/session/{session_id}/children")).json()
+    assert sorted(c["agent"] for c in children) == ["code"]
 
     journey = await client.get("/journey")
     assert journey.status_code == 200
-    assert journey.json()["product"]["name"] == "TestProduct"
+    assert journey.json()["product"]["name"] == "workspace"
+
+
+async def test_agent_registry_route(client):
+    agents = (await client.get("/agent")).json()
+    by_name = {a["name"]: a for a in agents}
+    assert by_name["skene"]["mode"] == "primary"
+    assert by_name["code"]["mode"] == "subagent"
+    assert by_name["schema"]["mode"] == "subagent"
 
 
 async def test_get_journey_404_when_absent(client):

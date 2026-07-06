@@ -150,9 +150,10 @@ async def test_emit_milestone_handler_records_into_collector():
 
 
 @pytest.mark.asyncio
-async def test_run_schema_agent_against_fixture():
-    """Smoke test the agent over the real journeygen fixture using a scripted client."""
-    from skene.analyzers.journey.schema_agent import run_schema_agent
+async def test_schema_agent_loop_against_fixture():
+    """Smoke test the schema-agent prompt + toolset through the agent loop."""
+    from skene.analyzers.journey.schema_agent import SCHEMA_AGENT_INSTRUCTIONS
+    from skene.analyzers.schema_parsers.supabase_sql import parse_schema_dir
     from skene.llm.agent_loop import AssistantTurn, Message, Tool, ToolCall
     from skene.llm.base import LLMClient
 
@@ -205,7 +206,13 @@ async def test_run_schema_agent_against_fixture():
             return AssistantTurn(text="done")
 
     client = _ScriptedAgent()
-    candidates = await run_schema_agent(fixture, llm=client, max_turns=10)
+    candidates: list = []
+    await client.run_agent(
+        instructions=SCHEMA_AGENT_INSTRUCTIONS,
+        tools=SchemaToolset(parse_schema_dir(fixture), candidates).as_tools(),
+        initial_input="Begin exploring the schema. Emit one milestone per user action.",
+        max_turns=10,
+    )
     assert len(candidates) == 1
     assert candidates[0].proposed_id == "account_created"
     assert candidates[0].evidence[0].source.value == "db"

@@ -15,6 +15,7 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import Field
 
 from skene.schema.base import WireModel
+from skene.schema.milestone import CandidateMilestone
 
 # ---------------------------------------------------------------------------
 # Tool state
@@ -86,14 +87,14 @@ class ToolPart(_BasePart):
 class MilestonePart(_BasePart):
     """A candidate milestone emitted by an analysis agent's ``emit_milestone``.
 
-    ``milestone`` is the serialized
-    :class:`skene.analyzers.journey.candidate.CandidateMilestone`. Kept as a
-    plain dict until phase 3 moves the analyzer models onto this package —
-    at which point this becomes a typed reference (single source of truth).
+    Streams live from subagent runs — ``milestone.stage_id`` is still
+    ``None`` at this point; classification happens later in
+    ``finalize_journey`` and is only visible in the ``journey.yaml``
+    artifact, not retroactively on these parts.
     """
 
     type: Literal["milestone"] = "milestone"
-    milestone: dict[str, Any]
+    milestone: CandidateMilestone
 
 
 class ArtifactPart(_BasePart):

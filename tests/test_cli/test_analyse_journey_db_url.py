@@ -4,10 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from skene.analyzers.journey.pipeline import JourneyPipelineConfig
-from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.cli.commands.analyse_journey import _infer_product_name, _redact_db_url
 
 
@@ -57,39 +53,3 @@ class TestInferProductName:
 
     def test_fallback_to_product(self):
         assert _infer_product_name(None, None, None) == "Product"
-
-
-class TestJourneyPipelineConfigWithSchemaIndex:
-    """Test JourneyPipelineConfig accepts schema_index."""
-
-    def test_config_with_schema_index(self):
-        index = SchemaIndex()
-        cfg = JourneyPipelineConfig(
-            repo_root=None,
-            schema_dir=None,
-            schema_index=index,
-            product_name="Test",
-        )
-        assert cfg.schema_index is index
-        assert cfg.schema_dir is None
-
-    def test_config_rejects_schema_dir_and_schema_index(self):
-        index = SchemaIndex()
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            JourneyPipelineConfig(
-                repo_root=None,
-                schema_dir=Path("/tmp/schemas"),
-                schema_index=index,
-                product_name="Test",
-            )
-
-    def test_config_with_repo_and_schema_index(self):
-        index = SchemaIndex()
-        cfg = JourneyPipelineConfig(
-            repo_root=Path("/tmp/repo"),
-            schema_dir=None,
-            schema_index=index,
-            product_name="Test",
-        )
-        assert cfg.repo_root is not None
-        assert cfg.schema_index is index

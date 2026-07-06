@@ -1,0 +1,63 @@
+product:
+  name: ParityProduct
+  generated_at: '2026-07-06T13:38:13.773750Z'
+layers:
+- id: L1
+  name: Acquisition
+  spans_stages:
+  - discovery
+- id: L2
+  name: Onboarding & Activation
+  spans_stages:
+  - onboarding
+- id: L4
+  name: Growth
+  spans_stages:
+  - virality
+stages:
+- id: discovery
+  order: 1
+  name: Discovery
+  subtitle: The Hook
+  milestones:
+  - id: landing_page
+    order: 1
+    name: Landing Page
+    description: marketing route
+    evidence:
+    - source: code
+      reason: served at /
+      path: index.tsx
+    confidence: 0.85
+  kpis: []
+- id: onboarding
+  order: 2
+  name: Onboarding
+  subtitle: The Setup
+  milestones:
+  - id: account_created
+    order: 1
+    name: Account Created
+    description: users table row inserted
+    evidence:
+    - source: db
+      reason: users table holds account state
+      table: public.users
+    confidence: 0.85
+  kpis: []
+- id: virality
+  order: 7
+  name: Virality
+  subtitle: The Loop
+  milestones:
+  - id: invite_sent
+    order: 1
+    name: Invite Sent
+    description: invites table row inserted
+    evidence:
+    - source: db
+      reason: invites reference a sender
+      table: public.invites
+    confidence: 0.8
+  kpis: []
+connectors: []

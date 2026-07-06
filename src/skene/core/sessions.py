@@ -13,9 +13,15 @@ concerns:
     ToolCallFinished             → ToolPart(state=completed | error)
     RunFinished                  → assistant message finish/tokens
 
-Phase 2 prompt runs are tool-less (the agent registry and task tool are
-phase 3); the coordinator is written against the stream shape, so phase 3
-reuses it unchanged for subagent runs.
+:meth:`SessionService.execute_run` layers the standard run bookkeeping
+(assistant message, status transitions, abort/error recording) on top of
+the coordinator; every kind of run — plain chat fallback, the main skene
+agent, task-tool subagents — goes through it.
+
+Prompt runs are dispatched through :attr:`SessionService.run_factory`
+(wired by :func:`skene.core.services.create_services` to the agent
+registry's main-agent flow); without a factory they fall back to the
+tool-less chat run.
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ from skene.llm.agent_loop import (
     AgentStreamEvent,
     AssistantText,
     RunFinished,
+    Tool,
     ToolCallFinished,
     ToolCallStarted,
 )
@@ -60,8 +67,8 @@ from skene.schema import (
     new_id,
 )
 
-# Phase 2 placeholder: prompt runs are plain chat. Phase 3 replaces this
-# with the agent registry's per-agent instructions + task tool.
+# Fallback for sessions whose agent isn't a registered primary agent
+# (no run_factory wired, or an unknown agent name).
 _CHAT_INSTRUCTIONS = (
     "You are skene, a product-led-growth analysis assistant. Answer the "
     "user's question directly and concisely. You have no tools available "
@@ -69,6 +76,15 @@ _CHAT_INSTRUCTIONS = (
 )
 
 LLMFactory = Callable[[], LLMClient]
+
+# Builds the background run for a prompt; see skene.core.journey.make_run_factory.
+RunFactory = Callable[["Session", str], Coroutine[Any, Any, None]]
+
+# Optional per-run stream decorator (e.g. milestone-part flushing in tasks.py).
+StreamWrapper = Callable[
+    ["Session", "AssistantMessage", AsyncGenerator[AgentStreamEvent, None]],
+    AsyncGenerator[AgentStreamEvent, None],
+]
 
 
 class SessionBusyError(RuntimeError):
@@ -86,6 +102,9 @@ class SessionService:
         self.store = store
         self.bus = bus
         self.llm_factory = llm_factory
+        # Wired post-construction (skene.core.services) to avoid a circular
+        # import; None keeps the chat fallback for bare service setups.
+        self.run_factory: RunFactory | None = None
         self._runs: dict[str, _Run] = {}
 
     # -- creation / queries ---------------------------------------------------
@@ -136,7 +155,8 @@ class SessionService:
         self.bus.publish(MessageCreated(properties={"message": user_message}), directory=directory)
         self.bus.publish(PartCreated(properties={"part": user_part}), directory=directory)
 
-        self.start_run(session, self._chat_run(session, text))
+        run = self.run_factory(session, text) if self.run_factory is not None else self.chat_run(session, text)
+        self.start_run(session, run)
         return user_message
 
     def start_run(self, session: Session, coro: Coroutine[Any, Any, None]) -> None:
@@ -153,8 +173,23 @@ class SessionService:
         task.add_done_callback(_cleanup)
 
     async def abort(self, session_id: str) -> bool:
-        """Cooperatively stop, then cancel, the session's active run."""
+        """Cooperatively stop, then cancel, the session's run tree.
+
+        Child-session runs (task-tool subagents) are independent asyncio
+        tasks, so the whole descendant tree is walked: parent first — its
+        cancellation path already aborts the children it is waiting on —
+        then every stored child, to catch runs the parent had let go of.
+        """
         await self.store.get_session(session_id)  # raises UnknownSessionError
+        return await self._abort_tree(session_id)
+
+    async def _abort_tree(self, session_id: str) -> bool:
+        aborted = await self._abort_run(session_id)
+        for child in await self.store.list_children(session_id):
+            aborted = (await self._abort_tree(child.id)) or aborted
+        return aborted
+
+    async def _abort_run(self, session_id: str) -> bool:
         run = self._runs.get(session_id)
         if run is None or run.task.done():
             return False
@@ -247,21 +282,52 @@ class SessionService:
             raise RuntimeError("agent stream ended without RunFinished")
         return result
 
-    # -- the phase-2 chat run ---------------------------------------------------
+    # -- standard run bookkeeping ------------------------------------------------
 
-    async def _chat_run(self, session: Session, text: str) -> None:
+    async def execute_run(
+        self,
+        session: Session,
+        *,
+        instructions: str,
+        tools: list[Tool],
+        initial_input: str,
+        max_turns: int = 20,
+        llm: LLMClient | None = None,
+        wrap_stream: StreamWrapper | None = None,
+        on_start: Callable[[LLMClient, AssistantMessage], None] | None = None,
+    ) -> AgentRunResult:
+        """Run one agent loop under ``session`` with standard bookkeeping.
+
+        Owns the assistant message and the running/aborted/error recording.
+        On success the session is left ``running`` and the result returned —
+        the caller decides the terminal status (usually ``idle``, but the
+        canned journey run turns a missing artifact into ``error``).
+        Cancellation and failures are recorded as session state, then
+        re-raised for the caller's own cleanup (futures, child aborts).
+
+        ``llm`` defaults to the service factory (resolved inside the run so
+        credential failures surface as session errors); ``on_start`` fires
+        after the assistant message exists, with the resolved client.
+        """
         message = AssistantMessage(id=new_id("msg"), session_id=session.id, created=now_ms(), agent=session.agent)
         try:
             session = await self.set_status(session, "running")
-            llm = self.llm_factory()
+            llm = llm if llm is not None else self.llm_factory()
             message = message.model_copy(update={"provider": llm.get_provider_name(), "model": llm.get_model_name()})
             await self.emit_message(message)
+            if on_start is not None:
+                on_start(llm, message)
             abort = self.abort_event(session.id)
-            result = await self.consume_stream(
-                session,
-                message,
-                llm.run_agent_stream(instructions=_CHAT_INSTRUCTIONS, tools=[], initial_input=text, abort=abort),
+            stream = llm.run_agent_stream(
+                instructions=instructions,
+                tools=tools,
+                initial_input=initial_input,
+                max_turns=max_turns,
+                abort=abort,
             )
+            if wrap_stream is not None:
+                stream = wrap_stream(session, message, stream)
+            result = await self.consume_stream(session, message, stream)
             usage = result.usage or {}
             message = message.model_copy(
                 update={
@@ -272,7 +338,7 @@ class SessionService:
                 }
             )
             await self.emit_message(message, update=True)
-            await self.set_status(session, "idle")
+            return result
         except asyncio.CancelledError:
             debug(f"run for session {session.id} cancelled")
             message = message.model_copy(update={"finish": "aborted"})
@@ -284,6 +350,18 @@ class SessionService:
             message = message.model_copy(update={"finish": "error", "error": str(e)})
             await self.emit_message(message, update=True)
             await self.set_status(session, "error", error=str(e))
+            raise
+
+    # -- the tool-less chat fallback ---------------------------------------------
+
+    async def chat_run(self, session: Session, text: str) -> None:
+        try:
+            await self.execute_run(session, instructions=_CHAT_INSTRUCTIONS, tools=[], initial_input=text)
+            await self.set_status(session, "idle")
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001, S110 — already recorded as session state
+            pass
 
 
 def _redact_inputs(arguments: dict) -> dict:

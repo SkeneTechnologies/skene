@@ -1,24 +1,16 @@
-"""Step 1 — Schema agent.
+"""The schema subagent's system prompt.
 
-Parses every ``.sql`` file in ``schema_dir`` once, then hands the
-:class:`SchemaIndex` to the LLM through five tools (see
-:mod:`skene.analyzers.journey.tools.schema_tools`). The agent calls
-``emit_milestone`` for each user action it finds; we collect those into a
-list and return it.
+The agent explores a parsed :class:`SchemaIndex` through five tools (see
+:mod:`skene.analyzers.journey.tools.schema_tools`) and calls
+``emit_milestone`` for each user action it finds. Registered as the
+``schema`` subagent in :mod:`skene.core.agents`; runs happen in child
+sessions through the task tool (:mod:`skene.core.tasks`), which resolves
+the index from a schema dir or live database first.
 
-Stage assignment happens later in Step 4.
+Stage assignment happens later, in ``finalize_journey``.
 """
 
 from __future__ import annotations
-
-from pathlib import Path
-
-from skene.analyzers.journey.candidate import CandidateMilestone
-from skene.analyzers.journey.tools.schema_tools import SchemaToolset
-from skene.analyzers.schema_parsers.models import SchemaIndex
-from skene.analyzers.schema_parsers.supabase_sql import parse_schema_dir
-from skene.llm.base import LLMClient
-from skene.output import status
 
 SCHEMA_AGENT_INSTRUCTIONS = """\
 You explore a parsed database schema and emit candidate user-journey
@@ -76,59 +68,3 @@ When you have examined every application table and emitted every
 milestone you can justify, reply with a brief plain-text summary (no
 tool call) and stop.
 """
-
-
-async def run_schema_agent(
-    schema_dir: Path | None = None,
-    *,
-    llm: LLMClient,
-    max_turns: int = 150,
-    schema_index: SchemaIndex | None = None,
-) -> list[CandidateMilestone]:
-    """Run the schema agent. Returns the list of emitted candidates.
-
-    Parameters
-    ----------
-    schema_dir:
-        Path to a directory of ``*.sql`` files. Mutually exclusive with
-        ``schema_index`` — provide exactly one.
-    llm:
-        The LLM client to use for the agent.
-    max_turns:
-        Maximum agent turns.
-    schema_index:
-        A pre-built :class:`SchemaIndex` (e.g. from a live database via
-        ``--db-url``). When provided, ``schema_dir`` is ignored.
-    """
-    if schema_index is None:
-        if schema_dir is None:
-            raise ValueError("run_schema_agent requires either schema_dir or schema_index")
-        status(f"Schema agent: parsing {schema_dir}")
-        index = parse_schema_dir(schema_dir)
-        table_count = sum(len(t) for t in index.files.values())
-        status(
-            f"Schema agent: parsed {len(index.files)} files, {table_count} tables "
-            f"({len(index.application_files())} application)"
-        )
-    else:
-        index = schema_index
-        table_count = sum(len(t) for t in index.files.values())
-        status(
-            f"Schema agent: using live DB schema, {table_count} tables ({len(index.application_files())} application)"
-        )
-
-    collector: list[CandidateMilestone] = []
-    toolset = SchemaToolset(index, collector)
-    tools = toolset.as_tools()
-
-    status(f"Schema agent: starting LLM exploration (model={llm.get_model_name()} max_turns={max_turns})")
-    result = await llm.run_agent(
-        instructions=SCHEMA_AGENT_INSTRUCTIONS,
-        tools=tools,
-        initial_input="Begin exploring the schema. Emit one milestone per user action.",
-        max_turns=max_turns,
-    )
-    status(
-        f"Schema agent: emitted {len(collector)} candidate(s) (turns={result.turns}, stopped={result.stopped_reason})"
-    )
-    return collector
