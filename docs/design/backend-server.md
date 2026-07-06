@@ -1,6 +1,15 @@
 # Skene Backend Server — Design
 
-Status: draft (2026-07-06)
+Status: in progress (2026-07-06) — phase 1 implemented, phases 2-5 pending.
+Work lands on feature branches targeting the `v1.0` integration branch.
+
+| Phase | Status | Where |
+|---|---|---|
+| 1. Schema + streaming loop | **done** | `feat/server-phase1` |
+| 2. Server MVP | pending | |
+| 3. Agentic flow | pending | |
+| 4. TUI cutover | pending | |
+| 5. Hardening & growth | pending | |
 
 Goal: turn skene into a client/server system where a **main skene agent** orchestrates
 **code/db subagents** (and future ones), and CLI + TUI are thin clients of a single
@@ -291,6 +300,43 @@ parsing `journey.yaml` itself.
 
 Phases 1–3 keep `main` shippable throughout: the old code path stays until phase 3's
 parity check passes.
+
+### Phase 1 — as built (notes for phase 2+)
+
+What exists after phase 1 (`feat/server-phase1`), and the contracts the next
+phases build on:
+
+- **`skene/schema`** is the wire-model package. Conventions baked in: camelCase
+  JSON / snake_case Python (`WireModel` base in `schema/base.py` sets
+  `alias_generator=to_camel`, `populate_by_name`, `serialize_by_alias`,
+  `extra="forbid"` — new wire models must inherit from it); discriminated unions
+  `Message` (by `role`), `Part` (by `type`), `ToolState` (by `status`), `Event`
+  (by `type`); IDs from `schema/ids.py` `new_id(prefix)` — prefixed
+  (`ses_/msg_/prt_/evt_/prj_`), time-sortable, monotonic **per process only**
+  (don't rely on cross-process ordering; the store's `created` column is the
+  cross-process truth).
+- **Streaming loop**: `agent_loop.run_agent_stream()` yields `TurnStarted`,
+  `AssistantText`, `ToolCallStarted`, `ToolCallFinished(error: bool)`, then
+  always `RunFinished(result)`. `run_agent()` is a draining wrapper (the batch
+  CLI path uses it unchanged). Reach it via `LLMClient.run_agent_stream(...)` so
+  provider overrides keep working. Phase 2's run coordinator maps events →
+  parts: `TurnStarted`+`AssistantText` → `TextPart`, `ToolCallStarted` →
+  `ToolPart(state=running)`, `ToolCallFinished` → `completed`/`error` state.
+  Note: providers return full turns, so there are no token-level text deltas
+  yet — `PartUpdated.delta` is wired but per-turn granularity for now; true
+  token streaming needs `generate_with_tools` streaming variants (later, not
+  phase 2 scope).
+- **Cancellation**: `abort: asyncio.Event`, checked before each LLM call and
+  each tool dispatch. It does **not** interrupt an in-flight provider call —
+  the phase-2 abort endpoint should set the event *and* cancel the session's
+  asyncio task, and must fan out to child-session tasks (phase 3).
+- **Aborted history caveat**: an aborted run's message list can end on an
+  assistant message with unanswered tool calls. If a session is ever resumed
+  from stored history, synthesize `tool` results for the dangling calls first —
+  providers reject histories with unanswered tool calls.
+- **Deliberate loose end**: `MilestonePart.milestone` is `dict[str, Any]`.
+  Phase 3 moves `CandidateMilestone`/`Evidence` into `skene/schema` (analyzers
+  re-export) and types it — do this when recasting the agents, not before.
 
 ---
 
