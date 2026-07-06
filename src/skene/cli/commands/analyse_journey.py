@@ -17,12 +17,6 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
-from skene.analyzers.journey.pipeline import (
-    JourneyPipelineConfig,
-    run_journey_pipeline,
-)
-from skene.analyzers.journey.serialize import write as write_journey
-from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.cli._journey_runner import (
     build_llm,
     require_llm_credentials,
@@ -31,8 +25,11 @@ from skene.cli._journey_runner import (
     resolve_cli_config,
 )
 from skene.cli.app import app
-from skene.output import console, error, status
+from skene.core.embedded import run_journey_embedded
+from skene.core.redact import redact_db_url as _redact_db_url
+from skene.output import console, error
 from skene.output_paths import DEFAULT_OUTPUT_DIR
+from skene.schema import JourneyAnalyseRequest
 
 
 @app.command(name="analyse-journey")
@@ -208,33 +205,25 @@ def analyse_journey_cmd(
     journey_path = resolve_artifact_path(output, "journey.yaml")
     journey_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Introspect live DB if --db-url is set.
-    live_schema_index: SchemaIndex | None = None
-    db_display: str | None = None
-    if db_url is not None:
-        from skene.analyzers.schema_parsers.postgres_live import introspect_db
-
-        db_display = _redact_db_url(db_url)
-        status(f"Introspecting database: {db_display}")
-        try:
-            live_schema_index = introspect_db(db_url)
-        except Exception as e:  # noqa: BLE001 — never leak connection details
-            error(f"Failed to introspect database: {e}")
-            raise typer.Exit(1) from e
-        status(f"Introspection complete: {sum(len(t) for t in live_schema_index.files.values())} tables found")
-
+    db_display = _redact_db_url(db_url) if db_url is not None else None
     resolved_product_name = product_name or _infer_product_name(base_path, schema_path, db_url)
 
-    cfg = JourneyPipelineConfig(
-        repo_root=base_path,
-        schema_dir=schema_path,
-        schema_index=live_schema_index,
+    # The run itself goes through the embedded server core (same code path
+    # as ``POST /journey/analyse``), so this CLI invocation leaves a session
+    # trace in the skene DB like any served run. Live-DB introspection also
+    # happens inside the run; the URL is never persisted.
+    request = JourneyAnalyseRequest(
+        path=str(base_path) if base_path is not None else None,
+        schema_dir=str(schema_path) if schema_path is not None else None,
+        db_url=db_url,
         product_name=resolved_product_name,
+        output=str(journey_path),
         classify_concurrency=classify_concurrency,
         schema_max_turns=schema_max_turns,
         code_max_turns=code_max_turns,
         specialize=not no_specialize,
     )
+    specialize = not no_specialize
 
     _render_kickoff(
         title="skene · analyse-journey",
@@ -244,7 +233,7 @@ def analyse_journey_cmd(
         rc=rc,
         product_name=resolved_product_name,
         journey_path=journey_path,
-        specialize=cfg.specialize,
+        specialize=specialize,
     )
 
     llm = build_llm(rc, resolved_api_key, no_fallback=no_fallback)
@@ -252,12 +241,10 @@ def analyse_journey_cmd(
     import asyncio
 
     try:
-        journey = asyncio.run(run_journey_pipeline(cfg, llm))
+        journey = asyncio.run(run_journey_embedded(request, llm, directory=config_root))
     except Exception as e:  # noqa: BLE001 — surface any failure to the user
         error(f"pipeline failed: {e}")
         raise typer.Exit(1) from e
-
-    write_journey(journey, journey_path)
 
     _render_summary(journey_path, journey)
 
@@ -361,36 +348,6 @@ def _infer_product_name(
     if schema_dir is not None:
         return schema_dir.name or "Product"
     return "Product"
-
-
-def _redact_db_url(url: str) -> str:
-    """Return a display-safe version of a DB URL with password redacted.
-
-    Examples::
-
-        postgresql://user:secret@host:5432/mydb  →  postgresql://user:***@host:5432/mydb
-        postgresql://user@host/mydb              →  postgresql://user@host/mydb
-    """
-    try:
-        if "://" not in url:
-            return "<redacted>"
-
-        scheme, rest = url.split("://", 1)
-
-        if "@" in rest:
-            creds, remainder = rest.split("@", 1)
-            if ":" in creds and not creds.endswith(":"):
-                # Has a password — redact it
-                user = creds.split(":", 1)[0]
-                rest = f"{user}:***@{remainder}"
-            else:
-                rest = f"{creds}@{remainder}"
-        else:
-            rest = rest
-
-        return f"{scheme}://{rest}"
-    except Exception:  # noqa: BLE001
-        return "<redacted>"
 
 
 def _render_kickoff(

@@ -276,6 +276,7 @@ from skene.cli.commands import (  # noqa: E402, F401
     login,
     plan,
     push,
+    serve,
     status_cmd,
     validate,
 )
