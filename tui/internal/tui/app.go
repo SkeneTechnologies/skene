@@ -391,7 +391,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if err != nil {
 			if a.analyzingView != nil {
-				a.analyzingView.SetCommandFailed("")
+				// The message matters: e.g. a provider quota error looks
+				// identical to any other failure without it.
+				a.analyzingView.SetCommandFailed(err.Error())
 			}
 		} else {
 			if a.analyzingView != nil {
@@ -1700,6 +1702,14 @@ func (a *App) startSimpleAnalysisCmd(p *tea.Program) tea.Cmd {
 		})
 		if result.Milestones > 0 {
 			send("", fmt.Sprintf("%d candidate milestones collected", result.Milestones))
+		}
+		if result.Err != nil && result.ArtifactPath != "" && ctx.Err() == nil {
+			// The deliverable exists — e.g. the agent's closing turn hit a
+			// provider error after finalize_journey had already written the
+			// artifact. Surface the error but finish as a success so the
+			// results flow (visualizer auto-open) still happens.
+			send("", "⚠ run ended with an error after journey.yaml was written: "+result.Err.Error())
+			return AnalysisDoneMsg{}
 		}
 		return AnalysisDoneMsg{Error: result.Err}
 	}
