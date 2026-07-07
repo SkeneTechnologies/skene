@@ -1,14 +1,13 @@
 package growth
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"skene/internal/constants"
 	"skene/internal/outputdirs"
@@ -54,19 +53,11 @@ type PhaseUpdate struct {
 	Message  string
 }
 
-// InteractivePrompt represents a prompt from uvx that requires user input
-type InteractivePrompt struct {
-	Question string
-	Options  []string
-	Response chan string
-}
-
 // AnalysisResult holds the complete analysis output
 type AnalysisResult struct {
 	GrowthPlan     string
 	Manifest       string
 	GrowthTemplate string
-	Journey        string
 	Error          error
 }
 
@@ -83,11 +74,12 @@ type EngineConfig struct {
 	UpstreamAPIKey string
 }
 
-// Engine spawns uvx commands to run Skene libraries in the selected repository
+// Engine spawns uvx commands for the legacy growth commands (analyze, plan,
+// build, validate, push). The journey analysis no longer runs through here —
+// it goes over the skene server API (internal/services/backend).
 type Engine struct {
 	config   EngineConfig
 	updateFn func(PhaseUpdate)
-	promptFn func(InteractivePrompt)
 }
 
 // NewEngine creates a new engine that delegates to uvx
@@ -96,11 +88,6 @@ func NewEngine(config EngineConfig, updateFn func(PhaseUpdate)) *Engine {
 		config:   config,
 		updateFn: updateFn,
 	}
-}
-
-// SetPromptHandler sets the callback for interactive prompts from uvx
-func (e *Engine) SetPromptHandler(fn func(InteractivePrompt)) {
-	e.promptFn = fn
 }
 
 // Run executes the analysis by spawning uvx skene analyze
@@ -127,42 +114,6 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 	result.GrowthTemplate = loadFileContent(filepath.Join(outputDir, constants.GrowthTemplateFile))
 
 	return result
-}
-
-// RunJourney executes the new agentic analyse-journey pipeline by spawning
-// uvx skene analyse-journey. The CLI now runs two parallel LLM agents (one
-// over the codebase, one over a SQL schema dir if provided) and emits a
-// single journey.yaml describing the user lifecycle in seven canonical
-// stages with evidence-backed milestones.
-//
-// This invocation is code-only — --schema-dir is intentionally omitted
-// until the TUI grows a view for collecting it.
-func (e *Engine) RunJourney(ctx context.Context) *AnalysisResult {
-	result := &AnalysisResult{}
-
-	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting journey analysis...")
-
-	if err := e.runUVX(ctx, e.journeyArgs()); err != nil {
-		result.Error = fmt.Errorf("analyse-journey failed: %w", err)
-		return result
-	}
-
-	e.sendUpdate(PhaseGenerateDocs, 1.0, "Analysis complete")
-
-	result.Journey = loadFileContent(filepath.Join(e.bundleOutputDir(), constants.JourneyFile))
-
-	return result
-}
-
-func (e *Engine) journeyArgs() []string {
-	args := []string{
-		constants.GrowthPackageSpec(), "analyse-journey", ".",
-		"-o", filepath.Join(e.bundleOutputDir(), constants.JourneyFile),
-	}
-	if e.config.Provider == "skene" && e.config.Upstream != "" && e.config.UpstreamAPIKey != "" {
-		args = append(args, "--auto-publish")
-	}
-	return args
 }
 
 // GeneratePlan spawns uvx skene plan
@@ -237,11 +188,9 @@ func (e *Engine) ValidateManifest() *AnalysisResult {
 	return result
 }
 
-// runUVX spawns a uvx command in the project directory and streams output.
-// It auto-provisions uv if not already installed.
-//
-// Uses chunk-based I/O so interactive prompts (no trailing newline) are
-// detected via a stall timer rather than waiting for a line delimiter.
+// runUVX spawns a uvx command in the project directory and streams its
+// output line by line into progress updates. The legacy commands it runs
+// are non-interactive; interactive flows live on the server now.
 func (e *Engine) runUVX(ctx context.Context, args []string) error {
 	uvxPath, err := uvresolver.Resolve()
 	if err != nil {
@@ -251,11 +200,7 @@ func (e *Engine) runUVX(ctx context.Context, args []string) error {
 	cmd := exec.CommandContext(ctx, uvxPath, args...)
 	cmd.Dir = e.config.ProjectDir
 	cmd.Env = append(os.Environ(), e.buildEnvVars()...)
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stdin pipe: %w", err)
-	}
+	cmd.Stdin = nil
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -267,155 +212,22 @@ func (e *Engine) runUVX(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to start uvx: %w", err)
 	}
 
-	type readResult struct {
-		line    string
-		isEOF   bool
-	}
-
-	readCh := make(chan readResult, 64)
-
-	go func() {
-		defer func() { readCh <- readResult{isEOF: true} }()
-		buf := make([]byte, 4096)
-		var partial bytes.Buffer
-		for {
-			n, readErr := stdout.Read(buf)
-			if n > 0 {
-				partial.Write(buf[:n])
-				for {
-					idx := bytes.IndexByte(partial.Bytes(), '\n')
-					if idx < 0 {
-						break
-					}
-					line := strings.TrimRight(string(partial.Bytes()[:idx]), "\r")
-					rest := make([]byte, partial.Len()-idx-1)
-					copy(rest, partial.Bytes()[idx+1:])
-					partial.Reset()
-					partial.Write(rest)
-					readCh <- readResult{line: line}
-				}
-			}
-			if readErr != nil {
-				if partial.Len() > 0 {
-					readCh <- readResult{line: strings.TrimRight(partial.String(), "\r")}
-				}
-				return
-			}
-		}
-	}()
-
 	var lastLines []string
-	appendLast := func(line string) {
+	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := strings.TrimRight(scanner.Text(), "\r")
+		e.sendUpdate(PhaseDetectFeatures, 0.5, line)
 		lastLines = append(lastLines, line)
 		if len(lastLines) > 10 {
 			lastLines = lastLines[1:]
 		}
 	}
 
-	var pendingOptions []string
-	var pendingQuestion string
-	collectingOptions := false
-
-	firePrompt := func() {
-		if len(pendingOptions) == 0 || e.promptFn == nil {
-			return
-		}
-		responseCh := make(chan string, 1)
-		e.promptFn(InteractivePrompt{
-			Question: pendingQuestion,
-			Options:  pendingOptions,
-			Response: responseCh,
-		})
-		select {
-		case answer := <-responseCh:
-			_, _ = fmt.Fprintln(stdin, answer)
-		case <-ctx.Done():
-			_ = stdin.Close()
-		}
-		collectingOptions = false
-		pendingOptions = nil
-		pendingQuestion = ""
-	}
-
-	processLine := func(line string) {
-		trimmed := strings.TrimSpace(line)
-
-		if collectingOptions {
-			if opt := parseOptionLine(trimmed); opt != "" {
-				pendingOptions = append(pendingOptions, opt)
-				return
-			}
-			if isSelectLine(trimmed) && len(pendingOptions) > 0 {
-				firePrompt()
-				return
-			}
-			// Non-option, non-select line while collecting: fire what we have
-			if len(pendingOptions) > 0 {
-				firePrompt()
-			} else {
-				collectingOptions = false
-			}
-		}
-
-		if isPromptQuestion(trimmed) {
-			collectingOptions = true
-			pendingQuestion = trimmed
-			pendingOptions = nil
-			e.sendUpdate(PhaseDetectFeatures, 0.5, line)
-			appendLast(line)
-			return
-		}
-
-		e.sendUpdate(PhaseDetectFeatures, 0.5, line)
-		appendLast(line)
-	}
-
-	stallTimeout := 800 * time.Millisecond
-
-	for {
-		var timer *time.Timer
-		if collectingOptions && len(pendingOptions) > 0 {
-			timer = time.NewTimer(stallTimeout)
-		}
-
-		if timer != nil {
-			select {
-			case r := <-readCh:
-				timer.Stop()
-				if r.isEOF {
-					if collectingOptions && len(pendingOptions) > 0 {
-						firePrompt()
-					}
-					goto done
-				}
-				processLine(r.line)
-			case <-timer.C:
-				firePrompt()
-			case <-ctx.Done():
-				timer.Stop()
-				_ = stdin.Close()
-				goto done
-			}
-		} else {
-			select {
-			case r := <-readCh:
-				if r.isEOF {
-					goto done
-				}
-				processLine(r.line)
-			case <-ctx.Done():
-				_ = stdin.Close()
-				goto done
-			}
-		}
-	}
-
-done:
-	if ctx.Err() != nil {
-		_ = cmd.Wait()
-		return ctx.Err()
-	}
 	if err := cmd.Wait(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		tail := strings.Join(lastLines, "\n")
 		if tail != "" {
 			return fmt.Errorf("uvx command failed:\n%s", tail)
@@ -423,42 +235,6 @@ done:
 		return fmt.Errorf("uvx command failed: %w", err)
 	}
 	return nil
-}
-
-func isPromptQuestion(line string) bool {
-	lower := strings.ToLower(line)
-	if strings.Contains(lower, "where do you want") ||
-		strings.Contains(lower, "select an option") {
-		return true
-	}
-	if strings.HasSuffix(lower, "?") &&
-		!strings.HasPrefix(lower, "#") &&
-		len(lower) < 120 {
-		return true
-	}
-	return false
-}
-
-func parseOptionLine(line string) string {
-	trimmed := strings.TrimSpace(line)
-	if len(trimmed) < 3 {
-		return ""
-	}
-	if trimmed[0] >= '1' && trimmed[0] <= '9' {
-		rest := trimmed[1:]
-		if strings.HasPrefix(rest, ".") || strings.HasPrefix(rest, ")") {
-			return strings.TrimSpace(rest[1:])
-		}
-	}
-	return ""
-}
-
-func isSelectLine(line string) bool {
-	lower := strings.ToLower(line)
-	return strings.Contains(lower, "select option") ||
-		strings.Contains(lower, "[1/") ||
-		strings.Contains(lower, "(1)") ||
-		strings.Contains(lower, "enter your choice")
 }
 
 func (e *Engine) buildEnvVars() []string {
@@ -485,11 +261,6 @@ func (e *Engine) buildEnvVars() []string {
 		envs = append(envs, "SKENE_OUTPUT_DIR="+outDir)
 	}
 	return envs
-}
-
-// bundleOutputDir is the canonical <project>/skene directory (schema, engine).
-func (e *Engine) bundleOutputDir() string {
-	return outputdirs.Bundle(e.config.ProjectDir)
 }
 
 // contextOutputDir is the configured / legacy path for non-bundle outputs (manifest, plans, etc.).

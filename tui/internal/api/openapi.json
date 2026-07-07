@@ -1,0 +1,2041 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "skene",
+    "description": "Backend server for the skene analysis engine.",
+    "version": "0.5.1"
+  },
+  "paths": {
+    "/session": {
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Create Session",
+        "operationId": "create_session_session_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "x-skene-directory",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "X-Skene-Directory",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "List Sessions",
+        "operationId": "list_sessions_session_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "x-skene-directory",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "X-Skene-Directory",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  },
+                  "title": "Response List Sessions Session Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}": {
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_session__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/children": {
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "List Children",
+        "operationId": "list_children_session__session_id__children_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  },
+                  "title": "Response List Children Session  Session Id  Children Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/message": {
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "List Messages",
+        "operationId": "list_messages_session__session_id__message_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageWithParts"
+                  },
+                  "title": "Response List Messages Session  Session Id  Message Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Prompt",
+        "description": "Record the user message and start the run; progress streams on ``/event``.",
+        "operationId": "prompt_session__session_id__message_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/UserMessage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AssistantMessage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SyntheticMessage"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "role",
+                    "mapping": {
+                      "user": "#/components/schemas/UserMessage",
+                      "assistant": "#/components/schemas/AssistantMessage",
+                      "synthetic": "#/components/schemas/SyntheticMessage"
+                    }
+                  },
+                  "title": "Response Prompt Session  Session Id  Message Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/abort": {
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Abort",
+        "operationId": "abort_session__session_id__abort_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Abort Session  Session Id  Abort Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/event": {
+      "get": {
+        "tags": [
+          "event"
+        ],
+        "summary": "Events",
+        "description": "Stream every bus event as SSE.\n\nWith an ``x-skene-directory`` header, only that workspace's events (plus\nserver-wide ones like heartbeats) are delivered; without it the stream\nis unfiltered \u2014 unlike the REST routes, which fall back to the server\ncwd, a global observer is the more useful default for an event tap.",
+        "operationId": "events_event_get",
+        "parameters": [
+          {
+            "name": "x-skene-directory",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "X-Skene-Directory",
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/journey/analyse": {
+      "post": {
+        "tags": [
+          "journey"
+        ],
+        "summary": "Analyse",
+        "description": "Start the canned journey analysis in a fresh session.\n\nThe run proceeds async: watch ``/event`` for progress; the result lands\nas an ``artifact`` part (and as ``journey.yaml`` in the workspace).",
+        "operationId": "analyse_journey_analyse_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "x-skene-directory",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "X-Skene-Directory",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyAnalyseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyAnalyseAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/journey": {
+      "get": {
+        "tags": [
+          "journey"
+        ],
+        "summary": "Get Journey",
+        "description": "Latest ``journey.yaml`` for the workspace, parsed to JSON.",
+        "operationId": "get_journey_journey_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "x-skene-directory",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "X-Skene-Directory",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Journey Journey Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "List Agents",
+        "description": "Registered agents: primaries are promptable, subagents are reachable\nonly through a primary agent's ``task`` tool.",
+        "operationId": "list_agents_agent_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentInfo"
+                  },
+                  "title": "Response List Agents Agent Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "subagent"
+            ],
+            "title": "Mode"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "title": "Model",
+            "type": "string",
+            "nullable": true
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "name"
+        ],
+        "title": "AgentInfo",
+        "description": "A registered agent as exposed by ``GET /agent``.\n\n``primary`` agents are user-selectable; ``subagent`` agents are only\nreachable through a primary agent's ``task`` tool."
+      },
+      "ArtifactPart": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "messageId": {
+            "type": "string",
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "artifact",
+            "enum": [
+              "artifact"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "messageId",
+          "path",
+          "sessionId",
+          "type"
+        ],
+        "title": "ArtifactPart",
+        "description": "A file the run produced (e.g. ``journey.yaml``)."
+      },
+      "AssistantMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "assistant",
+            "enum": [
+              "assistant"
+            ]
+          },
+          "agent": {
+            "type": "string",
+            "title": "Agent"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "title": "Model",
+            "type": "string",
+            "nullable": true
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenUsage"
+              }
+            ],
+            "nullable": true
+          },
+          "finish": {
+            "title": "Finish",
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "title": "Error",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "agent",
+          "created",
+          "id",
+          "role",
+          "sessionId"
+        ],
+        "title": "AssistantMessage"
+      },
+      "CandidateMilestone": {
+        "properties": {
+          "proposedId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Proposedid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Description"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Evidence"
+          },
+          "trackedEvent": {
+            "title": "Trackedevent",
+            "type": "string",
+            "nullable": true
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 1.0
+          },
+          "stageId": {
+            "title": "Stageid",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "description",
+          "evidence",
+          "name",
+          "proposedId"
+        ],
+        "title": "CandidateMilestone",
+        "description": "A milestone candidate emitted by a subagent, before classification."
+      },
+      "Evidence": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/EvidenceSource"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "path": {
+            "title": "Path",
+            "description": "Required when source == 'code'. File path inside the repo.",
+            "type": "string",
+            "nullable": true
+          },
+          "table": {
+            "title": "Table",
+            "description": "Required when source == 'db'. Table or collection name.",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "source"
+        ],
+        "title": "Evidence",
+        "description": "A pointer back to the code path or DB table that justifies a milestone."
+      },
+      "EvidenceSource": {
+        "type": "string",
+        "enum": [
+          "code",
+          "db",
+          "config"
+        ],
+        "title": "EvidenceSource"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JourneyAnalyseAccepted": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "title": "JourneyAnalyseAccepted",
+        "description": "Ack for ``POST /journey/analyse``: the run proceeds async in this session."
+      },
+      "JourneyAnalyseRequest": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string",
+            "nullable": true
+          },
+          "schemaDir": {
+            "title": "Schemadir",
+            "type": "string",
+            "nullable": true
+          },
+          "dbUrl": {
+            "title": "Dburl",
+            "type": "string",
+            "nullable": true
+          },
+          "productName": {
+            "title": "Productname",
+            "type": "string",
+            "nullable": true
+          },
+          "output": {
+            "title": "Output",
+            "type": "string",
+            "nullable": true
+          },
+          "schemaMaxTurns": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Schemamaxturns",
+            "default": 150
+          },
+          "codeMaxTurns": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Codemaxturns",
+            "default": 200
+          },
+          "classifyConcurrency": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Classifyconcurrency",
+            "default": 8
+          },
+          "specialize": {
+            "type": "boolean",
+            "title": "Specialize",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "JourneyAnalyseRequest",
+        "description": "Body of ``POST /journey/analyse`` \u2014 the v1-compat canned analysis.\n\nMirrors the ``skene analyse-journey`` CLI flags. ``db_url`` is used for\nlive introspection only and is never persisted or echoed back \u2014 the\nstored session records a redacted display form."
+      },
+      "MessageWithParts": {
+        "properties": {
+          "info": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserMessage"
+              },
+              {
+                "$ref": "#/components/schemas/AssistantMessage"
+              },
+              {
+                "$ref": "#/components/schemas/SyntheticMessage"
+              }
+            ],
+            "title": "Info",
+            "discriminator": {
+              "propertyName": "role",
+              "mapping": {
+                "assistant": "#/components/schemas/AssistantMessage",
+                "synthetic": "#/components/schemas/SyntheticMessage",
+                "user": "#/components/schemas/UserMessage"
+              }
+            }
+          },
+          "parts": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TextPart"
+                },
+                {
+                  "$ref": "#/components/schemas/ReasoningPart"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolPart"
+                },
+                {
+                  "$ref": "#/components/schemas/MilestonePart"
+                },
+                {
+                  "$ref": "#/components/schemas/ArtifactPart"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "artifact": "#/components/schemas/ArtifactPart",
+                  "milestone": "#/components/schemas/MilestonePart",
+                  "reasoning": "#/components/schemas/ReasoningPart",
+                  "text": "#/components/schemas/TextPart",
+                  "tool": "#/components/schemas/ToolPart"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Parts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "info"
+        ],
+        "title": "MessageWithParts",
+        "description": "One message plus its parts, as returned by ``GET /session/{id}/message``."
+      },
+      "MilestonePart": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "messageId": {
+            "type": "string",
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "milestone",
+            "enum": [
+              "milestone"
+            ]
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/CandidateMilestone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "messageId",
+          "milestone",
+          "sessionId",
+          "type"
+        ],
+        "title": "MilestonePart",
+        "description": "A candidate milestone emitted by an analysis agent's ``emit_milestone``.\n\nStreams live from subagent runs \u2014 ``milestone.stage_id`` is still\n``None`` at this point; classification happens later in\n``finalize_journey`` and is only visible in the ``journey.yaml``\nartifact, not retroactively on these parts."
+      },
+      "PromptRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "PromptRequest",
+        "description": "Body of ``POST /session/{id}/message``."
+      },
+      "ReasoningPart": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "messageId": {
+            "type": "string",
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "reasoning",
+            "enum": [
+              "reasoning"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "messageId",
+          "sessionId",
+          "text",
+          "type"
+        ],
+        "title": "ReasoningPart"
+      },
+      "Session": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "projectId": {
+            "type": "string",
+            "title": "Projectid"
+          },
+          "parentId": {
+            "title": "Parentid",
+            "type": "string",
+            "nullable": true
+          },
+          "agent": {
+            "type": "string",
+            "title": "Agent"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "running",
+              "error"
+            ],
+            "title": "Status",
+            "default": "idle"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "agent",
+          "created",
+          "id",
+          "projectId",
+          "updated"
+        ],
+        "title": "Session",
+        "description": "One agent conversation.\n\nSubagent runs are child sessions: ``parent_id`` points at the session\nwhose ``task`` tool spawned them."
+      },
+      "SessionCreateRequest": {
+        "properties": {
+          "agent": {
+            "type": "string",
+            "title": "Agent",
+            "default": "skene"
+          },
+          "parentId": {
+            "title": "Parentid",
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "title": "Title",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SessionCreateRequest"
+      },
+      "SyntheticMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "synthetic",
+            "enum": [
+              "synthetic"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "created",
+          "id",
+          "role",
+          "sessionId"
+        ],
+        "title": "SyntheticMessage",
+        "description": "Server-injected content, e.g. a subagent result surfaced to its parent."
+      },
+      "TextPart": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "messageId": {
+            "type": "string",
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "text",
+            "enum": [
+              "text"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "messageId",
+          "sessionId",
+          "text",
+          "type"
+        ],
+        "title": "TextPart"
+      },
+      "TokenUsage": {
+        "properties": {
+          "input": {
+            "type": "integer",
+            "title": "Input",
+            "default": 0
+          },
+          "output": {
+            "type": "integer",
+            "title": "Output",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TokenUsage"
+      },
+      "ToolPart": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "messageId": {
+            "type": "string",
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "tool",
+            "enum": [
+              "tool"
+            ]
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "callId": {
+            "type": "string",
+            "title": "Callid"
+          },
+          "state": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ToolStatePending"
+              },
+              {
+                "$ref": "#/components/schemas/ToolStateRunning"
+              },
+              {
+                "$ref": "#/components/schemas/ToolStateCompleted"
+              },
+              {
+                "$ref": "#/components/schemas/ToolStateError"
+              }
+            ],
+            "title": "State",
+            "discriminator": {
+              "propertyName": "status",
+              "mapping": {
+                "completed": "#/components/schemas/ToolStateCompleted",
+                "error": "#/components/schemas/ToolStateError",
+                "pending": "#/components/schemas/ToolStatePending",
+                "running": "#/components/schemas/ToolStateRunning"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "callId",
+          "id",
+          "messageId",
+          "sessionId",
+          "state",
+          "tool",
+          "type"
+        ],
+        "title": "ToolPart"
+      },
+      "ToolStateCompleted": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed",
+            "enum": [
+              "completed"
+            ]
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          },
+          "output": {
+            "type": "string",
+            "title": "Output",
+            "default": ""
+          },
+          "title": {
+            "title": "Title",
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "started": {
+            "title": "Started",
+            "type": "integer",
+            "nullable": true
+          },
+          "ended": {
+            "title": "Ended",
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ToolStateCompleted",
+        "required": [
+          "status"
+        ]
+      },
+      "ToolStateError": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "error",
+            "enum": [
+              "error"
+            ]
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "default": ""
+          },
+          "started": {
+            "title": "Started",
+            "type": "integer",
+            "nullable": true
+          },
+          "ended": {
+            "title": "Ended",
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ToolStateError",
+        "required": [
+          "status"
+        ]
+      },
+      "ToolStatePending": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending",
+            "enum": [
+              "pending"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ToolStatePending",
+        "required": [
+          "status"
+        ]
+      },
+      "ToolStateRunning": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "running",
+            "enum": [
+              "running"
+            ]
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string",
+            "nullable": true
+          },
+          "started": {
+            "title": "Started",
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ToolStateRunning",
+        "required": [
+          "status"
+        ]
+      },
+      "UserMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "user",
+            "enum": [
+              "user"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "created",
+          "id",
+          "role",
+          "sessionId"
+        ],
+        "title": "UserMessage"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "MessageCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "message.created",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "message.created"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_MessageProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "MessageCreated",
+        "type": "object"
+      },
+      "MessageUpdated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "message.updated",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "message.updated"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_MessageProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "MessageUpdated",
+        "type": "object"
+      },
+      "PartCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "part.created",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "part.created"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_PartProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "PartCreated",
+        "type": "object"
+      },
+      "PartUpdated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "part.updated",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "part.updated"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_PartProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "PartUpdated",
+        "type": "object"
+      },
+      "ServerConnected": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "server.connected",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "server.connected"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_Empty"
+          }
+        },
+        "title": "ServerConnected",
+        "type": "object",
+        "required": [
+          "type"
+        ]
+      },
+      "ServerHeartbeat": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "server.heartbeat",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "server.heartbeat"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_Empty"
+          }
+        },
+        "title": "ServerHeartbeat",
+        "type": "object",
+        "required": [
+          "type"
+        ]
+      },
+      "SessionCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "session.created",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "session.created"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_SessionProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "SessionCreated",
+        "type": "object"
+      },
+      "SessionError": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "session.error",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "session.error"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_SessionErrorProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "SessionError",
+        "type": "object"
+      },
+      "SessionIdle": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "session.idle",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "session.idle"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_SessionProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "SessionIdle",
+        "type": "object"
+      },
+      "SessionUpdated": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "session.updated",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "session.updated"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_SessionProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "SessionUpdated",
+        "type": "object"
+      },
+      "_Empty": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "_Empty",
+        "type": "object"
+      },
+      "_MessageProps": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "discriminator": {
+              "mapping": {
+                "assistant": "#/components/schemas/AssistantMessage",
+                "synthetic": "#/components/schemas/SyntheticMessage",
+                "user": "#/components/schemas/UserMessage"
+              },
+              "propertyName": "role"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserMessage"
+              },
+              {
+                "$ref": "#/components/schemas/AssistantMessage"
+              },
+              {
+                "$ref": "#/components/schemas/SyntheticMessage"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "_MessageProps",
+        "type": "object"
+      },
+      "_PartProps": {
+        "additionalProperties": false,
+        "properties": {
+          "part": {
+            "discriminator": {
+              "mapping": {
+                "artifact": "#/components/schemas/ArtifactPart",
+                "milestone": "#/components/schemas/MilestonePart",
+                "reasoning": "#/components/schemas/ReasoningPart",
+                "text": "#/components/schemas/TextPart",
+                "tool": "#/components/schemas/ToolPart"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TextPart"
+              },
+              {
+                "$ref": "#/components/schemas/ReasoningPart"
+              },
+              {
+                "$ref": "#/components/schemas/ToolPart"
+              },
+              {
+                "$ref": "#/components/schemas/MilestonePart"
+              },
+              {
+                "$ref": "#/components/schemas/ArtifactPart"
+              }
+            ],
+            "title": "Part"
+          },
+          "delta": {
+            "default": null,
+            "title": "Delta",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "part"
+        ],
+        "title": "_PartProps",
+        "type": "object"
+      },
+      "_SessionErrorProps": {
+        "additionalProperties": false,
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "session"
+        ],
+        "title": "_SessionErrorProps",
+        "type": "object"
+      },
+      "_SessionProps": {
+        "additionalProperties": false,
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          }
+        },
+        "required": [
+          "session"
+        ],
+        "title": "_SessionProps",
+        "type": "object"
+      },
+      "Event": {
+        "discriminator": {
+          "mapping": {
+            "message.created": "#/components/schemas/MessageCreated",
+            "message.updated": "#/components/schemas/MessageUpdated",
+            "part.created": "#/components/schemas/PartCreated",
+            "part.updated": "#/components/schemas/PartUpdated",
+            "server.connected": "#/components/schemas/ServerConnected",
+            "server.heartbeat": "#/components/schemas/ServerHeartbeat",
+            "session.created": "#/components/schemas/SessionCreated",
+            "session.error": "#/components/schemas/SessionError",
+            "session.idle": "#/components/schemas/SessionIdle",
+            "session.updated": "#/components/schemas/SessionUpdated"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ServerConnected"
+          },
+          {
+            "$ref": "#/components/schemas/ServerHeartbeat"
+          },
+          {
+            "$ref": "#/components/schemas/SessionCreated"
+          },
+          {
+            "$ref": "#/components/schemas/SessionUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/SessionIdle"
+          },
+          {
+            "$ref": "#/components/schemas/SessionError"
+          },
+          {
+            "$ref": "#/components/schemas/MessageCreated"
+          },
+          {
+            "$ref": "#/components/schemas/MessageUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/PartCreated"
+          },
+          {
+            "$ref": "#/components/schemas/PartUpdated"
+          }
+        ]
+      }
+    }
+  }
+}
