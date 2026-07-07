@@ -24,7 +24,9 @@ async def analyse(body: JourneyAnalyseRequest, services: Services, directory: Di
     as an ``artifact`` part (and as ``journey.yaml`` in the workspace).
     """
     try:
-        handle = await start_journey_run(services.sessions, services.registry, directory, body)
+        handle = await start_journey_run(
+            services.sessions, services.registry, directory, body, permissions=services.permissions
+        )
     except JourneyRequestError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:

@@ -135,6 +135,22 @@ def analyse_journey_cmd(
         "--no-fallback",
         help="Disable model fallback on rate limits; retry same model instead",
     ),
+    server: str | None = typer.Option(
+        None,
+        "--server",
+        envvar="SKENE_SERVER_URL",
+        help=(
+            "Run the analysis on a remote skene server instead of locally "
+            "(default: the server stored by `skene attach`, if any). Paths "
+            "are interpreted on the server's filesystem."
+        ),
+    ),
+    server_token: str | None = typer.Option(
+        None,
+        "--server-token",
+        envvar="SKENE_SERVER_TOKEN",
+        help="Bearer token for --server (default: the token stored by `skene attach`).",
+    ),
     auto_publish: bool = typer.Option(
         False,
         "--auto-publish",
@@ -201,6 +217,27 @@ def analyse_journey_cmd(
         quiet=quiet,
         debug=debug,
     )
+
+    # Attached to a server (via `skene attach` or --server)? Run remotely —
+    # the server holds the LLM credentials, so none are needed locally.
+    server_url = server or rc.config.get("server_url")
+    if server_url:
+        _run_remote(
+            server_url,
+            server_token or rc.config.get("server_token"),
+            config_root=config_root,
+            base_path=base_path,
+            schema_path=schema_path,
+            db_url=db_url,
+            output=output,
+            product_name=product_name,
+            schema_max_turns=schema_max_turns,
+            code_max_turns=code_max_turns,
+            classify_concurrency=classify_concurrency,
+            specialize=not no_specialize,
+        )
+        return
+
     resolved_api_key = require_llm_credentials(rc, "analyse-journey")
 
     journey_path = resolve_artifact_path(output, "journey.yaml")
@@ -250,6 +287,59 @@ def analyse_journey_cmd(
     _render_summary(journey_path, journey)
 
     _maybe_auto_publish(rc, config_root, journey_path=journey_path, enabled=auto_publish)
+
+
+def _run_remote(
+    server_url: str,
+    server_token: str | None,
+    *,
+    config_root: Path,
+    base_path: Path | None,
+    schema_path: Path | None,
+    db_url: str | None,
+    output: Path,
+    product_name: str | None,
+    schema_max_turns: int,
+    code_max_turns: int,
+    classify_concurrency: int,
+    specialize: bool,
+) -> None:
+    """Drive the analysis on an attached server; paths are server-side."""
+    import asyncio
+
+    from skene.cli.remote import RemoteServerError, check_health, run_journey_remote
+
+    try:
+        check_health(server_url, server_token)
+    except RemoteServerError as e:
+        error(f"{e}\n(re-run `skene attach <url>` or `skene attach --clear` to run locally)")
+        raise typer.Exit(1) from e
+
+    request = JourneyAnalyseRequest(
+        path=str(base_path) if base_path is not None else None,
+        schema_dir=str(schema_path) if schema_path is not None else None,
+        db_url=db_url,
+        product_name=product_name,
+        output=str(output) if output != Path(f"{DEFAULT_OUTPUT_DIR}/journey.yaml") else None,
+        classify_concurrency=classify_concurrency,
+        schema_max_turns=schema_max_turns,
+        code_max_turns=code_max_turns,
+        specialize=specialize,
+    )
+    console.print(f"[bold]skene · analyse-journey[/bold] [dim]→ remote server {server_url}[/dim]")
+    try:
+        artifact = asyncio.run(run_journey_remote(server_url, server_token, str(config_root), request))
+    except KeyboardInterrupt:
+        error("aborted")
+        raise typer.Exit(130) from None
+    except RemoteServerError as e:
+        error(f"analysis failed: {e}")
+        raise typer.Exit(1) from e
+
+    summary = artifact.get("summary") or ""
+    if summary:
+        console.print(summary)
+    console.print(f"\n[green]✓[/green] wrote {artifact.get('path')} (on {server_url})")
 
 
 def _maybe_auto_publish(rc, project_root: Path, *, journey_path: Path, enabled: bool) -> None:

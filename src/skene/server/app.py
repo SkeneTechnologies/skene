@@ -21,9 +21,9 @@ from pydantic import TypeAdapter
 from skene import __version__
 from skene.core.services import CoreServices, create_services
 from skene.core.sessions import LLMFactory
-from skene.schema import Event
+from skene.schema import Event, ServerConfigInfo
 from skene.server.deps import require_auth
-from skene.server.routes import agent, event, journey, session
+from skene.server.routes import agent, config, event, journey, session
 
 
 def create_app(
@@ -32,11 +32,14 @@ def create_app(
     db_path: Path | str | None = None,
     llm_factory: LLMFactory | None = None,
     auth_token: str | None = None,
+    config_info: ServerConfigInfo | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         owned = services is None
-        app.state.services = services if services is not None else await create_services(db_path, llm_factory)
+        app.state.services = (
+            services if services is not None else await create_services(db_path, llm_factory, config_info=config_info)
+        )
         try:
             yield
         finally:
@@ -59,6 +62,7 @@ def create_app(
     app.include_router(event.router, dependencies=protected)
     app.include_router(journey.router, dependencies=protected)
     app.include_router(agent.router, dependencies=protected)
+    app.include_router(config.router, dependencies=protected)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:

@@ -10,12 +10,15 @@ models accept both on input.
 """
 
 from skene.schema.agent import AgentInfo, AgentMode
+from skene.schema.config import ProviderInfo, ServerConfigInfo
 from skene.schema.event import (
     Event,
     MessageCreated,
     MessageUpdated,
     PartCreated,
     PartUpdated,
+    PermissionAnswered,
+    PermissionAsked,
     ServerConnected,
     ServerHeartbeat,
     SessionCreated,
@@ -48,6 +51,12 @@ from skene.schema.milestone import (
     Evidence,
     EvidenceSource,
 )
+from skene.schema.permission import (
+    PermissionAnswer,
+    PermissionReply,
+    PermissionRequest,
+    PermissionStatus,
+)
 from skene.schema.request import (
     JourneyAnalyseAccepted,
     JourneyAnalyseRequest,
@@ -77,9 +86,17 @@ __all__ = [
     "Part",
     "PartCreated",
     "PartUpdated",
+    "PermissionAnswer",
+    "PermissionAnswered",
+    "PermissionAsked",
+    "PermissionReply",
+    "PermissionRequest",
+    "PermissionStatus",
     "Project",
     "PromptRequest",
+    "ProviderInfo",
     "ReasoningPart",
+    "ServerConfigInfo",
     "ServerConnected",
     "ServerHeartbeat",
     "Session",

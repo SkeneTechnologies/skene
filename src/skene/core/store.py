@@ -20,7 +20,7 @@ import aiosqlite
 from pydantic import TypeAdapter
 
 from skene.core.bus import normalize_directory
-from skene.schema import Message, Part, Project, Session, new_id
+from skene.schema import Message, Part, PermissionRequest, Project, Session, new_id
 
 DEFAULT_DB_PATH = Path("~/.local/share/skene/skene.db").expanduser()
 
@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS part (
     data       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_part_message ON part(message_id, created);
+CREATE TABLE IF NOT EXISTS permission_request (
+    id         TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES session(id),
+    status     TEXT NOT NULL,
+    created    INTEGER NOT NULL,
+    data       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_permission_session ON permission_request(session_id, created);
 """
 
 
@@ -72,6 +80,10 @@ def now_ms() -> int:
 
 class UnknownSessionError(KeyError):
     """Raised when a session id does not exist."""
+
+
+class UnknownPermissionError(KeyError):
+    """Raised when a permission request id does not exist."""
 
 
 class Store:
@@ -249,11 +261,36 @@ class Store:
             result.append((message, parts_by_message.get(message.id, [])))
         return result
 
+    # -- permission requests ---------------------------------------------------
+
+    async def save_permission(self, request: PermissionRequest) -> None:
+        """Insert or replace a permission request (answers rewrite the JSON)."""
+        await self._db.execute(
+            "INSERT INTO permission_request (id, session_id, status, created, data) VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET status = excluded.status, data = excluded.data",
+            (request.id, request.session_id, request.status, request.created, request.model_dump_json()),
+        )
+        await self._db.commit()
+
+    async def get_permission(self, perm_id: str) -> PermissionRequest:
+        async with self._db.execute("SELECT data FROM permission_request WHERE id = ?", (perm_id,)) as cur:
+            row = await cur.fetchone()
+        if row is None:
+            raise UnknownPermissionError(perm_id)
+        return PermissionRequest.model_validate_json(row["data"])
+
+    async def list_permissions(self, session_id: str) -> list[PermissionRequest]:
+        async with self._db.execute(
+            "SELECT data FROM permission_request WHERE session_id = ? ORDER BY created, id", (session_id,)
+        ) as cur:
+            rows = await cur.fetchall()
+        return [PermissionRequest.model_validate_json(row["data"]) for row in rows]
+
     # -- diagnostics ----------------------------------------------------------
 
     async def counts(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
-        for table in ("project", "session", "message", "part"):
+        for table in ("project", "session", "message", "part", "permission_request"):
             async with self._db.execute(f"SELECT COUNT(*) AS n FROM {table}") as cur:  # noqa: S608
                 row = await cur.fetchone()
             out[table] = row["n"]

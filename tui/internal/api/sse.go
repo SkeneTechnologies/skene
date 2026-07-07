@@ -51,6 +51,10 @@ func (e EventEnvelope) Decode() (interface{}, error) {
 		target = &PartCreated{}
 	case "part.updated":
 		target = &PartUpdated{}
+	case "permission.asked":
+		target = &PermissionAsked{}
+	case "permission.answered":
+		target = &PermissionAnswered{}
 	default:
 		return nil, nil
 	}

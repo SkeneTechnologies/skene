@@ -36,6 +36,7 @@ from skene.analyzers.journey.specialize import specialize_stages
 from skene.analyzers.journey.stages import STAGES
 from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.core.agents import AgentDef, AgentRegistry
+from skene.core.permissions import PermissionService
 from skene.core.redact import redact_db_url
 from skene.core.sessions import RunFactory, SessionService
 from skene.core.store import now_ms
@@ -98,6 +99,7 @@ class JourneyRunContext:
         config: JourneyRunConfig,
         llm: LLMClient | None = None,
         result: "asyncio.Future[Journey] | None" = None,
+        permissions: PermissionService | None = None,
     ) -> None:
         self.sessions = sessions
         self.registry = registry
@@ -105,6 +107,9 @@ class JourneyRunContext:
         self.config = config
         self.llm = llm
         self.result = result
+        # For tool closures that guard side effects behind an ask (none of
+        # the built-in journey tools do yet — they are read-only).
+        self.permissions = permissions
         self.message_id: str | None = None
         self.journey: Journey | None = None
         self._schema_index: SchemaIndex | None = None
@@ -313,23 +318,37 @@ async def _finalize_journey(ctx: JourneyRunContext) -> str:
 # ---------------------------------------------------------------------------
 
 
-def make_run_factory(sessions: SessionService, registry: AgentRegistry) -> RunFactory:
+def make_run_factory(
+    sessions: SessionService, registry: AgentRegistry, permissions: PermissionService | None = None
+) -> RunFactory:
     """Prompt dispatch: primary agents get the main-agent flow with
     workspace defaults; everything else keeps the chat fallback."""
 
     def factory(session: Session, text: str):
-        return _prompt_run(sessions, registry, session, text)
+        return _prompt_run(sessions, registry, permissions, session, text)
 
     return factory
 
 
-async def _prompt_run(sessions: SessionService, registry: AgentRegistry, session: Session, text: str) -> None:
+async def _prompt_run(
+    sessions: SessionService,
+    registry: AgentRegistry,
+    permissions: PermissionService | None,
+    session: Session,
+    text: str,
+) -> None:
     agent = registry.get(session.agent)
     if agent is None or agent.mode != "primary":
         await sessions.chat_run(session, text)
         return
     directory = await sessions.store.session_directory(session.id)
-    ctx = JourneyRunContext(sessions=sessions, registry=registry, session=session, config=_default_config(directory))
+    ctx = JourneyRunContext(
+        sessions=sessions,
+        registry=registry,
+        session=session,
+        config=_default_config(directory),
+        permissions=permissions,
+    )
     await _agent_run(ctx, agent, text)
 
 
@@ -349,6 +368,7 @@ async def _agent_run(ctx: JourneyRunContext, agent: AgentDef, initial_input: str
             initial_input=initial_input,
             max_turns=agent.max_turns,
             llm=ctx.llm,
+            model=agent.model,
             on_start=on_start,
         )
     except asyncio.CancelledError:
@@ -383,6 +403,7 @@ async def start_journey_run(
     directory: str,
     request: JourneyAnalyseRequest,
     llm: LLMClient | None = None,
+    permissions: PermissionService | None = None,
 ) -> JourneyRunHandle:
     """Create a ``skene`` session and send it the canned analyse prompt.
 
@@ -395,7 +416,8 @@ async def start_journey_run(
     agent = registry.get("skene")
     if agent is None or agent.mode != "primary":
         raise JourneyRequestError("registry has no primary 'skene' agent")
-    llm = llm or sessions.llm_factory()  # resolve before creating anything: no orphan session on missing credentials
+    # Resolve before creating anything: no orphan session on missing credentials.
+    llm = llm or sessions.resolve_llm(agent.model)
 
     session = await sessions.create_session(
         directory, agent=agent.name, title=f"analyse-journey: {config.product_name}"
@@ -407,7 +429,13 @@ async def start_journey_run(
 
     result: asyncio.Future[Journey] = asyncio.get_running_loop().create_future()
     ctx = JourneyRunContext(
-        sessions=sessions, registry=registry, session=session, config=config, llm=llm, result=result
+        sessions=sessions,
+        registry=registry,
+        session=session,
+        config=config,
+        llm=llm,
+        result=result,
+        permissions=permissions,
     )
     sessions.start_run(session, _agent_run(ctx, agent, prompt))
     return JourneyRunHandle(session=session, result=result)

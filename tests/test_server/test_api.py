@@ -184,6 +184,68 @@ async def test_bearer_auth(services, workspace):
         assert (await client.get("/health")).status_code == 200
 
 
+async def test_permission_ask_answer_flow(client, services):
+    import asyncio
+
+    session_id = (await client.post("/session", json={})).json()["id"]
+    ask = asyncio.create_task(services.permissions.ask(session_id, tool="write_db", title="Write to users?"))
+    while not (pending := (await client.get(f"/session/{session_id}/permissions")).json()):
+        await asyncio.sleep(0.01)
+
+    request = pending[0]
+    assert request["status"] == "pending"
+    assert request["sessionId"] == session_id
+    assert request["tool"] == "write_db"
+
+    answered = await client.post(f"/session/{session_id}/permissions/{request['id']}", json={"reply": "allow"})
+    assert answered.status_code == 200
+    assert answered.json()["status"] == "allowed"
+    assert await ask is True
+
+    # One-shot: a second answer conflicts.
+    again = await client.post(f"/session/{session_id}/permissions/{request['id']}", json={"reply": "deny"})
+    assert again.status_code == 409
+
+    # Unknown ids and wrong sessions are 404s.
+    assert (
+        await client.post(f"/session/{session_id}/permissions/prm_nope", json={"reply": "allow"})
+    ).status_code == 404
+    other_id = (await client.post("/session", json={})).json()["id"]
+    wrong = await client.post(f"/session/{other_id}/permissions/{request['id']}", json={"reply": "allow"})
+    assert wrong.status_code == 404
+    assert (await client.get("/session/ses_nope/permissions")).status_code == 404
+
+
+async def test_config_route_without_snapshot(client):
+    from skene import __version__
+
+    config = (await client.get("/config")).json()
+    assert config["version"] == __version__
+    assert config["provider"] is None
+    assert config["apiKeyConfigured"] is False
+
+
+async def test_config_route_reports_snapshot_without_secrets(services, workspace):
+    from skene.schema import ServerConfigInfo
+
+    services.config_info = ServerConfigInfo(
+        version="", provider="anthropic", model="claude-sonnet-4-5", api_key_configured=True
+    )
+    app = create_app(services)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://skene.test") as client:
+        config = (await client.get("/config")).json()
+        assert config["provider"] == "anthropic"
+        assert config["apiKeyConfigured"] is True
+        assert "apiKey" not in config  # only the boolean crosses the wire
+
+        providers = (await client.get("/provider")).json()
+        by_name = {p["name"]: p for p in providers}
+        assert by_name["anthropic"]["active"] is True
+        assert by_name["openai"]["active"] is False
+        assert "gemini" in by_name
+
+
 async def test_journey_analyse_503_when_no_llm_configured(client, services, workspace):
     def broken_factory():
         raise RuntimeError("no LLM configured")

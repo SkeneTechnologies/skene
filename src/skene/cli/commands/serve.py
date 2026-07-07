@@ -58,13 +58,26 @@ def serve_cmd(
         api_key=api_key, provider=provider, model=model, base_url=base_url, quiet=quiet, debug=debug
     )
 
-    def llm_factory():
+    def llm_factory(model: str | None = None):
+        """``model`` is the per-agent override (AgentDef.model); None = the configured model."""
+        from dataclasses import replace
+
         from skene.cli._journey_runner import build_llm
 
         if not rc.api_key and not rc.is_local:
             raise RuntimeError("no LLM credentials configured — restart the server with --api-key or set SKENE_API_KEY")
-        return build_llm(rc, rc.api_key or rc.provider, no_fallback=False)
+        resolved = rc if model is None else replace(rc, model=model)
+        return build_llm(resolved, rc.api_key or rc.provider, no_fallback=False)
 
-    server_app = create_app(db_path=db_path, llm_factory=llm_factory, auth_token=token)
+    from skene.schema import ServerConfigInfo
+
+    config_info = ServerConfigInfo(
+        version="",  # filled in by the route
+        provider=rc.provider,
+        model=rc.model,
+        base_url=rc.base_url,
+        api_key_configured=bool(rc.api_key),
+    )
+    server_app = create_app(db_path=db_path, llm_factory=llm_factory, auth_token=token, config_info=config_info)
     console.print(f"[bold]skene[/bold] server listening on http://{host}:{port} (provider: {rc.provider})")
     uvicorn.run(server_app, host=host, port=port, log_level="debug" if debug else "info")

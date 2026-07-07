@@ -424,6 +424,135 @@
         }
       }
     },
+    "/session/{session_id}/permissions": {
+      "get": {
+        "tags": [
+          "session"
+        ],
+        "summary": "List Permissions",
+        "description": "Every permission request the session has raised, pending first-created first.",
+        "operationId": "list_permissions_session__session_id__permissions_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionRequest"
+                  },
+                  "title": "Response List Permissions Session  Session Id  Permissions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/permissions/{perm_id}": {
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "Answer Permission",
+        "description": "Answer a pending ask; the paused tool handler resumes with the verdict.",
+        "operationId": "answer_permission_session__session_id__permissions__perm_id__post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "perm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Perm Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionAnswer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/event": {
       "get": {
         "tags": [
@@ -629,6 +758,98 @@
                     "$ref": "#/components/schemas/AgentInfo"
                   },
                   "title": "Response List Agents Agent Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Get Config",
+        "description": "The server's resolved LLM configuration, secrets redacted.",
+        "operationId": "get_config_config_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerConfigInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/provider": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "List Providers",
+        "description": "Supported LLM providers; ``active`` marks the one the server runs with.",
+        "operationId": "list_providers_provider_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderInfo"
+                  },
+                  "title": "Response List Providers Provider Get"
                 }
               }
             }
@@ -1114,6 +1335,80 @@
         "title": "MilestonePart",
         "description": "A candidate milestone emitted by an analysis agent's ``emit_milestone``.\n\nStreams live from subagent runs \u2014 ``milestone.stage_id`` is still\n``None`` at this point; classification happens later in\n``finalize_journey`` and is only visible in the ``journey.yaml``\nartifact, not retroactively on these parts."
       },
+      "PermissionAnswer": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "deny"
+            ],
+            "title": "Reply"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reply"
+        ],
+        "title": "PermissionAnswer",
+        "description": "Body of ``POST /session/{id}/permissions/{permID}``."
+      },
+      "PermissionRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "allowed",
+              "denied"
+            ],
+            "title": "Status",
+            "default": "pending"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "answered": {
+            "title": "Answered",
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "created",
+          "id",
+          "sessionId",
+          "title",
+          "tool"
+        ],
+        "title": "PermissionRequest",
+        "description": "One pending or answered ask, as persisted and streamed."
+      },
       "PromptRequest": {
         "properties": {
           "text": {
@@ -1129,6 +1424,33 @@
         ],
         "title": "PromptRequest",
         "description": "Body of ``POST /session/{id}/message``."
+      },
+      "ProviderInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProviderInfo",
+        "description": "One supported LLM provider, as exposed by ``GET /provider``."
       },
       "ReasoningPart": {
         "properties": {
@@ -1167,6 +1489,41 @@
           "type"
         ],
         "title": "ReasoningPart"
+      },
+      "ServerConfigInfo": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "title": "Model",
+            "type": "string",
+            "nullable": true
+          },
+          "baseUrl": {
+            "title": "Baseurl",
+            "type": "string",
+            "nullable": true
+          },
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "title": "Apikeyconfigured",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "ServerConfigInfo",
+        "description": "Resolved server configuration, secrets redacted (``GET /config``)."
       },
       "Session": {
         "properties": {
@@ -1718,6 +2075,58 @@
         "title": "PartUpdated",
         "type": "object"
       },
+      "PermissionAnswered": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "permission.answered",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "permission.answered"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_PermissionProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "PermissionAnswered",
+        "type": "object"
+      },
+      "PermissionAsked": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "default": "permission.asked",
+            "title": "Type",
+            "type": "string",
+            "enum": [
+              "permission.asked"
+            ]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/_PermissionProps"
+          }
+        },
+        "required": [
+          "properties",
+          "type"
+        ],
+        "title": "PermissionAsked",
+        "type": "object"
+      },
       "ServerConnected": {
         "additionalProperties": false,
         "properties": {
@@ -1956,6 +2365,19 @@
         "title": "_PartProps",
         "type": "object"
       },
+      "_PermissionProps": {
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/PermissionRequest"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "_PermissionProps",
+        "type": "object"
+      },
       "_SessionErrorProps": {
         "additionalProperties": false,
         "properties": {
@@ -1994,6 +2416,8 @@
             "message.updated": "#/components/schemas/MessageUpdated",
             "part.created": "#/components/schemas/PartCreated",
             "part.updated": "#/components/schemas/PartUpdated",
+            "permission.answered": "#/components/schemas/PermissionAnswered",
+            "permission.asked": "#/components/schemas/PermissionAsked",
             "server.connected": "#/components/schemas/ServerConnected",
             "server.heartbeat": "#/components/schemas/ServerHeartbeat",
             "session.created": "#/components/schemas/SessionCreated",
@@ -2033,6 +2457,12 @@
           },
           {
             "$ref": "#/components/schemas/PartUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/PermissionAsked"
+          },
+          {
+            "$ref": "#/components/schemas/PermissionAnswered"
           }
         ]
       }

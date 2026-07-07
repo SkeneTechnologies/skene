@@ -271,6 +271,7 @@ def skene_growth_entry():
 from skene.cli.commands import (  # noqa: E402, F401
     analyse_journey,
     analyze,
+    attach,
     build,
     config_cmd,
     login,

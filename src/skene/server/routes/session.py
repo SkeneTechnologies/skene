@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from skene.core.permissions import PermissionAlreadyAnsweredError
 from skene.core.sessions import SessionBusyError
-from skene.core.store import UnknownSessionError
+from skene.core.store import UnknownPermissionError, UnknownSessionError
 from skene.schema import (
     Message,
     MessageWithParts,
+    PermissionAnswer,
+    PermissionRequest,
     PromptRequest,
     Session,
     SessionCreateRequest,
@@ -79,3 +82,30 @@ async def abort(session_id: str, services: Services) -> dict[str, bool]:
     except UnknownSessionError as e:
         raise HTTPException(status_code=404, detail=f"unknown session: {session_id}") from e
     return {"aborted": aborted}
+
+
+@router.get("/session/{session_id}/permissions", response_model=list[PermissionRequest])
+async def list_permissions(session_id: str, services: Services) -> list[PermissionRequest]:
+    """Every permission request the session has raised, pending first-created first."""
+    try:
+        await services.store.get_session(session_id)
+    except UnknownSessionError as e:
+        raise HTTPException(status_code=404, detail=f"unknown session: {session_id}") from e
+    return await services.store.list_permissions(session_id)
+
+
+@router.post("/session/{session_id}/permissions/{perm_id}", response_model=PermissionRequest)
+async def answer_permission(
+    session_id: str, perm_id: str, body: PermissionAnswer, services: Services
+) -> PermissionRequest:
+    """Answer a pending ask; the paused tool handler resumes with the verdict."""
+    try:
+        request = await services.store.get_permission(perm_id)
+    except UnknownPermissionError as e:
+        raise HTTPException(status_code=404, detail=f"unknown permission request: {perm_id}") from e
+    if request.session_id != session_id:
+        raise HTTPException(status_code=404, detail=f"permission request {perm_id} is not part of session {session_id}")
+    try:
+        return await services.permissions.answer(perm_id, body.reply)
+    except PermissionAlreadyAnsweredError as e:
+        raise HTTPException(status_code=409, detail=f"permission request already answered: {request.status}") from e

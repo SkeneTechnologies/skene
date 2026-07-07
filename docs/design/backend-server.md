@@ -1,6 +1,6 @@
 # Skene Backend Server — Design
 
-Status: in progress (2026-07-06) — phases 1-4 implemented, phase 5 pending.
+Status: implemented (2026-07-07) — phases 1-5 done.
 Work lands on feature branches targeting the `v1.0` integration branch.
 
 | Phase | Status | Where |
@@ -9,7 +9,7 @@ Work lands on feature branches targeting the `v1.0` integration branch.
 | 2. Server MVP | **done** | `feat/server-phase2` |
 | 3. Agentic flow | **done** | `feat/server-phase3` |
 | 4. TUI cutover | **done** | `feat/server-phase4` |
-| 5. Hardening & growth | pending | |
+| 5. Hardening & growth | **done** | `feat/server-phase5` |
 
 Goal: turn skene into a client/server system where a **main skene agent** orchestrates
 **code/db subagents** (and future ones), and CLI + TUI are thin clients of a single
@@ -158,9 +158,11 @@ POST /session/{id}/message                   prompt: returns user Message immedi
 POST /session/{id}/abort                     cancel the running task tree
 POST /session/{id}/permissions/{permID}      answer an ask (phase 2)
 
+GET  /session/{id}/permissions               asks the session has raised
 GET  /agent                                  registry (primary + subagents)
 GET  /provider                               available providers/models
-GET  /config          PATCH /config          resolved config (secrets redacted)
+GET  /config                                 resolved config (secrets redacted;
+                                             read-only — no PATCH, see phase 5)
 
 POST /journey/analyse                        v1-compat convenience: creates a session,
                                              sends the canned analyse prompt, returns
@@ -660,6 +662,75 @@ hooks into the as-built system:
   `skene sessions prune` only if the DB becomes a problem; the durable
   event log / event sourcing stays out until a multi-writer or sync
   requirement shows up.
+
+### Phase 5 — as built
+
+What landed in `feat/server-phase5`, and the contracts future work builds
+on:
+
+- **Permission ask flow is live end-to-end, with no built-in consumer
+  yet.** `skene/schema/permission.py` (`PermissionRequest`,
+  `PermissionAnswer`), `permission.asked`/`permission.answered` in the
+  `Event` union, a `permission_request` table (upserts, like parts), and
+  `core/permissions.py::PermissionService`. A tool handler calls
+  `await permissions.ask(session_id, tool=..., title=..., metadata=...)`
+  → the request persists as `pending`, `permission.asked` hits the bus,
+  and the handler suspends until `POST /session/{id}/permissions/{permID}`
+  (body `{reply: "allow"|"deny"}`) resolves it — `ask` returns the
+  boolean. Semantics chosen deliberately: **no rulesets** (every ask goes
+  to the client), **no timeout** (pending until answered or aborted),
+  **one-shot answers** (second answer → 409), and an aborted run records
+  its pending asks as `denied` (shielded, so clients never see a dangling
+  prompt). Answers to asks whose waiter is gone (server restart) still
+  record. Tools reach the service by closure —
+  `JourneyRunContext.permissions` is threaded from `create_services`
+  through `make_run_factory`/`start_journey_run` — the agent loop itself
+  stays permission-free. The built-in journey tools are read-only, so
+  nothing asks today; the first db-write tool should. Client side: the
+  TUI's `sse.go` decodes both events (regen done), but there is **no ask
+  UI yet** — build it against `permission.asked` when a tool that asks
+  ships. `GET /session/{id}/permissions` lists a session's asks.
+- **Config/provider surface, read-only by decision.** `GET /config`
+  returns `ServerConfigInfo` (provider, model, base_url,
+  `apiKeyConfigured` boolean — never the key), `GET /provider` the
+  supported-provider catalog with `active` marking the running one.
+  The snapshot is built by `skene serve` at startup and passed through
+  `create_app(config_info=...)` → `CoreServices.config_info`; bare
+  setups (tests, embedded CLI) get nulls + version. **There is no
+  PATCH**: the phase-5 pointer said pick deliberately, and rebuilding
+  `llm_factory` mid-flight while runs are in progress buys nothing —
+  changing config means restarting `skene serve`.
+- **Per-agent model overrides work through the factory signature.**
+  `SessionService.resolve_llm(model)` passes `model=` to any
+  `llm_factory` that accepts that keyword (inspected per call, since
+  tests swap factories); zero-arg factories ignore overrides with a
+  debug note. `execute_run` gained a `model` param; the task tool
+  resolves a fresh client for a subagent whose `AgentDef.model` is set
+  (otherwise the child shares the parent's client), and
+  `start_journey_run` honours the primary's. `skene serve`'s factory
+  accepts the keyword; the embedded CLI's pinned client deliberately
+  does not (one CLI invocation = one client).
+- **Remote serving: `skene attach <url> [--token]`.** Verifies
+  `/health`, then persists `server_url`/`server_token` into
+  `.skene.config` (project config if present, else user config;
+  `--clear` detaches). Once attached — or with `--server` /
+  `SKENE_SERVER_URL` — `analyse-journey` runs remotely via
+  `cli/remote.py::run_journey_remote`: subscribes to `/event` *before*
+  POSTing `/journey/analyse` (the TUI's race-avoidance pattern), folds
+  the stream into the same `status()` lines the embedded run prints,
+  waits for `session.idle`/`session.error`, and returns the artifact
+  part. Request paths are interpreted on the **server's** filesystem
+  (documented in the flag help). Ctrl-C aborts the remote session tree
+  on a fresh connection. No local LLM credentials are needed in remote
+  mode. The Python SSE reader mirrors the Go one (`data:`-only frames,
+  16 MiB cap); testing it needs a real socket — `tests/test_server/
+  test_remote.py` boots uvicorn on a loopback port because
+  `ASGITransport` buffers (the phase-2 note strikes again).
+- **Still deferred, still deliberate:** true token streaming (provider
+  layer), porting the TUI's legacy uvx commands server-side, the TUI
+  ask UI and journey-inputs form, a CI job regenerating the Go client /
+  diffing `openapi.json` (regen is still `make -C tui generate`), and
+  the durable event log.
 
 ---
 

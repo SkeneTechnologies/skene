@@ -81,9 +81,33 @@ func TestDecodeSessionEvent(t *testing.T) {
 }
 
 func TestDecodeUnknownTypeIsNil(t *testing.T) {
-	decoded, err := EventEnvelope{Type: "permission.asked", Raw: []byte(`{}`)}.Decode()
+	decoded, err := EventEnvelope{Type: "session.hibernated", Raw: []byte(`{}`)}.Decode()
 	if err != nil || decoded != nil {
 		t.Fatalf("unknown types should be (nil, nil); got (%v, %v)", decoded, err)
+	}
+}
+
+func TestDecodePermissionAsked(t *testing.T) {
+	envelope := EventEnvelope{
+		Type: "permission.asked",
+		Raw: []byte(`{"id":"evt_5","type":"permission.asked","properties":{"request":{` +
+			`"id":"prm_1","sessionId":"ses_1","tool":"write_db","title":"Write to users?",` +
+			`"metadata":{},"status":"pending","created":1,"answered":null}}}`),
+	}
+	decoded, err := envelope.Decode()
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	event, ok := decoded.(*PermissionAsked)
+	if !ok {
+		t.Fatalf("expected *PermissionAsked, got %T", decoded)
+	}
+	request := event.Properties.Request
+	if request.Id != "prm_1" || request.Tool != "write_db" {
+		t.Fatalf("unexpected request contents: %+v", request)
+	}
+	if request.Status == nil || *request.Status != PermissionRequestStatusPending {
+		t.Fatalf("expected pending status, got %v", request.Status)
 	}
 }
 
