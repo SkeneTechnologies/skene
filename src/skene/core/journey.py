@@ -29,7 +29,7 @@ from pathlib import Path
 
 from skene.analyzers.journey.assemble import assemble_journey
 from skene.analyzers.journey.classify import classify_all
-from skene.analyzers.journey.merge import merge_candidates
+from skene.analyzers.journey.merge import merge_candidates_llm
 from skene.analyzers.journey.models import Journey
 from skene.analyzers.journey.serialize import write as write_journey
 from skene.analyzers.journey.specialize import specialize_stages
@@ -273,7 +273,7 @@ async def _collect_candidates(ctx: JourneyRunContext) -> tuple[list[CandidateMil
 
 
 async def _finalize_journey(ctx: JourneyRunContext) -> str:
-    """The deterministic tail of the old pipeline, as one tool."""
+    """The tail of the old pipeline — merge, classify, assemble — as one tool."""
     schema_candidates, code_candidates = await _collect_candidates(ctx)
     if not schema_candidates and not code_candidates:
         raise ValueError("no candidate milestones found — run task subagents first")
@@ -282,8 +282,8 @@ async def _finalize_journey(ctx: JourneyRunContext) -> str:
     if ctx.config.specialize and ctx.config.repo_root is not None:
         stages = await specialize_stages(ctx.config.repo_root, ctx.config.product_name, llm=ctx.llm)
 
-    status("finalize: merging candidates (deterministic)")
-    merged = merge_candidates(schema_candidates, code_candidates)
+    status("finalize: merging candidates (LLM grouping)")
+    merged = await merge_candidates_llm(schema_candidates, code_candidates, llm=ctx.llm)
     status(
         f"finalize: merged {len(schema_candidates)} schema + {len(code_candidates)} "
         f"code → {len(merged)} unique candidates"

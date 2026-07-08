@@ -93,7 +93,9 @@ class JourneyFakeLLM(LLMClient):
     It tells the callers apart by their system prompt: the schema subagent
     ("parsed database schema"), the code subagent ("explore a codebase"),
     and everything else is treated as the main skene agent. Plain
-    ``generate_content`` calls are answered as the classifier, using
+    ``generate_content`` calls are answered as the merge agent (every
+    candidate its own group, matching the rule-based merge on the parity
+    fixture, which has no duplicates) or as the classifier, using
     ``stage_map`` (milestone name → stage id).
 
     The same instance drove the retired deterministic pipeline when the
@@ -107,6 +109,9 @@ class JourneyFakeLLM(LLMClient):
         self._steps: dict[str, int] = {"main": 0, "schema": 0, "code": 0}
 
     async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
+        if "You deduplicate candidate user-journey milestones" in prompt:
+            indices = re.findall(r"^(\d+)\. id=", prompt, flags=re.MULTILINE)
+            return json.dumps({"groups": [[int(i)] for i in indices]}), None
         match = re.search(r"^Milestone: (.+)$", prompt, flags=re.MULTILINE)
         name = match.group(1).strip() if match else ""
         stage = self._stage_map.get(name, "engagement")

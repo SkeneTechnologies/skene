@@ -1,21 +1,28 @@
-"""Step 3 — deterministic merge of schema-side and code-side candidates.
+"""Step 3 — merge of schema-side and code-side candidates.
 
-No LLM. Pure function so we can hammer it with unit tests.
+:func:`merge_candidates_llm` is the entry point: one LLM call decides
+which candidates describe the same user action (semantic duplicates the
+old string matching missed, e.g. "Account Created" vs "User signs up"),
+then each group is folded deterministically — evidence union, the
+higher-confidence candidate's name/description wins, confidences are
+averaged.
 
-Rules, in order:
-1. Exact ``proposed_id`` match → merge. Evidence is concatenated, the
-   higher-confidence candidate's name/description wins.
-2. Fuzzy name match (normalize: lowercase, strip punctuation, sort tokens)
-   → merge. Same evidence-union behaviour.
-3. Otherwise keep both.
+The rule-based :func:`merge_candidates` (exact ``proposed_id`` match,
+then fuzzy name match) survives as the fallback when the LLM errors or
+returns something that isn't a partition of the candidates.
 """
 
 from __future__ import annotations
 
 import re
 
+from pydantic import BaseModel, ValidationError
+
+from skene.analyzers._journey_common import parse_json
 from skene.analyzers.journey.candidate import CandidateMilestone
 from skene.analyzers.journey.models import Evidence
+from skene.llm.base import LLMClient
+from skene.output import debug, warning
 
 _TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
 
@@ -52,11 +59,97 @@ def _merge_pair(a: CandidateMilestone, b: CandidateMilestone) -> CandidateMilest
     )
 
 
+def _merge_group(group: list[CandidateMilestone]) -> CandidateMilestone:
+    merged = group[0]
+    for cm in group[1:]:
+        merged = _merge_pair(merged, cm)
+    return merged
+
+
+class _MergeResult(BaseModel):
+    groups: list[list[int]]
+
+
+_MERGE_INSTRUCTIONS = """\
+You deduplicate candidate user-journey milestones. The candidates below
+were gathered independently from a database schema and from source code,
+so the same user action often appears more than once under different ids
+or names.
+
+Group candidates that describe the SAME user action. Judge by meaning,
+not string similarity: "Account Created" and "User signs up" are the
+same action; "Invite Sent" and "Invite Accepted" are not.
+
+Rules:
+- Every candidate index appears in exactly one group.
+- A candidate with no duplicate is a group of one.
+- When genuinely unsure, keep candidates separate — a wrong merge loses
+  a real milestone, a missed merge only leaves a near-duplicate.
+
+Return ONLY a JSON object with this exact shape, no prose, no markdown,
+no code fences:
+{"groups": [[0, 3], [1], [2]]}
+"""
+
+
+def _format_candidate(idx: int, cm: CandidateMilestone) -> str:
+    lines = [f"{idx}. id={cm.proposed_id} name={cm.name!r} — {cm.description}"]
+    if cm.tracked_event:
+        lines.append(f"   tracked_event: {cm.tracked_event}")
+    for ev in cm.evidence:
+        loc = ev.path or ev.table or "?"
+        lines.append(f"   evidence {ev.source.value}: {loc} — {ev.reason}")
+    return "\n".join(lines)
+
+
+def _parse_groups(response: str, count: int) -> list[list[int]]:
+    """Validated groups from the LLM response; raises unless a partition."""
+    parsed = parse_json(response)
+    if parsed is None:
+        raise ValueError(f"merge agent returned non-JSON response: {response[:200]!r}")
+    try:
+        result = _MergeResult.model_validate(parsed)
+    except ValidationError as e:
+        raise ValueError(f"merge agent returned invalid result: {e}") from e
+    flat = [i for group in result.groups for i in group]
+    if sorted(flat) != list(range(count)):
+        raise ValueError(f"merge agent groups are not a partition of 0..{count - 1}: {result.groups}")
+    return result.groups
+
+
+async def merge_candidates_llm(
+    schema_candidates: list[CandidateMilestone],
+    code_candidates: list[CandidateMilestone],
+    llm: LLMClient,
+) -> list[CandidateMilestone]:
+    """Deduplicate the two streams with one LLM grouping call.
+
+    Falls back to the rule-based :func:`merge_candidates` on LLM failure
+    or an invalid grouping, so finalize never dies on this step.
+    """
+    candidates = [*schema_candidates, *code_candidates]
+    if len(candidates) <= 1:
+        return candidates
+
+    prompt = _MERGE_INSTRUCTIONS + "\n\nCandidates:\n" + "\n".join(
+        _format_candidate(i, cm) for i, cm in enumerate(candidates)
+    )
+    debug(f"merge LLM call → {len(candidates)} candidates")
+    try:
+        response = await llm.generate_content(prompt)
+        groups = _parse_groups(response, len(candidates))
+    except Exception as e:  # noqa: BLE001 — any failure falls back to the rule-based merge
+        warning(f"merge agent failed ({e}); falling back to rule-based merge")
+        return merge_candidates(schema_candidates, code_candidates)
+    debug(f"merge LLM result ← {len(groups)} groups")
+    return [_merge_group([candidates[i] for i in group]) for group in groups]
+
+
 def merge_candidates(
     schema_candidates: list[CandidateMilestone],
     code_candidates: list[CandidateMilestone],
 ) -> list[CandidateMilestone]:
-    """Deduplicate the two streams into a single list."""
+    """Rule-based fallback: exact-id then fuzzy-name dedup of the two streams."""
     merged: list[CandidateMilestone] = []
     by_id: dict[str, int] = {}
     by_norm_name: dict[str, int] = {}
