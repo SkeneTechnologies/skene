@@ -60,13 +60,13 @@ export OLLAMA_BASE_URL="http://localhost:8080/v1"
 
 ## API key issues
 
-### "No API key" or fallback to sample report
+### Missing API key
 
-If `analyze` runs without an API key, it falls back to showing a sample preview. Set your key using one of:
+In local (embedded) mode, `analyse-journey` requires a configured LLM. Cloud providers need an API key; local providers (`lmstudio`, `ollama`, `generic`) do not. Set your key using one of:
 
 ```bash
 # CLI flag
-uvx skene analyze . --api-key "your-key"
+uvx skene analyse-journey . --api-key "your-key"
 
 # Environment variable
 export SKENE_API_KEY="your-key"
@@ -96,7 +96,7 @@ Valid provider names:
 The `generic` provider requires a base URL:
 
 ```bash
-uvx skene analyze . --provider generic --base-url "http://localhost:8000/v1" --model "your-model"
+uvx skene analyse-journey . --provider generic --base-url "http://localhost:8000/v1" --model "your-model"
 ```
 
 Or set via environment variable:
@@ -107,39 +107,13 @@ export SKENE_BASE_URL="http://localhost:8000/v1"
 
 ## File not found errors
 
-### Wrong bundle when running from another directory (`push`, `analyze`, journey)
+### Wrong bundle when running from another directory (`push`, journey)
 
 If `output_dir` is not set in config, Skene picks `./skene-context` vs `./skene` by looking for those folders **under the project path you pass to the command** (for example `skene push ./my-repo`), not necessarily your shell’s current directory.
 
 If artifacts are still not found, set `output_dir` in `.skene.config` or `SKENE_OUTPUT_DIR`, or pass explicit paths (for example `skene analyse-journey -o ./skene/journey.yaml` on legacy-only trees).
 
 See [configuration — sticky output directory](guides/configuration.md#sticky-output-directory).
-
-### Manifest not found (plan/build commands)
-
-The `plan` and `build` commands look for files in `./skene-context/` by default (legacy `./skene/` is still auto-detected). Make sure you've run `analyze` first:
-
-```bash
-uvx skene analyze .   # Creates ./skene-context/growth-manifest.json
-uvx skene plan        # Reads from ./skene-context/
-```
-
-Or specify paths explicitly:
-
-```bash
-uvx skene plan --manifest ./path/to/manifest.json --template ./path/to/template.json
-uvx skene plan --context ./my-output-dir
-```
-
-### Growth plan not found (build command)
-
-```bash
-uvx skene plan    # Creates ./skene-context/growth-plan.md
-uvx skene build   # Reads from ./skene-context/
-
-# Or specify explicitly
-uvx skene build --plan ./path/to/growth-plan.md
-```
 
 ## Rate limit errors
 
@@ -148,7 +122,7 @@ When a provider returns a rate limit error, skene silently falls back to a cheap
 If you need output from a specific model (e.g. during benchmarking), use `--no-fallback`:
 
 ```bash
-uvx skene analyze . --no-fallback
+uvx skene analyse-journey . --no-fallback
 ```
 
 With `--no-fallback`, the CLI retries the same model with exponential backoff.
@@ -172,13 +146,7 @@ export SKENE_UPSTREAM_API_KEY="your-token"
 
 ### "No trigger migration found" or missing engine artifacts
 
-`push` now requires pre-generated artifacts from `build`. Make sure you have run:
-
-```bash
-uvx skene build
-```
-
-Then verify:
+`push` uploads existing artifacts — it does not generate them. Verify that:
 
 - `skene-context/engine.yaml` exists
 - `supabase/migrations/*_skene_triggers.sql` exists (or a legacy `*skene_trigger*` / `*skene_telemetry*` migration that push can detect)
@@ -192,21 +160,13 @@ uvx skene logout
 uvx skene login --upstream https://skene.ai/workspace/my-app
 ```
 
-### Base schema migration missing
-
-Schema + trigger migrations are generated during `build`. If you see schema-related errors:
-
-1. Ensure `supabase/migrations/` exists (or run `build` from project root).
-2. Run `uvx skene build` to regenerate schema + trigger migrations.
-3. Apply migrations with `supabase db push`.
-
 ## Debug mode
 
 Use `--debug` on any command to show diagnostic messages on screen and log all LLM input and output to `~/.local/state/skene/debug/`:
 
 ```bash
-uvx skene analyze . --debug
-uvx skene plan --debug
+uvx skene analyse-journey . --debug
+uvx skene push --debug
 ```
 
 Debug mode can also be enabled via environment variable or config:

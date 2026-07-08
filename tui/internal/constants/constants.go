@@ -63,7 +63,6 @@ const (
 	GrowthTemplateFile       = "growth-template.json"
 	GrowthManifestFile       = "growth-manifest.json"
 	ProductDocsFile          = "product-docs.md"
-	ImplementationPromptFile = "implementation-prompt.md"
 	JourneyFile              = "journey.yaml"
 	CompiledStateMachineFile = "compiled/state-machine.yaml"
 )
@@ -149,18 +148,6 @@ const (
 	EventDeploymentStarted   = "deployment_started"
 	EventDeploymentCompleted = "deployment_completed"
 	EventDeploymentFailed    = "deployment_failed"
-
-	EventPlanStarted   = "plan_started"
-	EventPlanCompleted = "plan_completed"
-	EventPlanFailed    = "plan_failed"
-
-	EventBuildStarted   = "build_started"
-	EventBuildCompleted = "build_completed"
-	EventBuildFailed    = "build_failed"
-
-	EventValidateStarted   = "validate_started"
-	EventValidateCompleted = "validate_completed"
-	EventValidateFailed    = "validate_failed"
 
 	EventNextStepCancelled = "next_step_cancelled"
 	EventOutputDirOpened   = "output_dir_opened"

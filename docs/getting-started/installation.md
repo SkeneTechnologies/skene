@@ -21,8 +21,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Then run any skene command directly:
 
 ```bash
-uvx skene analyze .
-uvx skene plan
+uvx skene analyse-journey .
+uvx skene status
 ```
 
 No `pip install` needed. `uvx` downloads the package into an isolated environment on first run and caches it for subsequent calls.
@@ -40,8 +40,8 @@ pip install skene
 After installation, the `skene` and `skene` commands are available on your PATH:
 
 ```bash
-skene analyze .
-skene plan
+skene analyse-journey .
+skene status
 ```
 
 ---

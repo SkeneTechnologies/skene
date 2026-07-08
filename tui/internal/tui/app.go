@@ -68,13 +68,7 @@ type CountdownMsg int
 
 // AnalysisDoneMsg is sent when analysis completes
 type AnalysisDoneMsg struct {
-	Error  error
-	Result *growth.AnalysisResult
-}
-
-// AnalysisPhaseMsg is sent to update analysis progress
-type AnalysisPhaseMsg struct {
-	Update growth.PhaseUpdate
+	Error error
 }
 
 // JourneyProgressMsg carries structured progress from a server-driven
@@ -195,9 +189,9 @@ type App struct {
 	// Telemetry: last view name for exit event
 	lastView string
 
-	// Telemetry: command currently being executed via runEngineCommand
-	// (plan / build / validate / push). Used to fire deployment_completed
-	// vs deployment_failed when NextStepDoneMsg arrives.
+	// Telemetry: command currently being executed via runPushCommand
+	// ("push"). Used to fire deployment_completed vs deployment_failed
+	// when NextStepDoneMsg arrives.
 	currentNextStepCommand string
 
 	// Telemetry: timestamp when the current next-step command started,
@@ -310,7 +304,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Tick spinners for active views
 		if a.state == StateAnalyzing && a.analyzingView != nil {
 			a.analyzingView.TickSpinner()
-			// Real analysis progress is updated via AnalysisPhaseMsg
+			// Real analysis progress is updated via JourneyProgressMsg
 		}
 		if a.state == StateAuth && a.authView != nil {
 			a.authView.TickSpinner()
@@ -369,9 +363,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnalysisDoneMsg:
 		err := msg.Error
-		if err == nil && msg.Result != nil && msg.Result.Error != nil {
-			err = msg.Result.Error
-		}
 		cancelled := errors.Is(err, context.Canceled)
 		if err != nil && !cancelled {
 			a.telemetry.Track(constants.EventAnalysisFailed, nil)
@@ -416,21 +407,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case AnalysisPhaseMsg:
-		if a.analyzingView != nil {
-			// Use phase name from enum instead of index
-			phaseName := msg.Update.Phase.String()
-			a.analyzingView.UpdatePhaseByName(phaseName, msg.Update.Progress, msg.Update.Message)
-		}
-		// Update game progress if game is active
-		if a.state == StateGame && a.game != nil && a.analyzingView != nil {
-			currentPhase := a.analyzingView.GetCurrentPhase()
-			if currentPhase == "" {
-				currentPhase = constants.StatusInProgress
-			}
-			a.game.SetProgressInfo(currentPhase, false, false)
-		}
-
 	case NextStepOutputMsg:
 		if a.analyzingView != nil {
 			a.analyzingView.UpdatePhase(-1, 0, msg.Line)
@@ -463,15 +439,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		duration := time.Since(a.currentNextStepStart).Truncate(time.Second).String()
 		var evOK, evFail string
-		switch a.currentNextStepCommand {
-		case "push":
+		if a.currentNextStepCommand == "push" {
 			evOK, evFail = constants.EventDeploymentCompleted, constants.EventDeploymentFailed
-		case "plan":
-			evOK, evFail = constants.EventPlanCompleted, constants.EventPlanFailed
-		case "build":
-			evOK, evFail = constants.EventBuildCompleted, constants.EventBuildFailed
-		case "validate":
-			evOK, evFail = constants.EventValidateCompleted, constants.EventValidateFailed
 		}
 		if evOK != "" && !errors.Is(msg.Error, context.Canceled) {
 			if msg.Error != nil {
@@ -535,7 +504,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.pendingPushAfterAuth {
 			a.pendingPushAfterAuth = false
 			origin := a.pushReturnState
-			cmds = append(cmds, a.runEngineCommand(constants.NextStepPushTitle, "push"))
+			cmds = append(cmds, a.runPushCommand())
 			// Override analyzingOrigin if we came from project-dir so
 			// back-navigation doesn't try to land on a nil resultsView.
 			if origin == StateProjectDir {
@@ -855,11 +824,6 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			case constants.ProjectDirRerunAnalysis, constants.ProjectDirRunAnalysis:
 				a.projectDirView.SetNoSchemaDetected(false)
 				return a.startJourneyAnalysis()
-			case constants.ProjectDirRunCodebaseAnalysis:
-				a.projectDirView.SetNoSchemaDetected(false)
-				cmd := a.startCodebaseAnalysis()
-				a.analyzingOrigin = StateProjectDir
-				return cmd
 			case constants.ProjectDirDeployToCloud:
 				return a.startPushFlow(StateProjectDir)
 			}
@@ -989,17 +953,6 @@ func (a *App) handleProjectDirNextStepsKeys(key string) tea.Cmd {
 		case "journey":
 			a.projectDirView.SetNoSchemaDetected(false)
 			return a.startJourneyAnalysis()
-		case "rerun":
-			a.projectDirView.SetNoSchemaDetected(false)
-			cmd := a.startCodebaseAnalysis()
-			a.analyzingOrigin = StateProjectDir
-			return cmd
-		case "plan":
-			return a.runEngineCommand("Generating Growth Plan", "plan")
-		case "build":
-			return a.runEngineCommand("Building Implementation Prompt", "build")
-		case "validate":
-			return a.runEngineCommand("Validating Manifest", "validate")
 		case "push":
 			return a.startPushFlow(StateProjectDir)
 		case "view-files":
@@ -1155,8 +1108,6 @@ func (a *App) handleNextStepsModalKeys(key string) tea.Cmd {
 			return tea.Quit
 		case "journey":
 			return a.startSimpleAnalysis()
-		case "rerun":
-			return a.startCodebaseAnalysis()
 		case "config":
 			a.configCheckView = nil
 			a.apiKeyView = nil
@@ -1164,12 +1115,6 @@ func (a *App) handleNextStepsModalKeys(key string) tea.Cmd {
 			a.providerView.SetSize(a.width, a.height)
 			a.state = StateProviderSelect
 			a.trackView("provider_select", nil)
-		case "plan":
-			return a.runEngineCommand("Generating Growth Plan", "plan")
-		case "build":
-			return a.runEngineCommand("Building Implementation Prompt", "build")
-		case "validate":
-			return a.runEngineCommand("Validating Manifest", "validate")
 		case "push":
 			return a.startPushFlow(StateResults)
 		case "view-files":
@@ -1463,12 +1408,13 @@ func (a *App) startPushFlow(origin AppState) tea.Cmd {
 		return a.startSkeneAuth(a.selectedProvider)
 	}
 
-	cmd := a.runEngineCommand(constants.NextStepPushTitle, "push")
-	// runEngineCommand hardcodes analyzingOrigin = StateNextSteps, which
-	// makes navigateBackFromAnalyzing land on StateResults. That's fine
-	// when Deploy was triggered from the results dashboard, but if we
-	// came from the project-dir modal there is no resultsView yet, so
-	// override the origin to avoid landing on a nil view.
+	cmd := a.runPushCommand()
+	// runPushCommand hardcodes analyzingOrigin = StateProjectDir, which
+	// makes navigateBackFromAnalyzing return to the project-dir prompt.
+	// That is what we want regardless of whether Deploy was triggered
+	// from the results dashboard or the project-dir modal, but keep the
+	// explicit override for the project-dir case so back-navigation never
+	// lands on a nil resultsView.
 	if origin == StateProjectDir {
 		a.analyzingOrigin = StateProjectDir
 	}
@@ -1644,19 +1590,6 @@ func (a *App) startJourneyAnalysis() tea.Cmd {
 	return a.startSimpleAnalysisCmd(a.program)
 }
 
-func (a *App) startCodebaseAnalysis() tea.Cmd {
-	a.journeyAnalysis = false
-	a.telemetry.Track(constants.EventAnalysisStarted, map[string]string{
-		"type": "codebase",
-	})
-	a.analyzingView = views.NewCommandView(constants.StepNameCodebaseAnalysis)
-	a.analyzingView.SetSize(a.width, a.height)
-	a.analysisStartTime = time.Now()
-	a.analyzingOrigin = StateNextSteps
-	a.state = StateAnalyzing
-	return a.startRealAnalysisCmd(a.program)
-}
-
 func (a *App) startSimpleAnalysis() tea.Cmd {
 	a.journeyAnalysis = true
 	a.analyzingView = views.NewCommandView(constants.StepNameJourneyAnalysis)
@@ -1743,44 +1676,16 @@ func (a *App) ensureBackend(ctx context.Context, cfg backend.Config, onStatus fu
 	return server, nil
 }
 
-func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
-	cfg := a.buildEngineConfig()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	a.cancelFunc = cancel
-
-	return func() tea.Msg {
-		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
-			if p != nil {
-				p.Send(AnalysisPhaseMsg{Update: update})
-			}
-		})
-
-		result := engine.Run(ctx)
-		if result.Error != nil {
-			return AnalysisDoneMsg{Error: result.Error, Result: result}
-		}
-		return AnalysisDoneMsg{Error: nil, Result: result}
-	}
-}
-
-func (a *App) runEngineCommand(title string, command string) tea.Cmd {
+// runPushCommand spawns `uvx skene push` (the only remaining uvx-based
+// next-step command) and streams its output into the analyzing view.
+func (a *App) runPushCommand() tea.Cmd {
 	a.telemetry.Track(constants.EventNextStepTriggered, map[string]string{
-		"command": command,
+		"command": "push",
 	})
-	a.currentNextStepCommand = command
+	a.currentNextStepCommand = "push"
 	a.currentNextStepStart = time.Now()
-	switch command {
-	case "push":
-		a.telemetry.Track(constants.EventDeploymentStarted, nil)
-	case "plan":
-		a.telemetry.Track(constants.EventPlanStarted, nil)
-	case "build":
-		a.telemetry.Track(constants.EventBuildStarted, nil)
-	case "validate":
-		a.telemetry.Track(constants.EventValidateStarted, nil)
-	}
-	a.analyzingView = views.NewCommandView(title)
+	a.telemetry.Track(constants.EventDeploymentStarted, nil)
+	a.analyzingView = views.NewCommandView(constants.NextStepPushTitle)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.analyzingOrigin = StateProjectDir
@@ -1797,42 +1702,16 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 			return NextStepDoneMsg{Error: ctx.Err()}
 		}
 
-		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
+		engine := growth.NewEngine(cfg, func(line string) {
 			if p != nil {
-				p.Send(NextStepOutputMsg{Line: update.Message})
+				p.Send(NextStepOutputMsg{Line: line})
 			}
 		})
 
-		var result *growth.AnalysisResult
-		switch command {
-		case "plan":
-			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Running: uvx skene plan ..."})
-			}
-			result = engine.GeneratePlan()
-		case "build":
-			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Running: uvx skene build ..."})
-			}
-			result = engine.GenerateBuild()
-		case "validate":
-			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Running: uvx skene validate ..."})
-			}
-			result = engine.ValidateManifest()
-		case "push":
-			if p != nil {
-				p.Send(NextStepOutputMsg{Line: constants.NextStepPushRunning})
-			}
-			result = engine.Push()
-		default:
-			return NextStepDoneMsg{Error: fmt.Errorf("unknown command: %s", command)}
+		if p != nil {
+			p.Send(NextStepOutputMsg{Line: constants.NextStepPushRunning})
 		}
-
-		if result.Error != nil {
-			return NextStepDoneMsg{Error: result.Error}
-		}
-		return NextStepDoneMsg{Error: nil}
+		return NextStepDoneMsg{Error: engine.Push()}
 	}
 }
 
@@ -2149,7 +2028,6 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 		BaseURL:        cfg.BaseURL,
 		ProjectDir:     projectDir,
 		OutputDir:      rel,
-		UseGrowth:      cfg.UseGrowth,
 		Upstream:       cfg.Upstream,
 		UpstreamAPIKey: cfg.UpstreamAPIKey,
 	}

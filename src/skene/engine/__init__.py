@@ -1,6 +1,5 @@
 """Engine document helpers."""
 
-from skene.engine.generator import generate_engine_delta_with_llm
 from skene.engine.storage import (
     EngineDocument,
     EngineFeature,
@@ -35,5 +34,4 @@ __all__ = [
     "parse_source_to_db_event",
     "engine_features_to_loop_definitions",
     "collect_engine_trigger_events",
-    "generate_engine_delta_with_llm",
 ]

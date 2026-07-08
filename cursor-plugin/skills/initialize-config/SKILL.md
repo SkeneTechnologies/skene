@@ -48,7 +48,7 @@ Make init invisible. Detect everything from existing config, env vars, and user-
    Confirm provider, model, API key. If good, report.
 
 5. **Report result**
-   "Skene init complete. Provider: X, model: Y. Run `/skene-analyze` next."
+   "Skene init complete. Provider: X, model: Y. Run `uvx skene analyse-journey .` next."
 
 ## Terminal rules
 
@@ -67,4 +67,4 @@ The user CANNOT type into agent-spawned terminals. The agent handles ALL input.
 
 ## Output
 
-One line: "Skene init complete. Provider: X, model: Y. Run `/skene-analyze` next."
+One line: "Skene init complete. Provider: X, model: Y. Run `uvx skene analyse-journey .` next."

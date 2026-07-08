@@ -2,7 +2,7 @@
   "name": "skene",
   "displayName": "Skene",
   "version": "0.1.0",
-  "description": "Product-Led Growth codebase analysis and implementation toolkit. Scan your code, detect growth opportunities, and build actionable implementation plans.",
+  "description": "Product-Led Growth codebase analysis toolkit. Map the customer journey encoded in your code and database schema.",
   "author": {
     "name": "Skene Technologies",
     "email": "support@skene.ai"

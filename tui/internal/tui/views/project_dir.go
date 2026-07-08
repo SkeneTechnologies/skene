@@ -322,13 +322,13 @@ func existingBundleDir(projectDir string) string {
 // When journey.yaml is present we expose the three primary actions (view,
 // re-run, deploy) directly so first-time users can reach "Deploy to Skene
 // Cloud" without opening the next-steps modal. When the journey is
-// missing we fall back to the two analysis options.
+// missing we fall back to offering the journey analysis.
 func (v *ProjectDirView) buildExistingButtons(projectDir string) *components.ButtonGroup {
 	primary := filepath.Join(projectDir, constants.OutputDirName, constants.JourneyFile)
 	if _, err := os.Stat(primary); err == nil {
 		return components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirDeployToCloud, constants.ProjectDirRerunAnalysis)
 	}
-	return components.NewButtonGroup(constants.ProjectDirRunAnalysis, constants.ProjectDirRunCodebaseAnalysis)
+	return components.NewButtonGroup(constants.ProjectDirRunAnalysis)
 }
 
 // IsAskingExistingChoice returns true if prompting for existing analysis choice

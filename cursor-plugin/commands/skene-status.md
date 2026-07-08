@@ -9,4 +9,4 @@ description: Check implementation status from skene-context/engine.yaml. Validat
 2. Run `uvx skene status --help` first to discover available flags.
 3. **Run autonomously.** Present the CLI engine status table. No mid-flow questions.
 4. Explain the Detail column: for action features, "Found in" lists the newest matching migration basename; `(+N)` means N other migration files also contain that trigger.
-5. Highlight gaps, suggest next step (`/skene-build` or `/skene-deploy`).
+5. Highlight gaps, suggest next step (`/skene-deploy`).

@@ -9,9 +9,7 @@ const (
 	StepNameProjectDir       = "Project Directory"
 	StepNameProjectSetup     = "Project Setup"
 	StepNameAnalysisConfig   = "Analysis Configuration"
-	StepNameAnalyzing        = "Analysing Growth Opportunities"
 	StepNameJourneyAnalysis  = "Analysing User Journey"
-	StepNameCodebaseAnalysis = "Analysing Growth Opportunities"
 	StepNameAnalysingStepper = "Analysing"
 	StepNameResults          = "Analysis Results"
 	StepNameNextSteps        = "Available Actions"
@@ -76,41 +74,11 @@ var NextStepActions = []NextStepDef{
 		Command:     "uvx skene analyse-journey .",
 	},
 	{
-		ID:          "rerun",
-		Name:        "Analyse Growth Opportunities",
-		Description: "Full growth analysis with tech stack, features, and monetisation",
-		Command:     "uvx skene analyze .",
-	},
-	{
-		ID:                    "plan",
-		Name:                  "Generate Growth Plan",
-		Description:           "Create a prioritized growth plan with implementation roadmap",
-		Command:               "uvx skene plan",
-		RequiresFile:          GrowthManifestFile,
-		RequiresFileInContext: true,
-	},
-	{
-		ID:                    "build",
-		Name:                  "Build Implementation Prompt",
-		Description:           "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
-		Command:               "uvx skene build",
-		RequiresFile:          GrowthManifestFile,
-		RequiresFileInContext: true,
-	},
-	{
 		ID:          "push",
 		Name:        "Deploy to Skene Cloud",
 		Description: "Push the analysis bundle to your Skene workspace",
 		Command:     "uvx skene push .",
 		RequiresDir: true,
-	},
-	{
-		ID:                    "validate",
-		Name:                  "Validate Manifest",
-		Description:           "Validate the growth manifest against the schema",
-		Command:               "uvx skene validate",
-		RequiresFile:          GrowthManifestFile,
-		RequiresFileInContext: true,
 	},
 	{
 		ID:          "view-files",
@@ -197,14 +165,13 @@ const (
 	ProjectDirExistingHeader = "Existing Analysis Detected"
 	ProjectDirExistingMsg    = "A previous Skene Growth analysis was found in this project."
 	ProjectDirExistingQ      = "What would you like to do?"
-	ProjectDirViewAnalysis       = "View Journey"
-	ProjectDirRerunAnalysis      = "Re-run Analysis"
-	ProjectDirDeployToCloud      = "Deploy to Skene Cloud"
-	ProjectDirRunAnalysis        = "Analyse Journey"
-	ProjectDirRunCodebaseAnalysis = "Analyse Codebase"
+	ProjectDirViewAnalysis  = "View Journey"
+	ProjectDirRerunAnalysis = "Re-run Analysis"
+	ProjectDirDeployToCloud = "Deploy to Skene Cloud"
+	ProjectDirRunAnalysis   = "Analyse Journey"
 
 	ProjectDirNoSchemaHeader = "No User Journey Detected"
-	ProjectDirNoSchemaMsg    = "Skene couldn't detect a user journey schema in your codebase. Try the full codebase analysis to get a broader picture of your product."
+	ProjectDirNoSchemaMsg    = "Skene couldn't detect a user journey schema in your codebase. Try re-running the analysis or selecting a different project."
 )
 
 // Analysis config view
@@ -241,19 +208,6 @@ const (
 	GameStatFinalScore = "Score    "
 	GameHUDFormat      = " SCORE: %d  HP: %s  DIST: %d "
 )
-
-// Engine phase names
-const (
-	PhaseScanningCodebase  = "Scanning codebase"
-	PhaseDetectingFeatures = "Detecting product features"
-	PhaseGrowthLoops       = "Growth loop analysis"
-	PhaseMonetisation      = "Monetisation analysis"
-	PhaseOpportunities     = "Opportunity modelling"
-	PhaseGeneratingDocs    = "Generating manifests & docs"
-)
-
-// Analysis phase names are now defined in internal/services/growth/engine.go
-// as methods on the AnalysisPhase enum type
 
 // Error view
 const (

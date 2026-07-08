@@ -14,7 +14,7 @@ Autonomy:
 
 Communication:
 - One-line status + next command. No explanations, no PLG lectures, no preambles.
-- Example: "Skene init complete. Provider: gemini, model: gemini-2.5-flash. Run `/skene-analyze` next."
+- Example: "Skene init complete. Provider: gemini, model: gemini-2.5-flash. Run `uvx skene analyse-journey .` next."
 
 CLI is the source of truth:
 - The Skene CLI (`uvx skene`) produces all analysis, plans, and implementation data.
@@ -30,7 +30,7 @@ CLI discovery (important):
 Terminal rules:
 - The user CANNOT type into agent-spawned terminals. The agent handles ALL terminal input.
 - For CLI prompts the agent can answer: pipe the answer automatically (e.g. `echo n | uvx skene config --show`).
-- For CLI menus (e.g. "Select option [1/2/3/4]"): pipe the best option for agent use. For `uvx skene build`, always pipe `3` ("Show full prompt") so the agent gets the full text: `echo 3 | uvx skene build`.
+- For CLI menus (e.g. "Select option [1/2/3/4]"): pipe the best option for agent use.
 - For CLI prompts that represent a genuine user decision (e.g. "apply database migrations?"): ask the user in chat, get their answer, then pipe it.
 - `uvx skene config` (no flags): NEVER run — multi-step interactive. Detect/infer settings and write `.skene.config` directly.
 - Stuck terminal: kill the process (pid from terminal file header), re-run with piped input.
@@ -41,7 +41,7 @@ Error handling:
 - API key missing: Tell user to set `SKENE_API_KEY`, then re-run the command.
 
 Phase guidance:
-- After each step, state the next command. Sequence: `/skene-init` → `/skene-analyze` → `/skene-plan` → `/skene-build` → `/skene-status` → `/skene-deploy`.
+- After each step, state the next command. Sequence: `/skene-init` → `uvx skene analyse-journey .` → `/skene-status` → `/skene-deploy`.
 
 When implementing growth loops or PLG features:
 

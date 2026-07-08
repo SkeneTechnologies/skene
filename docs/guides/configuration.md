@@ -73,7 +73,7 @@ Displays all current configuration values and their sources.
 
 If `output_dir` is **not** set in config and **`SKENE_OUTPUT_DIR`** is unset, Skene infers a default of `./skene-context` vs `./skene` by looking for bundle directories **`skene-context/`** (preferred) and **`skene/`** (legacy) under a **project root**.
 
-- **Which root:** Commands that take a project path (for example `skene push ./my-repo`, `skene analyze ./my-repo`, or journey commands with a `PATH` argument) resolve this layout against **that directory**, not necessarily your shell’s current working directory. That way a different cwd cannot pick the wrong bundle.
+- **Which root:** Commands that take a project path (for example `skene push ./my-repo` or `skene analyse-journey ./my-repo`) resolve this layout against **that directory**, not necessarily your shell’s current working directory. That way a different cwd cannot pick the wrong bundle.
 - **Precedence:** If both `skene-context/` and `skene/` exist under that root, **`skene-context` wins**. If only `skene/` exists, sticky defaults to `./skene`.
 - **Override:** Set `output_dir` in `.skene.config` or `SKENE_OUTPUT_DIR` to skip sticky detection entirely.
 
@@ -146,7 +146,7 @@ When using `skene push` to deploy to Skene Cloud, upstream URL, workspace slug, 
 
 ## Excluding folders
 
-Custom exclusions from both the config file and `--exclude` CLI flags are merged with the built-in defaults.
+Custom exclusions from the config file are merged with the built-in defaults.
 
 ### Default exclusions
 
@@ -161,14 +161,6 @@ Exclusion matches in three ways:
 3. **Path pattern** — `"tests/unit"` matches any path containing that pattern
 
 ### Examples
-
-```bash
-# CLI flags (merged with config file exclusions)
-uvx skene analyze . --exclude tests --exclude vendor
-
-# Short form
-uvx skene analyze . -e planner -e migrations -e docs
-```
 
 ```toml
 # In .skene.config

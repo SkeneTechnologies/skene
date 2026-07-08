@@ -61,7 +61,7 @@ def cmd_export(
 
     if not registry or not registry.get("features"):
         warning(
-            f"No feature registry found or registry is empty.\nRun `skene analyze` first to populate {registry_path}"
+            f"No feature registry found or registry is empty.\nExpected a populated registry at {registry_path}"
         )
         raise typer.Exit(1)
 

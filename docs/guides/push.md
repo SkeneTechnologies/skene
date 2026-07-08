@@ -2,13 +2,13 @@
 
 The `push` command uploads your Skene bundle (files under the configured output directory) plus the latest Supabase trigger migration to Skene Cloud.
 
-`push` does not build anything. Run `skene build` first so `engine.yaml`, the feature registry, and migrations exist.
+`push` does not generate anything. It uploads existing artifacts: `engine.yaml`, the optional feature registry, and trigger migrations must already exist.
 
 ## Prerequisites
 
 Before running `push`, you need:
 
-- **`{output_dir}/engine.yaml`** — typically `skene-context/engine.yaml` after `build` (see [configuration](configuration.md) for `output_dir`).
+- **`{output_dir}/engine.yaml`** — typically `skene-context/engine.yaml` (see [configuration](configuration.md) for `output_dir`).
 - **`supabase/migrations/`** containing at least one eligible trigger migration (newest `*_skene_triggers.sql` is used; older repos may use `*skene_trigger*` / `*skene_telemetry*` patterns).
 
 **Configuration:** `output_dir` comes from `.skene.config`, `SKENE_OUTPUT_DIR`, or sticky detection (see [configuration](configuration.md)). Sticky bundle layout is resolved against the **`PATH` you pass to `push`**, not only your current shell directory.
@@ -50,15 +50,6 @@ uvx skene push --upstream https://skene.ai/workspace/my-app
 2. **Payload** — Builds a manifest and a `files` list: **all files** under the bundle directory (`output_dir`), plus the latest trigger SQL, each as `{ "path", "content" }` relative to the project root. Missing optional files (for example `feature-registry.json`) are simply omitted from the upload.
 3. **API** — `POST` to Skene Cloud `/api/v1/push` with `{ "manifest", "files" }`. Success responses include `artifact_count`, `updated_paths`, and `push_id` where applicable.
 
-## Workflow summary
-
-| Command | Reads bundle + migrations | Generates SQL | Upstream |
-|---------|---------------------------|---------------|----------|
-| `skene build` | ✓ | ✓ (unless `--skip-migrations`) | ✗ |
-| `skene push` | ✓ | ✗ | ✓ |
-
-Trigger SQL is produced by `build` for engine features that define `action`.
-
 ## Publishing a journey from the TUI
 
 Running journey analysis (from the TUI or the CLI) never publishes anything by itself — the journey reaches Skene Cloud only when you push. In the TUI that is the explicit **"Deploy to Skene Cloud"** step, which runs a normal `skene push` and uploads the full bundle (engine, registry, migrations, journey) as described above.
@@ -74,7 +65,6 @@ Upstream URL resolution: `--upstream` → `upstream` in `.skene.config` → defa
 ## Next steps
 
 - [Login](login.md) — Authenticate with Skene Cloud
-- [Build](build.md) — Generate engine + migrations
 - [Status](status.md) — Validate engine vs migrations
 - [Configuration](configuration.md) — `output_dir` and sticky bundles
 - [CLI Reference](../reference/cli.md) — All commands

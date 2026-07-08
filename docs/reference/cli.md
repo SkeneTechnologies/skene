@@ -2,7 +2,7 @@
 
 Complete reference for every `skene` command and flag.
 
-For in-depth usage of individual commands, see the [guides](../guides/analyze.md). This page is a lookup reference.
+For in-depth usage of individual commands, see the [guides](../guides/push.md). This page is a lookup reference.
 
 ---
 
@@ -14,48 +14,6 @@ For in-depth usage of individual commands, see the [guides](../guides/analyze.md
 | `--help` | Show help message and exit |
 
 When invoked with no arguments, `skene` prints help and exits.
-
----
-
-## `analyze`
-
-Analyze a codebase and generate `growth-manifest.json`.
-
-Scans your codebase to detect the technology stack, current growth features, and new growth opportunities. Requires an LLM provider (or falls back to a sample preview if no API key is set).
-
-```
-skene analyze [PATH] [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `PATH` | `.` | Path to codebase directory to analyze (must exist) |
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--output PATH` | `-o` | `./skene-context/growth-manifest.json` (or configured `output_dir`) | Output path for the manifest file. If a directory is given, `growth-manifest.json` is appended automatically. |
-| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
-| `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic` (or `claude`), `lmstudio`, `ollama`, `generic` (aliases: `openai-compatible`, `openai_compatible`) |
-| `--model TEXT` | `-m` | provider default | LLM model name (e.g. `gpt-4o`, `gemini-3-flash-preview`) |
-| `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--quiet` | `-q` | `false` | Suppress output, show errors only |
-| `--product-docs` | | `false` | Also generate `product-docs.md` with user-facing feature documentation |
-| `--features` | | `false` | Only analyze growth features and update `feature-registry.json` (skips opportunities and revenue leakage) |
-| `--exclude TEXT` | `-e` | config value | Folder names to exclude from analysis. Repeatable: `--exclude tests --exclude vendor`. Merged with `exclude_folders` from config. |
-| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
-| `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
-
-### Behavior notes
-
-- When no API key is provided and the provider is not local (`lmstudio`, `ollama`, `generic`), the command falls back to a sample preview.
-- Local providers (`lmstudio`, `ollama`, `generic`) do not require an API key.
-- The `generic` provider requires `--base-url`.
-
-See the [analyze guide](../guides/analyze.md) for detailed usage.
 
 ---
 
@@ -195,100 +153,6 @@ skene attach --clear
 
 ---
 
-## `plan`
-
-Generate a growth plan using the Council of Growth Engineers methodology.
-
-Reads the manifest and template produced by `analyze`, then uses an LLM to create a prioritized growth plan with implementation tasks.
-
-```
-skene plan [OPTIONS]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--manifest PATH` | | auto-detected | Path to `growth-manifest.json`. Auto-detected from `./skene-context/` (or legacy `./skene/`), `./`, or the context directory. |
-| `--template PATH` | | auto-detected | Path to `growth-template.json`. Auto-detected using the same search order. |
-| `--context PATH` | `-c` | auto-detected | Directory containing manifest and template files. Checked before default paths. |
-| `--output PATH` | `-o` | `./skene-context/growth-plan.md` | Output path for the growth plan (markdown). If a directory is given, `growth-plan.md` is appended. |
-| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
-| `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
-| `--model TEXT` | `-m` | provider default | LLM model name |
-| `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--quiet` | `-q` | `false` | Suppress output, show errors only |
-| `--activation` | | `false` | Generate an activation-focused plan using a Senior Activation Engineer perspective |
-| `--prompt TEXT` | | | Additional user prompt to influence the plan generation |
-| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
-| `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
-
-### Auto-detection order
-
-Both `--manifest` and `--template` are auto-detected by searching these paths in order:
-
-1. `<context>/growth-manifest.json` (if `--context` is set)
-2. `./skene-context/growth-manifest.json`
-3. `./skene/growth-manifest.json` (legacy)
-4. `./growth-manifest.json`
-
-Neither file is strictly required; the plan command works with whatever context is available.
-
-See the [plan guide](../guides/plan.md) for detailed usage.
-
----
-
-## `build`
-
-Build engine artifacts and an AI-ready implementation prompt from your growth plan.
-
-Extracts the Technical Execution section from the growth plan, updates `skene-context/engine.yaml`, updates `skene-context/feature-registry.json` (or the legacy `skene/feature-registry.json` when the bundle already uses that name), generates Supabase trigger migration SQL (unless skipped), and then offers prompt delivery options (Cursor deep link, Claude CLI, or display).
-
-```
-skene build [OPTIONS]
-```
-
-### Options
-
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--plan PATH` | | auto-detected | Path to the growth plan markdown file. Auto-detected from `./skene-context/growth-plan.md` (or legacy `./skene/growth-plan.md`) or `./growth-plan.md`. |
-| `--context PATH` | `-c` | auto-detected | Directory containing `growth-plan.md` |
-| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
-| `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic` |
-| `--model TEXT` | `-m` | provider default | LLM model name |
-| `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible API endpoint. Required when provider is `generic`. |
-| `--quiet` | `-q` | `false` | Suppress output, show errors only |
-| `--debug` | | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
-| `--no-fallback` | | `false` | Disable model fallback on rate limits (429). Retries the same model with exponential backoff instead of switching to a cheaper model. |
-| `--target TEXT` | `-t` | interactive | Skip the interactive menu and send the prompt directly. Options: `cursor`, `claude`, `show`, `file`. |
-| `--feature TEXT` | `-f` | | Bias toward this feature name when linking engine features to the registry |
-| `--skip-migrations` | | `false` | Skip writing Supabase trigger migration files from actionable engine features |
-
-### Delivery targets
-
-After generating the prompt, an interactive menu asks where to send it:
-
-1. **Cursor** -- opens the prompt via a Cursor deep link
-2. **Claude** -- launches the Claude CLI with the prompt file
-3. **Show** -- prints the full prompt to the terminal
-
-When `--target` is provided, the interactive menu is skipped entirely. The `file` target saves the prompt to disk and exits without opening any editor or printing the full content. This is the recommended mode for scripting and subprocess usage.
-
-The prompt is always saved to a file in the plan's parent directory regardless of target selection.
-
-### Behavior notes
-
-- Requires a configured LLM (API key + provider). Falls back to a template-based prompt if the LLM call fails.
-- Ensures `skene-context/engine.yaml` exists and merges a new LLM-generated engine delta into it.
-- Updates `skene-context/feature-registry.json` from engine features (legacy `skene/` location still supported).
-- Generates `supabase/migrations/*_skene_triggers.sql` from engine features that include `action` (unless `--skip-migrations` is used).
-- Use `--target file` for non-interactive pipelines (e.g. `analyze && plan && build --target file`).
-
-See the [build guide](../guides/build.md) for detailed usage.
-
----
-
 ## `status`
 
 Show implementation status for `skene-context/engine.yaml`.
@@ -328,28 +192,6 @@ skene status [PATH] [OPTIONS]
 - Returns non-zero exit code when required engine/migration checks fail.
 
 See the [status guide](../guides/status.md) for detailed usage.
-
----
-
-## `validate`
-
-Validate a `growth-manifest.json` file against the GrowthManifest schema.
-
-```
-skene validate MANIFEST
-```
-
-### Arguments
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `MANIFEST` | Yes | Path to the `growth-manifest.json` file to validate (must exist) |
-
-### Behavior notes
-
-- Parses the file as JSON, then validates it against the Pydantic `GrowthManifest` model.
-- On success, prints a summary table showing project name, version, tech stack, and feature counts.
-- On failure, prints the validation error and exits with code 1.
 
 ---
 
@@ -393,7 +235,7 @@ See the [configuration guide](../guides/configuration.md) for file format and al
 
 Upload the Skene bundle (all files under `{output_dir}`) and the latest trigger migration to Skene Cloud.
 
-`push` does not generate migrations. Run `skene build` first so `engine.yaml`, optional `feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql` exist.
+`push` does not generate migrations. It uploads existing artifacts: `engine.yaml`, optional `feature-registry.json`, and `supabase/migrations/*_skene_triggers.sql` must already exist.
 
 ```
 skene push [PATH] [OPTIONS]
@@ -492,7 +334,7 @@ skene features export [PATH] [OPTIONS]
 ### Behavior notes
 
 - Reads `feature-registry.json` from the context directory.
-- Requires running `analyze` first to populate the registry.
+- The registry is populated by analysis runs; it must exist before exporting.
 - Use for integrating with dashboards, Linear, Notion, or documentation.
 
 See the [features guide](../guides/features.md) for detailed usage.
@@ -503,8 +345,8 @@ See the [features guide](../guides/features.md) for detailed usage.
 
 | Variable | Used by | Description |
 |----------|---------|-------------|
-| `SKENE_API_KEY` | `analyze`, `plan`, `build`, `status`, `analyse-journey` | API key for the LLM provider. Equivalent to `--api-key`. |
-| `SKENE_BASE_URL` | `analyze`, `plan`, `build`, `analyse-journey` | Base URL for OpenAI-compatible endpoints. Equivalent to `--base-url`. |
+| `SKENE_API_KEY` | `analyse-journey`, `serve` | API key for the LLM provider. Equivalent to `--api-key`. |
+| `SKENE_BASE_URL` | `analyse-journey`, `serve` | Base URL for OpenAI-compatible endpoints. Equivalent to `--base-url`. |
 | `SKENE_PROVIDER` | config loading | LLM provider override at the environment level. |
 | `SKENE_OUTPUT_DIR` | all commands | Override `output_dir` for commands that have no dedicated flag (primarily `push`). |
 | `SKENE_UPSTREAM_API_KEY` | `push`, `login` | API key for upstream authentication. |
@@ -531,33 +373,27 @@ See the [features guide](../guides/features.md) for detailed usage.
 # Full workflow
 uvx skene config --init
 uvx skene config
-uvx skene analyze .
-uvx skene plan
-uvx skene build
+uvx skene analyse-journey .
 
-# Analyze with explicit provider settings
-uvx skene analyze ./my-app -p gemini -m gemini-3-flash-preview --api-key "YOUR_KEY"
+# Analyse user journey with SQL schema files
+uvx skene analyse-journey ./my-app --schema-dir ./schemas
 
-# Analyze with a local LLM (no API key needed)
-uvx skene analyze . -p ollama -m llama3
+# Analyse user journey with a live database
+uvx skene analyse-journey --db-url "postgresql://user:pass@localhost:5432/mydb"
 
-# Analyze with OpenAI-compatible endpoint
-uvx skene analyze . -p generic --base-url http://localhost:8080/v1
+# Journey analysis with custom output
+uvx skene analyse-journey ./my-app --schema-dir ./schemas -o ./output/journey.yaml
 
-# Generate activation-focused plan
-uvx skene plan --activation
+# Journey analysis with explicit provider settings
+uvx skene analyse-journey . -p gemini -m gemini-3-flash-preview --api-key "YOUR_KEY"
 
-# Validate a manifest
-uvx skene validate ./skene-context/growth-manifest.json
+# Journey analysis with a local LLM (no API key needed)
+uvx skene analyse-journey . -p ollama -m llama3
 
 # Check engine implementation status
 uvx skene status
 
-# Features-only analysis (updates feature registry without full analysis)
-uvx skene analyze . --features
-
-# Build engine + trigger artifacts, then push upstream
-uvx skene build
+# Push artifacts upstream
 uvx skene push
 uvx skene push --upstream https://skene.ai/workspace/my-app
 
@@ -568,18 +404,6 @@ uvx skene logout
 
 # Export feature registry
 uvx skene features export --format markdown -o features.md
-
-# Quick preview (no API key, just run analyze without a key)
-uvx skene analyze .
-
-# Analyse user journey with SQL schema files
-uvx skene analyse-journey ./my-app --schema-dir ./schemas
-
-# Analyse user journey with a live database
-uvx skene analyse-journey --db-url "postgresql://user:pass@localhost:5432/mydb"
-
-# Journey analysis with custom output
-uvx skene analyse-journey ./my-app --schema-dir ./schemas -o ./output/journey.yaml
 
 # Run the backend server headless (localhost)
 uvx skene serve --port 4906
