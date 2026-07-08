@@ -66,6 +66,8 @@ Displays all current configuration values and their sources.
 | `debug` | boolean | `false` | Show diagnostic messages and log LLM I/O to `~/.local/state/skene/debug/` |
 | `exclude_folders` | list | `[]` | Folder names to exclude from analysis |
 | `upstream` | string | — | Upstream workspace URL for `push` command |
+| `server_url` | string | — | URL of a remote `skene serve` instance. Written by `skene attach`; used by `analyse-journey` remote mode. |
+| `server_token` | string | — | Bearer token for the remote server. Written by `skene attach`. |
 
 ### Sticky output directory
 
@@ -124,8 +126,19 @@ exclude_folders = ["tests", "vendor"]
 | `SKENE_DEBUG` | Enable debug mode | `true` |
 | `SKENE_UPSTREAM_API_KEY` | API key for upstream authentication | `sk-upstream-...` |
 | `SKENE_DB_URL` | PostgreSQL connection string for `analyse-journey` live schema introspection. Skene introspects all user-defined schemas (excluding `pg_catalog`, `information_schema`, `pg_toast`, and `pg_*` schemas). | `postgresql://user:pass@localhost:5432/mydb` |
+| `SKENE_SERVER_URL` | URL of a remote `skene serve` instance for `analyse-journey` (equivalent to `--server`) | `http://127.0.0.1:4906` |
+| `SKENE_SERVER_TOKEN` | Bearer token for server auth (`serve --token`, `attach --token`, `analyse-journey --server-token`) | `my-secret` |
+| `SKENE_DB_PATH` | Path to the global SQLite session database (see below) | `~/.local/share/skene/skene.db` |
 | `LMSTUDIO_BASE_URL` | LM Studio server URL | `http://localhost:1234/v1` |
 | `OLLAMA_BASE_URL` | Ollama server URL | `http://localhost:11434/v1` |
+
+## Server settings
+
+`skene attach <url>` connects the CLI to a running [`skene serve`](../reference/cli.md#serve) instance: it verifies the server's `/health` and saves `server_url` / `server_token` to `.skene.config` (the project config if one exists, otherwise the user config). Once attached, `analyse-journey` runs on that server. `skene attach --clear` removes the settings.
+
+## Session database
+
+Every `analyse-journey` run — embedded or served — persists a session trace in a global SQLite database at `~/.local/share/skene/skene.db`. Override the location with `SKENE_DB_PATH` or `skene serve --db-path`. The database holds sessions for every workspace on the machine; nothing is deleted automatically.
 
 ## Upstream credentials
 

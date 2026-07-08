@@ -59,13 +59,9 @@ uvx skene push --upstream https://skene.ai/workspace/my-app
 
 Trigger SQL is produced by `build` for engine features that define `action`.
 
-## Automatic first publish (journey analysis)
+## Publishing a journey from the TUI
 
-You don't always need an explicit `push` for a **journey** to reach Skene Cloud. When you run journey analysis from the **TUI** while linked to a workspace (the `skene` provider), Skene publishes the generated `journey.yaml` automatically — but only when the workspace has **no journey upstream yet**. This is so a first-time user's journey appears in the cloud Customer Journey canvas without a manual step.
-
-- If a journey already exists upstream, nothing is published (your existing journey is never overwritten).
-- If the presence check can't be completed, publishing is skipped silently.
-- A normal `skene push` still uploads the full bundle (engine, registry, migrations, journey) as described above.
+Running journey analysis (from the TUI or the CLI) never publishes anything by itself — the journey reaches Skene Cloud only when you push. In the TUI that is the explicit **"Deploy to Skene Cloud"** step, which runs a normal `skene push` and uploads the full bundle (engine, registry, migrations, journey) as described above.
 
 ## Upstream authentication
 

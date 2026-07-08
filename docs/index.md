@@ -11,6 +11,8 @@ A CLI toolkit for analyzing codebases through the lens of Product-Led Growth (PL
 - **Builds implementation artifacts and prompts** — updates `skene-context/engine.yaml`, feature-registry, trigger SQL, and generates implementation prompts
 - **Pushes the Skene bundle upstream** — uploads files from the configured output directory plus the latest trigger migration to Skene Cloud
 - **Validates engine/migration alignment** — checks action-enabled engine features against generated SQL artifacts
+- **Maps the customer journey** — `analyse-journey` uses parallel code and schema agents to produce a `journey.yaml` of your product's user lifecycle
+- **Runs as a client/server system** — a backend server (`skene serve`) owns the analysis engine and exposes an [HTTP API](reference/http-api.md); the CLI and TUI are clients, and every run is persisted as a session trace
 - **Supports multiple LLM providers**: OpenAI, Gemini, Anthropic, LM Studio, Ollama, and any OpenAI-compatible endpoint
 
 ## Core workflow
@@ -77,6 +79,7 @@ uvx skene push
 ### Reference
 
 - [CLI reference](reference/cli.md) — All commands and flags
+- [HTTP API](reference/http-api.md) — The `skene serve` REST + SSE API, domain model, and event stream
 - [Python API](reference/python-api.md) — CodebaseExplorer, analyzers, schemas
 - [Manifest schema](reference/manifest-schema.md) — JSON schema for v1.0 and v2.0 manifests
 

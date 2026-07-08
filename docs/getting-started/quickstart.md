@@ -82,7 +82,7 @@ uvx skene build
 uvx skene push
 ```
 
-> **Note:** If you run **journey analysis from the TUI** while linked to a workspace, your `journey.yaml` is published to Skene Cloud automatically on first run — no manual `push` needed for the journey to appear in the cloud canvas. The `build → push` flow above is still how you deploy engine artifacts and Supabase triggers. See [Automatic first publish](../guides/push.md#automatic-first-publish-journey-analysis).
+> **Note:** Journey analysis never publishes anything by itself. To get your `journey.yaml` into the cloud Customer Journey canvas, push it — from the TUI use the explicit **"Deploy to Skene Cloud"** step, from the CLI run `skene push`. The `build → push` flow above is also how you deploy engine artifacts and Supabase triggers.
 
 ## What you get
 
