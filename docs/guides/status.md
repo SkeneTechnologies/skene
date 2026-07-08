@@ -6,7 +6,7 @@ The `status` command validates `skene-context/engine.yaml` and checks whether ac
 
 Before running `status`, you need:
 
-- A `skene-context/engine.yaml` file (generated or updated by `build`)
+- A `skene-context/engine.yaml` file
 - Trigger migrations in `supabase/migrations/` if your engine features include `action`
 
 ## Basic usage
@@ -79,6 +79,5 @@ Warm Welcome Copy   public.users.insert       code-only ok       Code-only featu
 
 ## Next steps
 
-- [Build](build.md) -- Generate/merge `skene-context/engine.yaml` and trigger migrations
 - [Push](push.md) -- Push pre-generated artifacts upstream
 - [CLI Reference](../reference/cli.md) -- Full reference for all commands and flags

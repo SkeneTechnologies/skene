@@ -2,14 +2,10 @@
 Command-line interface for skene.
 
 Usage with uvx (recommended):
-    uvx skene analyze .
-    uvx skene plan
-    uvx skene validate ./growth-manifest.json
+    uvx skene analyse-journey .
 
 Usage with pip install:
-    skene analyze .
-    skene plan
-    skene validate ./growth-manifest.json
+    skene analyse-journey .
 """
 
 from skene.cli.app import app

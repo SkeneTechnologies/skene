@@ -56,6 +56,16 @@ in the TUI and its installer.
 
 ## skene CLI
 
+### [Unreleased]
+
+#### Removed
+- **Legacy pipeline commands removed: `analyze`, `plan`, `build`, `validate`.** The journey flow (`analyse-journey`) is now the sole analysis entry point. Removed alongside them:
+  - The legacy analyzers (`TechStackAnalyzer`, `GrowthFeaturesAnalyzer`, `ManifestAnalyzer`, `DocsAnalyzer`), the strategy framework (`skene.strategies`), the planner (`skene.planner`), docs generation (`skene.docs`), templates (`skene.templates`), objectives (`skene.objectives`), and the manifest schemas (`skene.manifest`).
+  - Dead support code with no remaining callers: the engine delta generator (`skene.engine.generator`), growth-loop JSON generation (`skene.growth_loops.storage`), and the AST-based loop validator (`skene.validators.loop_validator`, `ts_parser`, `py_parser`).
+  - The `benchmarks/` suite (it benchmarked the removed pipeline), the cursor-plugin `skene-analyze`/`skene-plan`/`skene-build` commands and their skills, and the corresponding docs pages.
+  - `skene/__init__.py` now exports only `CodebaseExplorer`, `build_directory_tree`, `DEFAULT_EXCLUDE_FOLDERS`, `Config`, `load_config`, `LLMClient`, `create_llm_client`.
+- Kept: `analyse-journey`, `status` (engine.yaml validation), `push`, `config`, `login`/`logout`, `features`, `serve`, `attach`.
+
 ### [0.4.1] - 2026-05-20
 
 Maintenance release — version bump only.

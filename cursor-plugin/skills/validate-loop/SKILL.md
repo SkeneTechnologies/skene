@@ -18,20 +18,16 @@ Check implementation status via the Skene CLI.
 1. **Discover CLI options**
    Run `uvx skene status --help` to see available flags. Use only flags that appear in the output.
 
-2. **Check for growth loops**
-   `ls .skene/active-loop.json 2>/dev/null || ls skene-context/growth-loops/ 2>/dev/null || ls skene/growth-loops/ 2>/dev/null`
-   If missing: "No growth loop found. Run `/skene-plan` first." Stop.
-
-3. **Run status check**
+2. **Run status check**
    Run `uvx skene status` with appropriate flags from --help output (e.g. path argument, `--context` if needed).
    If it fails, report error. Do NOT build your own checklist.
 
-4. **Present CLI output**
+3. **Present CLI output**
    Present the engine status table from CLI output. For action features, **Detail** uses `Found in: <newest migration> (+N)` when the same trigger exists in multiple SQL files (`+N` = additional files beyond the one shown).
 
-5. **Suggest next step**
-   - All done → "Growth loop implemented. Run `/skene-deploy` for telemetry."
-   - Gaps remain → "Remaining: [items]. Run `/skene-build` to continue."
+4. **Suggest next step**
+   - All done → "Engine implemented. Run `/skene-deploy` for telemetry."
+   - Gaps remain → "Remaining: [items]. Implement the missing triggers, then re-run `/skene-status`."
 
 ## Error handling
 

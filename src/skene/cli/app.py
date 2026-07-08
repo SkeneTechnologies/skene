@@ -23,14 +23,10 @@ from skene.output import apply_verbosity, console, error
 # ---------------------------------------------------------------------------
 
 _COMMAND_ORDER = [
-    "analyze",
     "analyse-journey",
-    "plan",
-    "build",
     "status",
     "push",
     "config",
-    "validate",
     "login",
     "logout",
     "features",
@@ -48,7 +44,7 @@ class SectionedHelpGroup(TyperGroup):
 
 app = typer.Typer(
     name="skene",
-    help="PLG analysis toolkit for codebases. Analyze code, detect growth opportunities.",
+    help="PLG analysis toolkit for codebases. Analyse your code and schema into a journey.yaml.",
     add_completion=False,
     no_args_is_help=True,
     cls=SectionedHelpGroup,
@@ -216,21 +212,16 @@ def main(
     """
     skene - PLG analysis toolkit for codebases.
 
-    Analyze your codebase, detect growth opportunities, and generate documentation.
-
-    Workflow suggestion:
-        analyze -> plan
+    Analyse your codebase and its schema to produce a journey.yaml.
 
     Quick start with uvx (no installation required):
 
-        uvx skene analyze .
-        # Or: uvx skene analyze .
+        uvx skene analyse-journey .
 
     Or install with pip:
 
         pip install skene
-        skene analyze .
-        # Or: skene analyze .
+        skene analyse-journey .
     """
     pass
 
@@ -270,14 +261,10 @@ def skene_growth_entry():
 
 from skene.cli.commands import (  # noqa: E402, F401
     analyse_journey,
-    analyze,
     attach,
-    build,
     config_cmd,
     login,
-    plan,
     push,
     serve,
     status_cmd,
-    validate,
 )

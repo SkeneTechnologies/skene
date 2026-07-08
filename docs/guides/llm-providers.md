@@ -19,7 +19,7 @@ There are three ways to configure your provider, model, and API key:
 
 ```bash
 # 1. CLI flags (highest priority)
-uvx skene analyze . --provider gemini --model gemini-3-flash-preview --api-key "your-key"
+uvx skene analyse-journey . --provider gemini --model gemini-3-flash-preview --api-key "your-key"
 
 # 2. Environment variables
 export SKENE_API_KEY="your-key"
@@ -38,10 +38,10 @@ The default provider. Get an API key at [platform.openai.com/api-keys](https://p
 Any OpenAI model can be used via `--model`. The default is `gpt-4o`.
 
 ```bash
-uvx skene analyze . --provider openai --api-key "sk-..."
+uvx skene analyse-journey . --provider openai --api-key "sk-..."
 
 # gpt-4o is the default, but you can specify any OpenAI model
-uvx skene analyze . --model gpt-4o-mini --api-key "sk-..."
+uvx skene analyse-journey . --model gpt-4o-mini --api-key "sk-..."
 ```
 
 ## Gemini
@@ -51,10 +51,10 @@ Google's Gemini models via the v1beta API. Get an API key at [aistudio.google.co
 Any Gemini model can be used via `--model`. The default is `gemini-3-flash-preview`.
 
 ```bash
-uvx skene analyze . --provider gemini --api-key "your-gemini-key"
+uvx skene analyse-journey . --provider gemini --api-key "your-gemini-key"
 
 # Use a specific model
-uvx skene analyze . --provider gemini --model gemini-2.5-pro --api-key "your-gemini-key"
+uvx skene analyse-journey . --provider gemini --model gemini-2.5-pro --api-key "your-gemini-key"
 ```
 
 > **Note**: The v1beta API requires the `-preview` suffix on Gemini 3.x models.
@@ -66,13 +66,13 @@ Anthropic's Claude models. Get an API key at [console.anthropic.com](https://con
 Any Claude model can be used via `--model`. The default is `claude-sonnet-4-5`.
 
 ```bash
-uvx skene analyze . --provider anthropic --api-key "sk-ant-..."
+uvx skene analyse-journey . --provider anthropic --api-key "sk-ant-..."
 
 # Or use the "claude" alias
-uvx skene analyze . --provider claude --api-key "sk-ant-..."
+uvx skene analyse-journey . --provider claude --api-key "sk-ant-..."
 
 # Use a specific model
-uvx skene analyze . --provider claude --model claude-haiku-4-5 --api-key "sk-ant-..."
+uvx skene analyse-journey . --provider claude --model claude-haiku-4-5 --api-key "sk-ant-..."
 ```
 
 ## LM Studio
@@ -83,10 +83,10 @@ Use `--model` to specify whichever model you have loaded in LM Studio. If omitte
 
 ```bash
 # Make sure LM Studio is running with a model loaded
-uvx skene analyze . --provider lmstudio
+uvx skene analyse-journey . --provider lmstudio
 
 # Specify the model name if needed
-uvx skene analyze . --provider lmstudio --model "your-loaded-model"
+uvx skene analyse-journey . --provider lmstudio --model "your-loaded-model"
 ```
 
 **Default server URL**: `http://localhost:1234/v1`
@@ -114,11 +114,11 @@ ollama pull llama3.3
 # Make sure Ollama is running
 ollama serve
 
-# Analyze
-uvx skene analyze . --provider ollama
+# Analyse the journey
+uvx skene analyse-journey . --provider ollama
 
 # Specify a model
-uvx skene analyze . --provider ollama --model mistral
+uvx skene analyse-journey . --provider ollama --model mistral
 ```
 
 **Default server URL**: `http://localhost:11434/v1`
@@ -137,10 +137,10 @@ Connect to any OpenAI-compatible API endpoint. Requires `--base-url` or the `SKE
 
 ```bash
 # With API key
-uvx skene analyze . --provider generic --base-url "https://your-api.com/v1" --api-key "your-key" --model "your-model"
+uvx skene analyse-journey . --provider generic --base-url "https://your-api.com/v1" --api-key "your-key" --model "your-model"
 
 # Local endpoint without API key
-uvx skene analyze . --provider generic --base-url "http://localhost:8000/v1" --model "local-model"
+uvx skene analyse-journey . --provider generic --base-url "http://localhost:8000/v1" --model "local-model"
 ```
 
 The provider also accepts `openai-compatible` and `openai_compatible` as aliases.
@@ -155,12 +155,10 @@ This is convenient for interactive use but can corrupt results during benchmarki
 Pass `--no-fallback` to disable model switching. Instead of falling back, the CLI retries the **same** model with exponential backoff and raises an error if all retries are exhausted:
 
 ```bash
-uvx skene analyze . --provider gemini --model gemini-3-flash-preview --no-fallback
-uvx skene plan --no-fallback
-uvx skene build --no-fallback
+uvx skene analyse-journey . --provider gemini --model gemini-3-flash-preview --no-fallback
 ```
 
-This flag is available on the `analyze`, `plan`, and `build` commands.
+This flag is available on the `analyse-journey` command.
 
 ## Next steps
 

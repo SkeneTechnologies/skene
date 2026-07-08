@@ -31,16 +31,6 @@ type AnalyzingView struct {
 	currentIdx  int
 }
 
-// NewAnalyzingView creates a new analysis progress view
-func NewAnalyzingView() *AnalyzingView {
-	return &AnalyzingView{
-		phases:   []AnalysisPhase{},
-		header:   components.NewTitleHeader(constants.StepNameAnalyzing),
-		spinner:  components.NewSpinner(),
-		terminal: components.NewTerminalOutput(14, 300),
-	}
-}
-
 // NewCommandView creates a view for running a generic command with terminal output
 func NewCommandView(title string) *AnalyzingView {
 	return &AnalyzingView{

@@ -13,14 +13,15 @@ The skene docs should live at `/resources/docs/skene/` as a new section alongsid
 | `docs/index.md` | `app/(landing)/resources/docs/skene/page.tsx` | `/resources/docs/skene` |
 | `docs/getting-started/installation.md` | `.../skene/getting-started/installation/page.tsx` | `/resources/docs/skene/getting-started/installation` |
 | `docs/getting-started/quickstart.md` | `.../skene/getting-started/quickstart/page.tsx` | `/resources/docs/skene/getting-started/quickstart` |
-| `docs/guides/analyze.md` | `.../skene/guides/analyze/page.tsx` | `/resources/docs/skene/guides/analyze` |
-| `docs/guides/plan.md` | `.../skene/guides/plan/page.tsx` | `/resources/docs/skene/guides/plan` |
-| `docs/guides/build.md` | `.../skene/guides/build/page.tsx` | `/resources/docs/skene/guides/build` |
+| `docs/guides/push.md` | `.../skene/guides/push/page.tsx` | `/resources/docs/skene/guides/push` |
+| `docs/guides/login.md` | `.../skene/guides/login/page.tsx` | `/resources/docs/skene/guides/login` |
+| `docs/guides/status.md` | `.../skene/guides/status/page.tsx` | `/resources/docs/skene/guides/status` |
+| `docs/guides/features.md` | `.../skene/guides/features/page.tsx` | `/resources/docs/skene/guides/features` |
 | `docs/guides/llm-providers.md` | `.../skene/guides/llm-providers/page.tsx` | `/resources/docs/skene/guides/llm-providers` |
 | `docs/guides/configuration.md` | `.../skene/guides/configuration/page.tsx` | `/resources/docs/skene/guides/configuration` |
 | `docs/reference/cli.md` | `.../skene/reference/cli/page.tsx` | `/resources/docs/skene/reference/cli` |
+| `docs/reference/http-api.md` | `.../skene/reference/http-api/page.tsx` | `/resources/docs/skene/reference/http-api` |
 | `docs/reference/python-api.md` | `.../skene/reference/python-api/page.tsx` | `/resources/docs/skene/reference/python-api` |
-| `docs/reference/manifest-schema.md` | `.../skene/reference/manifest-schema/page.tsx` | `/resources/docs/skene/reference/manifest-schema` |
 | `docs/troubleshooting.md` | `.../skene/troubleshooting/page.tsx` | `/resources/docs/skene/troubleshooting` |
 
 ## Creating Next.js pages
@@ -147,16 +148,15 @@ import {
   BookOpen,
   Download,
   Zap,
-  Search,
-  Map,
-  Hammer,
-  MessageSquare,
+  Upload,
+  LogIn,
+  ListChecks,
+  Layers,
   Cpu,
   Settings,
   Plug,
   Terminal,
   Code,
-  FileJson,
   HelpCircle,
 } from "lucide-react";
 
@@ -164,14 +164,15 @@ const docsNavItems = [
   { href: "/resources/docs/skene", label: "Overview", icon: BookOpen },
   { href: "/resources/docs/skene/getting-started/installation", label: "Installation", icon: Download },
   { href: "/resources/docs/skene/getting-started/quickstart", label: "Quickstart", icon: Zap },
-  { href: "/resources/docs/skene/guides/analyze", label: "Analyze", icon: Search },
-  { href: "/resources/docs/skene/guides/plan", label: "Plan", icon: Map },
-  { href: "/resources/docs/skene/guides/build", label: "Build", icon: Hammer },
+  { href: "/resources/docs/skene/guides/push", label: "Push", icon: Upload },
+  { href: "/resources/docs/skene/guides/login", label: "Login", icon: LogIn },
+  { href: "/resources/docs/skene/guides/status", label: "Status", icon: ListChecks },
+  { href: "/resources/docs/skene/guides/features", label: "Features", icon: Layers },
   { href: "/resources/docs/skene/guides/llm-providers", label: "LLM Providers", icon: Cpu },
   { href: "/resources/docs/skene/guides/configuration", label: "Configuration", icon: Settings },
   { href: "/resources/docs/skene/reference/cli", label: "CLI Reference", icon: Terminal },
+  { href: "/resources/docs/skene/reference/http-api", label: "HTTP API", icon: Plug },
   { href: "/resources/docs/skene/reference/python-api", label: "Python API", icon: Code },
-  { href: "/resources/docs/skene/reference/manifest-schema", label: "Manifest Schema", icon: FileJson },
   { href: "/resources/docs/skene/troubleshooting", label: "Troubleshooting", icon: HelpCircle },
 ];
 ```

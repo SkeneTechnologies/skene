@@ -1,36 +1,26 @@
 # Python API
 
-Programmatic access to skene's codebase analysis, manifest generation, and documentation tools.
+Programmatic access to skene's codebase exploration, configuration, LLM client, and journey models.
 
 ## Quick example
 
 ```python
-import asyncio
 from pathlib import Path
-from pydantic import SecretStr
-from skene import CodebaseExplorer, ManifestAnalyzer
-from skene.llm import create_llm_client
+import yaml
 
-async def main():
-    codebase = CodebaseExplorer(Path("/path/to/repo"))
-    llm = create_llm_client(
-        provider="openai",
-        api_key=SecretStr("your-api-key"),
-        model="gpt-4o",
-    )
+from skene import CodebaseExplorer
+from skene.analyzers.journey.models import Journey
 
-    analyzer = ManifestAnalyzer()
-    result = await analyzer.run(
-        codebase=codebase,
-        llm=llm,
-        request="Analyze this codebase for growth opportunities",
-    )
+# Sandboxed access to a codebase
+explorer = CodebaseExplorer(Path("/path/to/repo"))
 
-    manifest = result.data["output"]
-    print(manifest["tech_stack"])
-    print(manifest["current_growth_features"])
-
-asyncio.run(main())
+# Load and validate a journey.yaml produced by `skene analyse-journey`
+journey = Journey.model_validate(
+    yaml.safe_load(Path("skene-context/journey.yaml").read_text())
+)
+print(journey.product.name)
+for stage in journey.stages:
+    print(stage.name, [m.name for m in stage.milestones])
 ```
 
 ## CodebaseExplorer
@@ -65,49 +55,6 @@ explorer = CodebaseExplorer(
 
 - `build_directory_tree` — Standalone function for building directory trees
 - `DEFAULT_EXCLUDE_FOLDERS` — List of default excluded folder names
-
-## Analyzers
-
-### ManifestAnalyzer
-
-Runs a full codebase analysis and produces a growth manifest.
-
-```python
-from skene import ManifestAnalyzer
-
-analyzer = ManifestAnalyzer()
-result = await analyzer.run(
-    codebase=codebase,
-    llm=llm,
-    request="Analyze this codebase for growth opportunities",
-)
-
-manifest = result.data["output"]
-```
-
-### TechStackAnalyzer
-
-Detects the technology stack of a codebase.
-
-```python
-from skene import TechStackAnalyzer
-
-analyzer = TechStackAnalyzer()
-result = await analyzer.run(codebase=codebase, llm=llm)
-tech_stack = result.data["output"]
-```
-
-### GrowthFeaturesAnalyzer
-
-Identifies existing growth features in a codebase.
-
-```python
-from skene import GrowthFeaturesAnalyzer
-
-analyzer = GrowthFeaturesAnalyzer()
-result = await analyzer.run(codebase=codebase, llm=llm)
-features = result.data["output"]
-```
 
 ## Configuration
 
@@ -157,44 +104,93 @@ client: LLMClient = create_llm_client(
 )
 ```
 
-## Manifest schemas
+## Journey models
 
-All schemas are Pydantic v2 models. See [Manifest schema reference](manifest-schema.md) for full field details.
+The `journey.yaml` schema is defined by Pydantic v2 models in `skene.analyzers.journey.models`. They are validated end-to-end before the file is written by `skene analyse-journey`.
 
 ```python
-from skene import (
-    GrowthManifest,     # v1.0 manifest
-    DocsManifest,       # v2.0 manifest (extends GrowthManifest)
-    TechStack,
-    GrowthFeature,
-    GrowthOpportunity,
-    IndustryInfo,
-    ProductOverview,    # v2.0 only
-    Feature,            # v2.0 only
+from skene.analyzers.journey.models import (
+    Journey,        # The whole document
+    Product,        # Product metadata (name, description, generated_at, source_commit)
+    Stage,          # A lifecycle stage containing milestones and KPIs
+    Milestone,      # A user-facing milestone with evidence
+    Kpi,            # A stage KPI
+    KpiDerivation,  # How a KPI is derived from tables/events
+    Layer,          # A named layer spanning multiple stages
+    Connector,      # A cross-stage link between milestones
+    Evidence,       # Re-exported from skene.schema.milestone
+    EvidenceSource, # Re-exported from skene.schema.milestone
+    TriggerType,    # Enum: email, scheduled, webhook, event_bus, unknown
+    ConnectorStyle, # Enum: solid, dashed, dotted
+    KpiUnit,        # Enum: percentage, count, duration_days, duration_hours, ratio, currency
 )
 ```
 
-### GrowthManifest fields
+### Journey fields
 
 | Field | Type |
 |-------|------|
-| `version` | `str` (`"1.0"`) |
-| `project_name` | `str` |
-| `description` | `str \| None` |
-| `tech_stack` | `TechStack` |
-| `industry` | `IndustryInfo \| None` |
-| `current_growth_features` | `list[GrowthFeature]` |
-| `growth_opportunities` | `list[GrowthOpportunity]` |
-| `revenue_leakage` | `list[RevenueLeakage]` |
-| `generated_at` | `datetime` |
+| `product` | `Product` |
+| `layers` | `list[Layer]` |
+| `stages` | `list[Stage]` (min 1) |
+| `connectors` | `list[Connector]` |
 
-### DocsManifest additional fields
+Model validators enforce unique stage/layer/connector IDs, unique stage orders, and that layers and connectors reference real stages/milestones.
+
+### Stage fields
 
 | Field | Type |
 |-------|------|
-| `version` | `str` (`"2.0"`) |
-| `product_overview` | `ProductOverview \| None` |
-| `features` | `list[Feature]` |
+| `id` | `str` (snake_case ID) |
+| `order` | `int` (>= 1) |
+| `name` | `str` |
+| `subtitle` | `str \| None` |
+| `milestones` | `list[Milestone]` (min 1, unique IDs and orders) |
+| `kpis` | `list[Kpi]` (unique IDs) |
+
+### Milestone fields
+
+| Field | Type |
+|-------|------|
+| `id` | `str` (snake_case ID) |
+| `order` | `int` (>= 1) |
+| `name` | `str` |
+| `description` | `str` |
+| `evidence` | `list[Evidence]` (min 1) |
+| `tracked_event` | `str \| None` |
+| `confidence` | `float` (0.0–1.0, default 1.0) |
+
+### Connector fields
+
+| Field | Type |
+|-------|------|
+| `id` | `str` (snake_case ID) |
+| `from` | `str` (`"<stage_id>.<milestone_id>"`) |
+| `to` | `str` (milestone ref or the literal `"unknown"`) |
+| `label` | `str` |
+| `trigger_type` | `TriggerType` |
+| `style` | `ConnectorStyle` (default `dashed`) |
+| `confidence` | `float` (0.0–1.0, default 1.0) |
+| `evidence` | `list[Evidence]` (min 1) |
+
+### Serialization
+
+```python
+from skene.analyzers.journey import serialize
+
+yaml_text = serialize.to_yaml(journey)   # Render Journey to YAML
+json_text = serialize.to_json(journey)   # Render Journey to JSON
+serialize.write(journey, path)           # Write journey.yaml to disk
+```
+
+### Journey pipeline
+
+The rest of the journey machinery lives alongside the models and is orchestrated by `skene.core.journey`:
+
+- `skene.analyzers.journey.merge` — `merge_candidates` deduplicates milestone candidates from the code and schema agents
+- `skene.analyzers.journey.classify` — `classify_milestone` / `classify_all` assign candidates to lifecycle stages
+- `skene.analyzers.journey.assemble` — `assemble_journey` builds the final validated `Journey`
+- `skene.analyzers.schema_parsers` — `parse_schema_dir` (SQL files) and `introspect_db` (live PostgreSQL) produce the schema input
 
 ## Feature registry
 
@@ -203,8 +199,7 @@ from skene.feature_registry import (
     load_feature_registry,              # Load registry from disk
     write_feature_registry,             # Write registry to disk
     merge_features_into_registry,       # Merge new features with existing registry
-    merge_registry_and_enrich_manifest, # Full registry + manifest enrichment pipeline
-    load_features_for_build,            # Load active features for build command
+    upsert_registry_from_engine,        # Upsert registry entries from engine.yaml features
     export_registry_to_format,          # Export to json, csv, or markdown
     derive_feature_id,                  # Convert feature name to snake_case ID
     compute_loop_ids_by_feature,        # Map feature_id -> list of loop_ids
@@ -216,9 +211,7 @@ from skene.feature_registry import (
 | Function | Description |
 |----------|-------------|
 | `merge_features_into_registry(new_features, registry)` | Merges new features: adds new, updates matched, archives missing |
-| `merge_registry_and_enrich_manifest(manifest, engine_features, output_path)` | Full pipeline: loads/maps engine features, writes registry, enriches manifest |
 | `upsert_registry_from_engine(engine_doc, registry_path)` | Upserts feature-registry entries from `engine.yaml` features |
-| `load_features_for_build(context_dir)` | Returns active features list for the build command |
 | `export_registry_to_format(registry, format)` | Exports to `"json"`, `"csv"`, or `"markdown"` |
 
 ## Engine and migrations
@@ -248,89 +241,3 @@ from skene.growth_loops.upstream import (
     push_to_upstream,                   # POST {manifest, files} to /api/v1/push
 )
 ```
-
-## Plan decline
-
-```python
-from skene.planner.decline import (
-    decline_plan,           # Archive a declined plan with executive summary only
-    load_declined_plans,    # Load recent declined plans for reference
-)
-```
-
-## Documentation generation
-
-```python
-from skene import DocsGenerator, GrowthManifest
-
-manifest = GrowthManifest.model_validate_json(open("growth-manifest.json").read())
-
-generator = DocsGenerator()
-context_doc = generator.generate_context_doc(manifest)
-product_doc = generator.generate_product_docs(manifest)
-```
-
-The `PSEOBuilder` class generates programmatic SEO content from manifests.
-
-## Strategy framework
-
-The analysis pipeline is built on a composable strategy framework:
-
-```python
-from skene.strategies import (
-    AnalysisStrategy,    # Base strategy class
-    AnalysisResult,      # Result container with data + metadata
-    AnalysisMetadata,    # Timing, token usage, step info
-    AnalysisContext,     # Shared context between steps
-    MultiStepStrategy,   # Chains multiple steps together
-)
-
-from skene.strategies.steps import (
-    AnalysisStep,        # Base step class
-    SelectFilesStep,     # Select relevant files for analysis
-    ReadFilesStep,       # Read file contents
-    AnalyzeStep,         # Send to LLM for analysis
-    GenerateStep,        # Generate structured output
-)
-```
-
-These classes are primarily used internally by the analyzers but can be composed for custom analysis pipelines.
-
-## Planner
-
-```python
-from skene.planner import Planner
-from skene.planner.schema import GrowthPlan, TechnicalExecution, PlanSection
-```
-
-The `Planner` class generates growth plans from manifests and templates. It is used internally by the `plan` CLI command.
-
-### GrowthPlan schema
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `executive_summary` | `str` | High-level summary focused on first-time activation |
-| `sections` | `list[PlanSection]` | Plan sections (dynamic, driven by step definitions) |
-| `technical_execution` | `TechnicalExecution` | Technical Execution blueprint |
-
-### TechnicalExecution fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `overview` | `str` | 1-2 sentence overview with confidence |
-| `what_we_building` | `str` | Short numbered list (3-5 items) of what we're building |
-| `tasks` | `str` | Most important technical tasks only, short numbered list |
-| `data_triggers` | `str` | Events/conditions that trigger the flow |
-| `success_metrics` | `str` | Primary success metrics |
-
-### PlanSection fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | `str` | Section heading, e.g. `"The Next Action"` |
-| `content` | `str` | Free-form markdown content |
-
-### Helper functions
-
-- `render_plan_to_markdown(plan, generated_at, project_name=None)` — Render a `GrowthPlan` to the council memo markdown format. Include `project_name` only when from manifest file.
-- `parse_plan_json(response)` — Parse an LLM response (with optional code fences) into a validated `GrowthPlan`

@@ -1,18 +1,16 @@
 # Skene PLG Analyzer — Cursor Plugin
 
-Product-Led Growth codebase analysis and implementation toolkit for [Cursor IDE](https://cursor.com).
+Product-Led Growth codebase analysis toolkit for [Cursor IDE](https://cursor.com).
 
-Scan your code, detect growth opportunities, and build actionable implementation plans — all without leaving your editor.
+Map the customer journey encoded in your code and database schema — all without leaving your editor.
 
 ## Features
 
 | Capability | Description |
 |-----------|-------------|
-| **Codebase Analysis** | Detect tech stack, existing growth features, and revenue leakage |
-| **Growth Planning** | Generate prioritized growth loops ranked by impact and effort |
-| **Implementation Prompts** | Context-aware code generation matched to your stack |
-| **Telemetry Deployment** | After `skene build`, `*_skene_triggers.sql` in `supabase/migrations/`; `skene push` uploads to upstream |
-| **Validation** | Verify that growth loop requirements are actually implemented |
+| **Journey Analysis** | `skene analyse-journey` maps your product's user lifecycle into a `journey.yaml` |
+| **Telemetry Deployment** | `skene push` uploads `engine.yaml` + trigger migrations to upstream |
+| **Validation** | Verify that engine features are actually implemented (`skene status`) |
 | **Best Practices** | Always-on PLG guidance via Cursor rules |
 
 ## Quick Start
@@ -34,20 +32,14 @@ Open a project and type `/skene-init` in the Cursor agent to configure Skene.
 | Command | Description |
 |---------|-------------|
 | `/skene-init` | Initialize Skene configuration |
-| `/skene-analyze` | Analyze codebase for PLG opportunities |
-| `/skene-plan` | Generate growth loop implementation plan |
-| `/skene-build` | Build implementation prompt for selected loop |
 | `/skene-status` | Check implementation progress |
-| `/skene-deploy` | Push engine + trigger migration to upstream (run `skene build` first) |
+| `/skene-deploy` | Push engine + trigger migration to upstream |
 
 ## Skills
 
 Skills are invoked automatically by the Cursor agent based on context, or triggered via commands:
 
 - **initialize-config** — First-time Skene setup
-- **analyze-codebase** — Full PLG analysis
-- **plan-growth-loop** — Prioritized growth loop generation
-- **build-implementation** — Code generation from growth plans
 - **deploy-telemetry** — Analytics infrastructure setup
 - **validate-loop** — Implementation verification
 
@@ -84,14 +76,11 @@ Config options and env vars: [Configuration guide](https://www.skene.ai/resource
 cursor-plugin/
 ├── .cursor-plugin/
 │   └── plugin.json         # Plugin manifest
-├── skills/                  # Agent skills (6 skills)
+├── skills/                  # Agent skills (3 skills)
 │   ├── initialize-config/
-│   ├── analyze-codebase/
-│   ├── plan-growth-loop/
-│   ├── build-implementation/
 │   ├── deploy-telemetry/
 │   └── validate-loop/
-├── commands/                # Slash commands (6 commands)
+├── commands/                # Slash commands (3 commands)
 ├── hooks/
 │   └── hooks.json           # Automation hooks
 ├── rules/
