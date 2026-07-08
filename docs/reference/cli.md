@@ -63,7 +63,9 @@ See the [analyze guide](../guides/analyze.md) for detailed usage.
 
 Generate a `journey.yaml` describing the user lifecycle of a product.
 
-Uses two parallel LLM agents — one analyzing the codebase filesystem, one analyzing the database schema — to discover user-facing milestones and assemble them into a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
+A main "skene" agent orchestrates two parallel subagents — one analyzing the codebase filesystem, one analyzing the database schema — to discover user-facing milestones; a deterministic finalize step merges and classifies them into a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
+
+By default the command runs an embedded (in-process) server; after [`skene attach`](#attach) (or with `--server`) it drives a remote [`skene serve`](#serve) instance instead. Every run — local or remote — persists a session trace in the [skene database](#serve), which is the debug trail for a run.
 
 ```
 skene analyse-journey [PATH] [OPTIONS]
@@ -87,6 +89,8 @@ skene analyse-journey [PATH] [OPTIONS]
 | `--provider TEXT` | `-p` | config value | LLM provider: `openai`, `gemini`, `anthropic`/`claude`, `lmstudio`, `ollama`, `generic`, `skene` |
 | `--model TEXT` | `-m` | provider default | LLM model name |
 | `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for API endpoint |
+| `--server TEXT` | | `$SKENE_SERVER_URL`, or the URL saved by `skene attach` | Run the analysis on a remote `skene serve` instance instead of the embedded server. See [Remote mode](#remote-mode) below. |
+| `--server-token TEXT` | | `$SKENE_SERVER_TOKEN`, or the token saved by `skene attach` | Bearer token for the remote server |
 | `--schema-max-turns INT` | | `150` | Maximum agent turns for the schema agent (range: 1–500) |
 | `--code-max-turns INT` | | `200` | Maximum agent turns for the code agent (range: 1–500) |
 | `--classify-concurrency INT` | | `8` | Parallel classifier requests (range: 1–64) |
@@ -104,14 +108,90 @@ The schema agent requires one of two inputs — **never both**:
 
 `--schema-dir` and `--db-url` are mutually exclusive. At least one of `PATH`, `--schema-dir`, or `--db-url` must be provided. When `PATH` is omitted, only the schema agent runs (no code agent).
 
+### Remote mode
+
+When a server URL is set — via `--server`, `SKENE_SERVER_URL`, or a prior `skene attach` — the analysis runs on that server instead of in-process:
+
+- No local LLM credentials are needed; the server uses its own LLM configuration (`--api-key`/`--provider`/`--model`/`--base-url` are not forwarded).
+- Progress streams live from the server, and `Ctrl-C` aborts the remote run.
+- **Paths (`PATH`, `--schema-dir`, `--output`) are interpreted on the server's filesystem**, not the client's.
+
 ### Behavior notes
 
-- Requires a configured LLM (API key + provider). Local providers (`lmstudio`, `ollama`, `generic`) do not require an API key.
+- In local (embedded) mode, requires a configured LLM (API key + provider). Local providers (`lmstudio`, `ollama`, `generic`) do not require an API key.
 - The `generic` provider requires `--base-url`.
 - When `--db-url` is used without `--product-name`, the database name is extracted from the connection string for the product name.
-- When run from the TUI with a linked Skene Cloud workspace, the journey is automatically published on first run.
+- `--db-url` credentials are used live and never persisted; anything stored or streamed shows a redacted form.
+- Every run persists a session trace (agent turns, tool calls, milestones) in the skene database — use it to debug a run. See [`serve`](#serve) for the database location.
 
 See the CLI help output (`skene analyse-journey --help`) for detailed usage.
+
+---
+
+## `serve`
+
+Run the skene backend server headless.
+
+The server owns the analysis engine: it exposes the [HTTP API](http-api.md) (sessions, SSE event stream, journey analysis), and persists every run as a session tree in a global SQLite database. The CLI and the TUI are clients of this server.
+
+```
+skene serve [OPTIONS]
+```
+
+### Options
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--host TEXT` | | `127.0.0.1` | Interface to bind. Binding any non-localhost interface requires `--token`. |
+| `--port INT` | | `4906` | Port to listen on |
+| `--token TEXT` | | `$SKENE_SERVER_TOKEN` | Bearer token clients must send as `Authorization: Bearer <token>`. Required for non-localhost binds. |
+| `--db-path PATH` | | `$SKENE_DB_PATH` or `~/.local/share/skene/skene.db` | Path to the SQLite session database |
+| `--api-key TEXT` | | `$SKENE_API_KEY` or config | API key for the LLM provider |
+| `--provider TEXT` | `-p` | config value | LLM provider |
+| `--model TEXT` | `-m` | provider default | LLM model name |
+| `--base-url TEXT` | | `$SKENE_BASE_URL` or config | Base URL for OpenAI-compatible endpoints |
+| `--quiet` | `-q` | `false` | Suppress output, show errors only |
+| `--debug` | | `false` | Show diagnostic messages |
+
+### Behavior notes
+
+- `/health` is always unauthenticated; all other routes require the bearer token when one is set.
+- The server starts fine without LLM credentials — analyse requests then return `503` with the reason.
+- LLM configuration is resolved once at startup; changing it means restarting the server (there is deliberately no config-mutation API).
+- The session database is global (one per machine, all workspaces) and currently keeps everything — there is no GC command yet.
+- Auth is single-tenant: one optional token per server. Multi-tenancy is out of scope.
+
+See the [HTTP API reference](http-api.md) for routes, the event stream, and the domain model.
+
+---
+
+## `attach`
+
+Attach the CLI to a running `skene serve` instance.
+
+```
+skene attach <URL> [--token TEXT]
+skene attach --clear
+```
+
+### Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `URL` | Yes (unless `--clear`) | Base URL of the server, e.g. `http://127.0.0.1:4906` |
+
+### Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--token TEXT` | `$SKENE_SERVER_TOKEN` | Bearer token for the server, if it requires one |
+| `--clear` | `false` | Detach: remove the saved server settings (mutually exclusive with `URL`) |
+
+### Behavior notes
+
+- Verifies the server by calling `GET /health` before saving anything.
+- Persists `server_url` and `server_token` into `.skene.config` — the project config if one exists (found by walking up from the current directory), otherwise the user config (`~/.config/skene/config`).
+- Once attached, `analyse-journey` runs on that server (see [Remote mode](#remote-mode)). Use `--clear` to go back to embedded runs.
 
 ---
 
@@ -430,6 +510,9 @@ See the [features guide](../guides/features.md) for detailed usage.
 | `SKENE_UPSTREAM_API_KEY` | `push`, `login` | API key for upstream authentication. |
 | `SKENE_DEBUG` | all commands | Enable debug mode (`true`/`false`). |
 | `SKENE_DB_URL` | `analyse-journey` | PostgreSQL connection string for live schema introspection. Equivalent to `--db-url`. |
+| `SKENE_SERVER_URL` | `analyse-journey` | URL of a remote `skene serve` instance. Equivalent to `--server`. |
+| `SKENE_SERVER_TOKEN` | `serve`, `attach`, `analyse-journey` | Bearer token for server auth. Equivalent to `--token` / `--server-token`. |
+| `SKENE_DB_PATH` | `serve`, `analyse-journey` | Path to the global SQLite session database. Equivalent to `serve --db-path`. |
 
 ---
 
@@ -497,4 +580,15 @@ uvx skene analyse-journey --db-url "postgresql://user:pass@localhost:5432/mydb"
 
 # Journey analysis with custom output
 uvx skene analyse-journey ./my-app --schema-dir ./schemas -o ./output/journey.yaml
+
+# Run the backend server headless (localhost)
+uvx skene serve --port 4906
+
+# Serve on all interfaces (token required)
+uvx skene serve --host 0.0.0.0 --token "my-secret"
+
+# Attach the CLI to a running server, then analyse remotely
+uvx skene attach http://127.0.0.1:4906
+uvx skene analyse-journey .          # now runs on the attached server
+uvx skene attach --clear             # back to embedded runs
 ```

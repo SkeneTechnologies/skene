@@ -8,7 +8,7 @@ Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 Skene terminal is the interactive front-end for **Skene** — a PLG analysis toolkit that models your product's user journey from your schema and code, surfaces growth opportunities along it, and turns them into actionable implementation plans.
 
-The tool itself does **not** perform any analysis. It orchestrates `uvx skene` in your selected repository directory and displays the results.
+The tool itself does **not** perform any analysis — it is a client of the skene backend. For journey analysis it spawns a local `skene serve` on a free port (or attaches to an existing server via `SKENE_SERVER_URL`) and renders the server's live event stream; legacy commands (`analyze`, `plan`, `build`, `validate`, `push`) still run one-shot via `uvx skene`.
 
 ## Features
 
@@ -16,10 +16,12 @@ The tool itself does **not** perform any analysis. It orchestrates `uvx skene` i
 - Multiple AI providers — OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint
 - Authentication — Skene magic link, API key entry, local model auto-detection
 - Existing analysis detection — detects previous `skene-context/` (or legacy `skene/`) output and offers to view or re-run
-- Live terminal output during analysis
+- Server-backed journey analysis — spawns `skene serve` (or attaches to a remote one) and renders structured per-agent, per-tool progress from the server's SSE event stream
+- Browser journey visualizer — reads the journey from the server's `GET /journey` endpoint
 - Tabbed results view — User Journey, Growth Manifest, Growth Plan, Engine
-- Next steps menu — generate plans, build prompts, validate, or re-analyse
-- Cancellable processes — press `Esc` to cancel a running analysis
+- Next steps menu — generate plans, build prompts, validate, re-analyse, or deploy to Skene Cloud
+- Explicit publishing — nothing is pushed to Skene Cloud until you choose **"Deploy to Skene Cloud"**
+- Cancellable processes — press `Esc` to cancel a running analysis (remote runs are aborted on the server)
 - Error handling with retry and go-back
 - Cross-platform — macOS, Linux, Windows
 - Mini-game while you wait
@@ -41,7 +43,7 @@ This downloads the latest release binary for your platform and installs it to `/
 To install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | VERSION=tui-v0.4.0 bash
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene/main/tui/install.sh | VERSION=tui-v0.5.1 bash
 ```
 
 ### Clone and Run
@@ -119,6 +121,15 @@ Example `.skene.config`:
 }
 ```
 
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `SKENE_SERVER_URL` | Attach to an already-running `skene serve` instead of spawning one |
+| `SKENE_SERVER_TOKEN` | Bearer token sent to the attached server |
+
+When the TUI spawns its own server, it passes the wizard's LLM configuration to it via `SKENE_API_KEY`, `SKENE_PROVIDER`, `SKENE_MODEL`, and `SKENE_BASE_URL`.
+
 ### Supported Providers
 
 | Provider | ID | Auth |
@@ -136,9 +147,12 @@ make dev          # live reload (requires air)
 make test         # run tests
 make lint         # lint
 make fmt          # format
+make generate     # regenerate the Go API client from the server's OpenAPI spec (requires uv)
 make build-all    # build for all platforms
 make release      # package releases
 ```
+
+The Go API client (`internal/api/client.gen.go`) is generated from the Python server's OpenAPI spec and checked in. Regeneration is manual: run `make generate` whenever the server API changes.
 
 ## Dependencies
 
