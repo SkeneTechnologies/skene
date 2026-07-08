@@ -88,4 +88,4 @@ async def test_counts(services, workspace):
     project = await services.store.ensure_project(workspace)
     await services.store.create_session(project_id=project.id, agent="skene")
     counts = await services.store.counts()
-    assert counts == {"project": 1, "session": 1, "message": 0, "part": 0}
+    assert counts == {"project": 1, "session": 1, "message": 0, "part": 0, "permission_request": 0}

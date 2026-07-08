@@ -65,6 +65,29 @@ const (
 	PartUpdatedTypePartUpdated PartUpdatedType = "part.updated"
 )
 
+// Defines values for PermissionAnswerReply.
+const (
+	Allow PermissionAnswerReply = "allow"
+	Deny  PermissionAnswerReply = "deny"
+)
+
+// Defines values for PermissionAnsweredType.
+const (
+	PermissionAnsweredTypePermissionAnswered PermissionAnsweredType = "permission.answered"
+)
+
+// Defines values for PermissionAskedType.
+const (
+	PermissionAskedTypePermissionAsked PermissionAskedType = "permission.asked"
+)
+
+// Defines values for PermissionRequestStatus.
+const (
+	PermissionRequestStatusAllowed PermissionRequestStatus = "allowed"
+	PermissionRequestStatusDenied  PermissionRequestStatus = "denied"
+	PermissionRequestStatusPending PermissionRequestStatus = "pending"
+)
+
 // Defines values for ReasoningPartType.
 const (
 	Reasoning ReasoningPartType = "reasoning"
@@ -134,7 +157,7 @@ const (
 
 // Defines values for ToolStatePendingStatus.
 const (
-	Pending ToolStatePendingStatus = "pending"
+	ToolStatePendingStatusPending ToolStatePendingStatus = "pending"
 )
 
 // Defines values for ToolStateRunningStatus.
@@ -330,9 +353,59 @@ type PartUpdated struct {
 // PartUpdatedType defines model for PartUpdated.Type.
 type PartUpdatedType string
 
+// PermissionAnswer Body of “POST /session/{id}/permissions/{permID}“.
+type PermissionAnswer struct {
+	Reply PermissionAnswerReply `json:"reply"`
+}
+
+// PermissionAnswerReply defines model for PermissionAnswer.Reply.
+type PermissionAnswerReply string
+
+// PermissionAnswered defines model for PermissionAnswered.
+type PermissionAnswered struct {
+	Id         *string                   `json:"id,omitempty"`
+	Properties UnderscorePermissionProps `json:"properties"`
+	Type       PermissionAnsweredType    `json:"type"`
+}
+
+// PermissionAnsweredType defines model for PermissionAnswered.Type.
+type PermissionAnsweredType string
+
+// PermissionAsked defines model for PermissionAsked.
+type PermissionAsked struct {
+	Id         *string                   `json:"id,omitempty"`
+	Properties UnderscorePermissionProps `json:"properties"`
+	Type       PermissionAskedType       `json:"type"`
+}
+
+// PermissionAskedType defines model for PermissionAsked.Type.
+type PermissionAskedType string
+
+// PermissionRequest One pending or answered ask, as persisted and streamed.
+type PermissionRequest struct {
+	Answered  *int                     `json:"answered"`
+	Created   int                      `json:"created"`
+	Id        string                   `json:"id"`
+	Metadata  *map[string]interface{}  `json:"metadata,omitempty"`
+	SessionId string                   `json:"sessionId"`
+	Status    *PermissionRequestStatus `json:"status,omitempty"`
+	Title     string                   `json:"title"`
+	Tool      string                   `json:"tool"`
+}
+
+// PermissionRequestStatus defines model for PermissionRequest.Status.
+type PermissionRequestStatus string
+
 // PromptRequest Body of “POST /session/{id}/message“.
 type PromptRequest struct {
 	Text string `json:"text"`
+}
+
+// ProviderInfo One supported LLM provider, as exposed by “GET /provider“.
+type ProviderInfo struct {
+	Active *bool     `json:"active,omitempty"`
+	Models *[]string `json:"models,omitempty"`
+	Name   string    `json:"name"`
 }
 
 // ReasoningPart defines model for ReasoningPart.
@@ -346,6 +419,15 @@ type ReasoningPart struct {
 
 // ReasoningPartType defines model for ReasoningPart.Type.
 type ReasoningPartType string
+
+// ServerConfigInfo Resolved server configuration, secrets redacted (“GET /config“).
+type ServerConfigInfo struct {
+	ApiKeyConfigured *bool   `json:"apiKeyConfigured,omitempty"`
+	BaseUrl          *string `json:"baseUrl"`
+	Model            *string `json:"model"`
+	Provider         *string `json:"provider"`
+	Version          string  `json:"version"`
+}
 
 // ServerConnected defines model for ServerConnected.
 type ServerConnected struct {
@@ -580,6 +662,12 @@ type PartProps_Part struct {
 	union json.RawMessage
 }
 
+// UnderscorePermissionProps defines model for _PermissionProps.
+type UnderscorePermissionProps struct {
+	// Request One pending or answered ask, as persisted and streamed.
+	Request PermissionRequest `json:"request"`
+}
+
 // UnderscoreSessionErrorProps defines model for _SessionErrorProps.
 type UnderscoreSessionErrorProps struct {
 	Error string `json:"error"`
@@ -605,6 +693,11 @@ type ListAgentsAgentGetParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// GetConfigConfigGetParams defines parameters for GetConfigConfigGet.
+type GetConfigConfigGetParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // EventsEventGetParams defines parameters for EventsEventGet.
 type EventsEventGetParams struct {
 	XSkeneDirectory *string `json:"x-skene-directory,omitempty"`
@@ -621,6 +714,11 @@ type GetJourneyJourneyGetParams struct {
 type AnalyseJourneyAnalysePostParams struct {
 	Authorization   *string `json:"authorization,omitempty"`
 	XSkeneDirectory *string `json:"x-skene-directory,omitempty"`
+}
+
+// ListProvidersProviderGetParams defines parameters for ListProvidersProviderGet.
+type ListProvidersProviderGetParams struct {
+	Authorization *string `json:"authorization,omitempty"`
 }
 
 // ListSessionsSessionGetParams defines parameters for ListSessionsSessionGet.
@@ -660,6 +758,16 @@ type PromptSessionSessionIdMessagePostParams struct {
 	Authorization *string `json:"authorization,omitempty"`
 }
 
+// ListPermissionsSessionSessionIdPermissionsGetParams defines parameters for ListPermissionsSessionSessionIdPermissionsGet.
+type ListPermissionsSessionSessionIdPermissionsGetParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
+// AnswerPermissionSessionSessionIdPermissionsPermIdPostParams defines parameters for AnswerPermissionSessionSessionIdPermissionsPermIdPost.
+type AnswerPermissionSessionSessionIdPermissionsPermIdPostParams struct {
+	Authorization *string `json:"authorization,omitempty"`
+}
+
 // AnalyseJourneyAnalysePostJSONRequestBody defines body for AnalyseJourneyAnalysePost for application/json ContentType.
 type AnalyseJourneyAnalysePostJSONRequestBody = JourneyAnalyseRequest
 
@@ -668,6 +776,9 @@ type CreateSessionSessionPostJSONRequestBody = SessionCreateRequest
 
 // PromptSessionSessionIdMessagePostJSONRequestBody defines body for PromptSessionSessionIdMessagePost for application/json ContentType.
 type PromptSessionSessionIdMessagePostJSONRequestBody = PromptRequest
+
+// AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody defines body for AnswerPermissionSessionSessionIdPermissionsPermIdPost for application/json ContentType.
+type AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody = PermissionAnswer
 
 // AsTokenUsage returns the union data inside the AssistantMessage_Tokens as a TokenUsage
 func (t AssistantMessage_Tokens) AsTokenUsage() (TokenUsage, error) {
@@ -985,6 +1096,62 @@ func (t *Event) MergePartUpdated(v PartUpdated) error {
 	return err
 }
 
+// AsPermissionAsked returns the union data inside the Event as a PermissionAsked
+func (t Event) AsPermissionAsked() (PermissionAsked, error) {
+	var body PermissionAsked
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPermissionAsked overwrites any union data inside the Event as the provided PermissionAsked
+func (t *Event) FromPermissionAsked(v PermissionAsked) error {
+	v.Type = "permission.asked"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePermissionAsked performs a merge with any union data inside the Event, using the provided PermissionAsked
+func (t *Event) MergePermissionAsked(v PermissionAsked) error {
+	v.Type = "permission.asked"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPermissionAnswered returns the union data inside the Event as a PermissionAnswered
+func (t Event) AsPermissionAnswered() (PermissionAnswered, error) {
+	var body PermissionAnswered
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPermissionAnswered overwrites any union data inside the Event as the provided PermissionAnswered
+func (t *Event) FromPermissionAnswered(v PermissionAnswered) error {
+	v.Type = "permission.answered"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePermissionAnswered performs a merge with any union data inside the Event, using the provided PermissionAnswered
+func (t *Event) MergePermissionAnswered(v PermissionAnswered) error {
+	v.Type = "permission.answered"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t Event) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"type"`
@@ -1007,6 +1174,10 @@ func (t Event) ValueByDiscriminator() (interface{}, error) {
 		return t.AsPartCreated()
 	case "part.updated":
 		return t.AsPartUpdated()
+	case "permission.answered":
+		return t.AsPermissionAnswered()
+	case "permission.asked":
+		return t.AsPermissionAsked()
 	case "server.connected":
 		return t.AsServerConnected()
 	case "server.heartbeat":
@@ -1917,6 +2088,9 @@ type ClientInterface interface {
 	// ListAgentsAgentGet request
 	ListAgentsAgentGet(ctx context.Context, params *ListAgentsAgentGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetConfigConfigGet request
+	GetConfigConfigGet(ctx context.Context, params *GetConfigConfigGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// EventsEventGet request
 	EventsEventGet(ctx context.Context, params *EventsEventGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1930,6 +2104,9 @@ type ClientInterface interface {
 	AnalyseJourneyAnalysePostWithBody(ctx context.Context, params *AnalyseJourneyAnalysePostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	AnalyseJourneyAnalysePost(ctx context.Context, params *AnalyseJourneyAnalysePostParams, body AnalyseJourneyAnalysePostJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProvidersProviderGet request
+	ListProvidersProviderGet(ctx context.Context, params *ListProvidersProviderGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListSessionsSessionGet request
 	ListSessionsSessionGet(ctx context.Context, params *ListSessionsSessionGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1955,10 +2132,30 @@ type ClientInterface interface {
 	PromptSessionSessionIdMessagePostWithBody(ctx context.Context, sessionId string, params *PromptSessionSessionIdMessagePostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PromptSessionSessionIdMessagePost(ctx context.Context, sessionId string, params *PromptSessionSessionIdMessagePostParams, body PromptSessionSessionIdMessagePostJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListPermissionsSessionSessionIdPermissionsGet request
+	ListPermissionsSessionSessionIdPermissionsGet(ctx context.Context, sessionId string, params *ListPermissionsSessionSessionIdPermissionsGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBody request with any body
+	AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBody(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AnswerPermissionSessionSessionIdPermissionsPermIdPost(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, body AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ListAgentsAgentGet(ctx context.Context, params *ListAgentsAgentGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListAgentsAgentGetRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetConfigConfigGet(ctx context.Context, params *GetConfigConfigGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetConfigConfigGetRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2019,6 +2216,18 @@ func (c *Client) AnalyseJourneyAnalysePostWithBody(ctx context.Context, params *
 
 func (c *Client) AnalyseJourneyAnalysePost(ctx context.Context, params *AnalyseJourneyAnalysePostParams, body AnalyseJourneyAnalysePostJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAnalyseJourneyAnalysePostRequest(c.Server, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProvidersProviderGet(ctx context.Context, params *ListProvidersProviderGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProvidersProviderGetRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2137,6 +2346,42 @@ func (c *Client) PromptSessionSessionIdMessagePost(ctx context.Context, sessionI
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListPermissionsSessionSessionIdPermissionsGet(ctx context.Context, sessionId string, params *ListPermissionsSessionSessionIdPermissionsGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListPermissionsSessionSessionIdPermissionsGetRequest(c.Server, sessionId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBody(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequestWithBody(c.Server, sessionId, permId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AnswerPermissionSessionSessionIdPermissionsPermIdPost(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, body AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequest(c.Server, sessionId, permId, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // NewListAgentsAgentGetRequest generates requests for ListAgentsAgentGet
 func NewListAgentsAgentGetRequest(server string, params *ListAgentsAgentGetParams) (*http.Request, error) {
 	var err error
@@ -2147,6 +2392,48 @@ func NewListAgentsAgentGetRequest(server string, params *ListAgentsAgentGetParam
 	}
 
 	operationPath := fmt.Sprintf("/agent")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.Authorization != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "authorization", runtime.ParamLocationHeader, *params.Authorization)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("authorization", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewGetConfigConfigGetRequest generates requests for GetConfigConfigGet
+func NewGetConfigConfigGetRequest(server string, params *GetConfigConfigGetParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/config")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2371,6 +2658,48 @@ func NewAnalyseJourneyAnalysePostRequestWithBody(server string, params *AnalyseJ
 			}
 
 			req.Header.Set("x-skene-directory", headerParam1)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewListProvidersProviderGetRequest generates requests for ListProvidersProviderGet
+func NewListProvidersProviderGetRequest(server string, params *ListProvidersProviderGetParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/provider")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.Authorization != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "authorization", runtime.ParamLocationHeader, *params.Authorization)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("authorization", headerParam0)
 		}
 
 	}
@@ -2755,6 +3084,124 @@ func NewPromptSessionSessionIdMessagePostRequestWithBody(server string, sessionI
 	return req, nil
 }
 
+// NewListPermissionsSessionSessionIdPermissionsGetRequest generates requests for ListPermissionsSessionSessionIdPermissionsGet
+func NewListPermissionsSessionSessionIdPermissionsGetRequest(server string, sessionId string, params *ListPermissionsSessionSessionIdPermissionsGetParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "session_id", runtime.ParamLocationPath, sessionId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/session/%s/permissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.Authorization != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "authorization", runtime.ParamLocationHeader, *params.Authorization)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("authorization", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequest calls the generic AnswerPermissionSessionSessionIdPermissionsPermIdPost builder with application/json body
+func NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequest(server string, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, body AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequestWithBody(server, sessionId, permId, params, "application/json", bodyReader)
+}
+
+// NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequestWithBody generates requests for AnswerPermissionSessionSessionIdPermissionsPermIdPost with any type of body
+func NewAnswerPermissionSessionSessionIdPermissionsPermIdPostRequestWithBody(server string, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "session_id", runtime.ParamLocationPath, sessionId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "perm_id", runtime.ParamLocationPath, permId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/session/%s/permissions/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.Authorization != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "authorization", runtime.ParamLocationHeader, *params.Authorization)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("authorization", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -2801,6 +3248,9 @@ type ClientWithResponsesInterface interface {
 	// ListAgentsAgentGetWithResponse request
 	ListAgentsAgentGetWithResponse(ctx context.Context, params *ListAgentsAgentGetParams, reqEditors ...RequestEditorFn) (*ListAgentsAgentGetResponse, error)
 
+	// GetConfigConfigGetWithResponse request
+	GetConfigConfigGetWithResponse(ctx context.Context, params *GetConfigConfigGetParams, reqEditors ...RequestEditorFn) (*GetConfigConfigGetResponse, error)
+
 	// EventsEventGetWithResponse request
 	EventsEventGetWithResponse(ctx context.Context, params *EventsEventGetParams, reqEditors ...RequestEditorFn) (*EventsEventGetResponse, error)
 
@@ -2814,6 +3264,9 @@ type ClientWithResponsesInterface interface {
 	AnalyseJourneyAnalysePostWithBodyWithResponse(ctx context.Context, params *AnalyseJourneyAnalysePostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AnalyseJourneyAnalysePostResponse, error)
 
 	AnalyseJourneyAnalysePostWithResponse(ctx context.Context, params *AnalyseJourneyAnalysePostParams, body AnalyseJourneyAnalysePostJSONRequestBody, reqEditors ...RequestEditorFn) (*AnalyseJourneyAnalysePostResponse, error)
+
+	// ListProvidersProviderGetWithResponse request
+	ListProvidersProviderGetWithResponse(ctx context.Context, params *ListProvidersProviderGetParams, reqEditors ...RequestEditorFn) (*ListProvidersProviderGetResponse, error)
 
 	// ListSessionsSessionGetWithResponse request
 	ListSessionsSessionGetWithResponse(ctx context.Context, params *ListSessionsSessionGetParams, reqEditors ...RequestEditorFn) (*ListSessionsSessionGetResponse, error)
@@ -2839,6 +3292,14 @@ type ClientWithResponsesInterface interface {
 	PromptSessionSessionIdMessagePostWithBodyWithResponse(ctx context.Context, sessionId string, params *PromptSessionSessionIdMessagePostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PromptSessionSessionIdMessagePostResponse, error)
 
 	PromptSessionSessionIdMessagePostWithResponse(ctx context.Context, sessionId string, params *PromptSessionSessionIdMessagePostParams, body PromptSessionSessionIdMessagePostJSONRequestBody, reqEditors ...RequestEditorFn) (*PromptSessionSessionIdMessagePostResponse, error)
+
+	// ListPermissionsSessionSessionIdPermissionsGetWithResponse request
+	ListPermissionsSessionSessionIdPermissionsGetWithResponse(ctx context.Context, sessionId string, params *ListPermissionsSessionSessionIdPermissionsGetParams, reqEditors ...RequestEditorFn) (*ListPermissionsSessionSessionIdPermissionsGetResponse, error)
+
+	// AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBodyWithResponse request with any body
+	AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBodyWithResponse(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse, error)
+
+	AnswerPermissionSessionSessionIdPermissionsPermIdPostWithResponse(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, body AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody, reqEditors ...RequestEditorFn) (*AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse, error)
 }
 
 type ListAgentsAgentGetResponse struct {
@@ -2858,6 +3319,29 @@ func (r ListAgentsAgentGetResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ListAgentsAgentGetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetConfigConfigGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ServerConfigInfo
+	JSON422      *HTTPValidationError
+}
+
+// Status returns HTTPResponse.Status
+func (r GetConfigConfigGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetConfigConfigGetResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2948,6 +3432,29 @@ func (r AnalyseJourneyAnalysePostResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r AnalyseJourneyAnalysePostResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProvidersProviderGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]ProviderInfo
+	JSON422      *HTTPValidationError
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProvidersProviderGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProvidersProviderGetResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3117,6 +3624,52 @@ func (r PromptSessionSessionIdMessagePostResponse) StatusCode() int {
 	return 0
 }
 
+type ListPermissionsSessionSessionIdPermissionsGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]PermissionRequest
+	JSON422      *HTTPValidationError
+}
+
+// Status returns HTTPResponse.Status
+func (r ListPermissionsSessionSessionIdPermissionsGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListPermissionsSessionSessionIdPermissionsGetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PermissionRequest
+	JSON422      *HTTPValidationError
+}
+
+// Status returns HTTPResponse.Status
+func (r AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // ListAgentsAgentGetWithResponse request returning *ListAgentsAgentGetResponse
 func (c *ClientWithResponses) ListAgentsAgentGetWithResponse(ctx context.Context, params *ListAgentsAgentGetParams, reqEditors ...RequestEditorFn) (*ListAgentsAgentGetResponse, error) {
 	rsp, err := c.ListAgentsAgentGet(ctx, params, reqEditors...)
@@ -3124,6 +3677,15 @@ func (c *ClientWithResponses) ListAgentsAgentGetWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseListAgentsAgentGetResponse(rsp)
+}
+
+// GetConfigConfigGetWithResponse request returning *GetConfigConfigGetResponse
+func (c *ClientWithResponses) GetConfigConfigGetWithResponse(ctx context.Context, params *GetConfigConfigGetParams, reqEditors ...RequestEditorFn) (*GetConfigConfigGetResponse, error) {
+	rsp, err := c.GetConfigConfigGet(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetConfigConfigGetResponse(rsp)
 }
 
 // EventsEventGetWithResponse request returning *EventsEventGetResponse
@@ -3168,6 +3730,15 @@ func (c *ClientWithResponses) AnalyseJourneyAnalysePostWithResponse(ctx context.
 		return nil, err
 	}
 	return ParseAnalyseJourneyAnalysePostResponse(rsp)
+}
+
+// ListProvidersProviderGetWithResponse request returning *ListProvidersProviderGetResponse
+func (c *ClientWithResponses) ListProvidersProviderGetWithResponse(ctx context.Context, params *ListProvidersProviderGetParams, reqEditors ...RequestEditorFn) (*ListProvidersProviderGetResponse, error) {
+	rsp, err := c.ListProvidersProviderGet(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProvidersProviderGetResponse(rsp)
 }
 
 // ListSessionsSessionGetWithResponse request returning *ListSessionsSessionGetResponse
@@ -3249,6 +3820,32 @@ func (c *ClientWithResponses) PromptSessionSessionIdMessagePostWithResponse(ctx 
 	return ParsePromptSessionSessionIdMessagePostResponse(rsp)
 }
 
+// ListPermissionsSessionSessionIdPermissionsGetWithResponse request returning *ListPermissionsSessionSessionIdPermissionsGetResponse
+func (c *ClientWithResponses) ListPermissionsSessionSessionIdPermissionsGetWithResponse(ctx context.Context, sessionId string, params *ListPermissionsSessionSessionIdPermissionsGetParams, reqEditors ...RequestEditorFn) (*ListPermissionsSessionSessionIdPermissionsGetResponse, error) {
+	rsp, err := c.ListPermissionsSessionSessionIdPermissionsGet(ctx, sessionId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListPermissionsSessionSessionIdPermissionsGetResponse(rsp)
+}
+
+// AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBodyWithResponse request with arbitrary body returning *AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse
+func (c *ClientWithResponses) AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBodyWithResponse(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse, error) {
+	rsp, err := c.AnswerPermissionSessionSessionIdPermissionsPermIdPostWithBody(ctx, sessionId, permId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAnswerPermissionSessionSessionIdPermissionsPermIdPostResponse(rsp)
+}
+
+func (c *ClientWithResponses) AnswerPermissionSessionSessionIdPermissionsPermIdPostWithResponse(ctx context.Context, sessionId string, permId string, params *AnswerPermissionSessionSessionIdPermissionsPermIdPostParams, body AnswerPermissionSessionSessionIdPermissionsPermIdPostJSONRequestBody, reqEditors ...RequestEditorFn) (*AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse, error) {
+	rsp, err := c.AnswerPermissionSessionSessionIdPermissionsPermIdPost(ctx, sessionId, permId, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAnswerPermissionSessionSessionIdPermissionsPermIdPostResponse(rsp)
+}
+
 // ParseListAgentsAgentGetResponse parses an HTTP response from a ListAgentsAgentGetWithResponse call
 func ParseListAgentsAgentGetResponse(rsp *http.Response) (*ListAgentsAgentGetResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -3265,6 +3862,39 @@ func ParseListAgentsAgentGetResponse(rsp *http.Response) (*ListAgentsAgentGetRes
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest []AgentInfo
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest HTTPValidationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetConfigConfigGetResponse parses an HTTP response from a GetConfigConfigGetWithResponse call
+func ParseGetConfigConfigGetResponse(rsp *http.Response) (*GetConfigConfigGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetConfigConfigGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ServerConfigInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3387,6 +4017,39 @@ func ParseAnalyseJourneyAnalysePostResponse(rsp *http.Response) (*AnalyseJourney
 			return nil, err
 		}
 		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest HTTPValidationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProvidersProviderGetResponse parses an HTTP response from a ListProvidersProviderGetWithResponse call
+func ParseListProvidersProviderGetResponse(rsp *http.Response) (*ListProvidersProviderGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProvidersProviderGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderInfo
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest HTTPValidationError
@@ -3620,6 +4283,72 @@ func ParsePromptSessionSessionIdMessagePostResponse(rsp *http.Response) (*Prompt
 			return nil, err
 		}
 		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest HTTPValidationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListPermissionsSessionSessionIdPermissionsGetResponse parses an HTTP response from a ListPermissionsSessionSessionIdPermissionsGetWithResponse call
+func ParseListPermissionsSessionSessionIdPermissionsGetResponse(rsp *http.Response) (*ListPermissionsSessionSessionIdPermissionsGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListPermissionsSessionSessionIdPermissionsGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []PermissionRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
+		var dest HTTPValidationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON422 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAnswerPermissionSessionSessionIdPermissionsPermIdPostResponse parses an HTTP response from a AnswerPermissionSessionSessionIdPermissionsPermIdPostWithResponse call
+func ParseAnswerPermissionSessionSessionIdPermissionsPermIdPostResponse(rsp *http.Response) (*AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AnswerPermissionSessionSessionIdPermissionsPermIdPostResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PermissionRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest HTTPValidationError

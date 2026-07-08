@@ -29,7 +29,9 @@ async def run_journey_embedded(
     """
     services = await create_services(db_path, llm_factory=lambda: llm)
     try:
-        handle = await start_journey_run(services.sessions, services.registry, str(directory), request, llm=llm)
+        handle = await start_journey_run(
+            services.sessions, services.registry, str(directory), request, llm=llm, permissions=services.permissions
+        )
         try:
             return await handle.result
         finally:

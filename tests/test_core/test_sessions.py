@@ -133,6 +133,25 @@ async def test_stream_events_are_scoped_to_directory(services, workspace, tmp_pa
     assert await outsider.get(timeout=0.05) is None
 
 
+async def test_resolve_llm_honours_model_override(services):
+    calls = []
+
+    def factory(model: str | None = None):
+        calls.append(model)
+        return ScriptedClient([turn(text="ok")])
+
+    services.sessions.llm_factory = factory
+    services.sessions.resolve_llm()
+    services.sessions.resolve_llm("cheap-model")
+    assert calls == [None, "cheap-model"]
+
+
+async def test_resolve_llm_ignores_override_for_pinned_factory(services):
+    client = ScriptedClient([turn(text="ok")])
+    services.sessions.llm_factory = lambda: client
+    assert services.sessions.resolve_llm("cheap-model") is client
+
+
 def _event_names(events: list) -> list[str]:
     return [type(e).__name__ for e in events]
 

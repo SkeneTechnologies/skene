@@ -27,6 +27,7 @@ tool-less chat run.
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from typing import Any
 
@@ -75,7 +76,9 @@ _CHAT_INSTRUCTIONS = (
     "in this session."
 )
 
-LLMFactory = Callable[[], LLMClient]
+# Called with no arguments for the default client; a factory that also
+# accepts a ``model`` keyword opts in to per-agent overrides (AgentDef.model).
+LLMFactory = Callable[..., LLMClient]
 
 # Builds the background run for a prompt; see skene.core.journey.make_run_factory.
 RunFactory = Callable[["Session", str], Coroutine[Any, Any, None]]
@@ -207,6 +210,26 @@ class SessionService:
         run = self._runs.get(session_id)
         return run.abort if run is not None else None
 
+    # -- LLM resolution ---------------------------------------------------------
+
+    def resolve_llm(self, model: str | None = None) -> LLMClient:
+        """A client from the service factory, honouring a per-agent model.
+
+        Overrides need a factory that accepts ``model`` (``skene serve``
+        wires one); with a zero-arg factory (tests, the embedded CLI's
+        pinned client) the override is ignored with a debug note.
+        """
+        if model is None:
+            return self.llm_factory()
+        try:
+            accepts_model = "model" in inspect.signature(self.llm_factory).parameters
+        except (TypeError, ValueError):
+            accepts_model = False
+        if accepts_model:
+            return self.llm_factory(model=model)
+        debug(f"llm factory does not accept model overrides; ignoring model={model!r}")
+        return self.llm_factory()
+
     # -- run coordinator -------------------------------------------------------
 
     async def set_status(self, session: Session, status: str, *, error: str | None = None) -> Session:
@@ -293,6 +316,7 @@ class SessionService:
         initial_input: str,
         max_turns: int = 20,
         llm: LLMClient | None = None,
+        model: str | None = None,
         wrap_stream: StreamWrapper | None = None,
         on_start: Callable[[LLMClient, AssistantMessage], None] | None = None,
     ) -> AgentRunResult:
@@ -306,13 +330,14 @@ class SessionService:
         re-raised for the caller's own cleanup (futures, child aborts).
 
         ``llm`` defaults to the service factory (resolved inside the run so
-        credential failures surface as session errors); ``on_start`` fires
-        after the assistant message exists, with the resolved client.
+        credential failures surface as session errors), with ``model`` as
+        the per-agent override passed to :meth:`resolve_llm`; ``on_start``
+        fires after the assistant message exists, with the resolved client.
         """
         message = AssistantMessage(id=new_id("msg"), session_id=session.id, created=now_ms(), agent=session.agent)
         try:
             session = await self.set_status(session, "running")
-            llm = llm if llm is not None else self.llm_factory()
+            llm = llm if llm is not None else self.resolve_llm(model)
             message = message.model_copy(update={"provider": llm.get_provider_name(), "model": llm.get_model_name()})
             await self.emit_message(message)
             if on_start is not None:

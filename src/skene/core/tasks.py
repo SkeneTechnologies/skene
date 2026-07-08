@@ -125,7 +125,11 @@ async def _run_task(ctx: "JourneyRunContext", args: dict) -> str:
 
     status(f"task: {name} subagent started (session {child.id}, max_turns={_max_turns(ctx, agent)})")
     outcome: asyncio.Future[SubagentOutcome] = asyncio.get_running_loop().create_future()
-    sessions.start_run(child, _subagent_run(sessions, child, agent, ctx.llm, tools, collector, prompt, ctx, outcome))
+    # A subagent with its own model resolves a fresh client inside the run
+    # (execute_run surfaces credential failures as session state); otherwise
+    # it shares the parent's client.
+    llm = None if agent.model is not None else ctx.llm
+    sessions.start_run(child, _subagent_run(sessions, child, agent, llm, tools, collector, prompt, ctx, outcome))
     try:
         result = await outcome
     except asyncio.CancelledError:
@@ -190,6 +194,7 @@ async def _subagent_run(
             initial_input=prompt,
             max_turns=_max_turns(ctx, agent),
             llm=llm,
+            model=agent.model,
             wrap_stream=wrap,
         )
         await sessions.set_status(child, "idle")

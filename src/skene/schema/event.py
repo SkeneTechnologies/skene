@@ -13,6 +13,7 @@ from pydantic import Field
 from skene.schema.base import WireModel
 from skene.schema.ids import new_id
 from skene.schema.message import Message, Part
+from skene.schema.permission import PermissionRequest
 from skene.schema.session import Session
 
 
@@ -107,6 +108,23 @@ class PartUpdated(_BaseEvent):
     properties: _PartProps
 
 
+# --- permissions --------------------------------------------------------------
+
+
+class _PermissionProps(WireModel):
+    request: PermissionRequest
+
+
+class PermissionAsked(_BaseEvent):
+    type: Literal["permission.asked"] = "permission.asked"
+    properties: _PermissionProps
+
+
+class PermissionAnswered(_BaseEvent):
+    type: Literal["permission.answered"] = "permission.answered"
+    properties: _PermissionProps
+
+
 Event = Annotated[
     Union[
         ServerConnected,
@@ -119,6 +137,8 @@ Event = Annotated[
         MessageUpdated,
         PartCreated,
         PartUpdated,
+        PermissionAsked,
+        PermissionAnswered,
     ],
     Field(discriminator="type"),
 ]
