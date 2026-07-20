@@ -73,6 +73,9 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "db: database integration tests (require --db-url)",
+]
 
 [dependency-groups]
 dev = [

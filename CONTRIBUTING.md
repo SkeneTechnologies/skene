@@ -43,6 +43,15 @@ See `make help` for the full list of targets.
 - **Style:** Ruff handles linting and formatting (config in `pyproject.toml`).
 - **Tests:** Add or update tests for any behavioral change.
 
+#### Running tests
+
+```bash
+uv run pytest tests/                        # Unit tests (no database)
+uv run pytest tests/ --db-url "postgresql://user:pass@host/db"  # + integration tests
+```
+
+Integration tests (`@pytest.mark.db`) are skipped when `--db-url` is not provided.
+
 ### TUI
 
 - **Style:** `gofmt` for formatting, `golangci-lint` for linting.
