@@ -30,7 +30,7 @@ The wizard walks you through provider selection, authentication, and analysis �
 
 Skene turns a repository into a single `journey.yaml` describing your product's user lifecycle, and renders it as an interactive diagram.
 
-- **Agentic analysis** — two parallel agents read your project: one walks the codebase, one walks your SQL schemas. They each propose candidate milestones, which are then merged and classified into a canonical seven-stage lifecycle.
+- **Agentic analysis** — two parallel agents read your project: one walks the codebase, one walks your SQL schemas. They each emit product features, which are merged into a deduplicated feature map (`features.yaml`); a synthesis agent then composes user-journey milestones from that map across a canonical seven-stage lifecycle.
 - **Seven-stage user journey** — every product maps to the same canonical stages (*discovery, onboarding, activation, engagement, retention, expansion, virality*) so journeys are comparable across products. Stage names are specialized to your product where useful.
 - **Evidence-backed milestones** — each milestone carries a `tracked_event`, a `confidence` score, and one or more `evidence` chips pointing back to the exact code path, database table, or config file that justifies it.
 - **Journey visualizer** — the TUI opens a local web app that lays out the stages as columns, with milestone cards and clickable evidence chips, so you can review the journey alongside the underlying source.

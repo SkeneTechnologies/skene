@@ -40,6 +40,11 @@ const (
 	Db     EvidenceSource = "db"
 )
 
+// Defines values for FeaturePartType.
+const (
+	FeaturePartTypeFeature FeaturePartType = "feature"
+)
+
 // Defines values for MessageCreatedType.
 const (
 	MessageCreatedTypeMessageCreated MessageCreatedType = "message.created"
@@ -48,11 +53,6 @@ const (
 // Defines values for MessageUpdatedType.
 const (
 	MessageUpdatedTypeMessageUpdated MessageUpdatedType = "message.updated"
-)
-
-// Defines values for MilestonePartType.
-const (
-	Milestone MilestonePartType = "milestone"
 )
 
 // Defines values for PartCreatedType.
@@ -221,23 +221,12 @@ type AssistantMessage_Tokens struct {
 	union json.RawMessage
 }
 
-// CandidateMilestone A milestone candidate emitted by a subagent, before classification.
-type CandidateMilestone struct {
-	Confidence   *float32   `json:"confidence,omitempty"`
-	Description  string     `json:"description"`
-	Evidence     []Evidence `json:"evidence"`
-	Name         string     `json:"name"`
-	ProposedId   string     `json:"proposedId"`
-	StageId      *string    `json:"stageId"`
-	TrackedEvent *string    `json:"trackedEvent"`
-}
-
 // Event defines model for Event.
 type Event struct {
 	union json.RawMessage
 }
 
-// Evidence A pointer back to the code path or DB table that justifies a milestone.
+// Evidence A pointer back to the code path or DB table that justifies a feature.
 type Evidence struct {
 	// Path Required when source == 'code'. File path inside the repo.
 	Path   *string        `json:"path"`
@@ -250,6 +239,34 @@ type Evidence struct {
 
 // EvidenceSource defines model for EvidenceSource.
 type EvidenceSource string
+
+// Feature A product feature emitted by a subagent — one feature-map entry.
+type Feature struct {
+	Confidence   *float32   `json:"confidence,omitempty"`
+	Description  string     `json:"description"`
+	Evidence     []Evidence `json:"evidence"`
+	Name         string     `json:"name"`
+	ProposedId   string     `json:"proposedId"`
+	TrackedEvent *string    `json:"trackedEvent"`
+}
+
+// FeaturePart A feature emitted by an analysis agent's “emit_feature“.
+//
+// Streams live from subagent runs — features carry no stage or
+// milestone assignment; milestone synthesis happens later in
+// “synthesize_journey“ and is only visible in the “journey.yaml“
+// artifact, not retroactively on these parts.
+type FeaturePart struct {
+	// Feature A product feature emitted by a subagent — one feature-map entry.
+	Feature   Feature         `json:"feature"`
+	Id        string          `json:"id"`
+	MessageId string          `json:"messageId"`
+	SessionId string          `json:"sessionId"`
+	Type      FeaturePartType `json:"type"`
+}
+
+// FeaturePartType defines model for FeaturePart.Type.
+type FeaturePartType string
 
 // HTTPValidationError defines model for HTTPValidationError.
 type HTTPValidationError struct {
@@ -313,25 +330,6 @@ type MessageWithParts_Info struct {
 type MessageWithParts_Parts_Item struct {
 	union json.RawMessage
 }
-
-// MilestonePart A candidate milestone emitted by an analysis agent's “emit_milestone“.
-//
-// Streams live from subagent runs — “milestone.stage_id“ is still
-// “None“ at this point; classification happens later in
-// “finalize_journey“ and is only visible in the “journey.yaml“
-// artifact, not retroactively on these parts.
-type MilestonePart struct {
-	Id        string `json:"id"`
-	MessageId string `json:"messageId"`
-
-	// Milestone A milestone candidate emitted by a subagent, before classification.
-	Milestone CandidateMilestone `json:"milestone"`
-	SessionId string             `json:"sessionId"`
-	Type      MilestonePartType  `json:"type"`
-}
-
-// MilestonePartType defines model for MilestonePart.Type.
-type MilestonePartType string
 
 // PartCreated defines model for PartCreated.
 type PartCreated struct {
@@ -1408,24 +1406,24 @@ func (t *MessageWithParts_Parts_Item) MergeToolPart(v ToolPart) error {
 	return err
 }
 
-// AsMilestonePart returns the union data inside the MessageWithParts_Parts_Item as a MilestonePart
-func (t MessageWithParts_Parts_Item) AsMilestonePart() (MilestonePart, error) {
-	var body MilestonePart
+// AsFeaturePart returns the union data inside the MessageWithParts_Parts_Item as a FeaturePart
+func (t MessageWithParts_Parts_Item) AsFeaturePart() (FeaturePart, error) {
+	var body FeaturePart
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMilestonePart overwrites any union data inside the MessageWithParts_Parts_Item as the provided MilestonePart
-func (t *MessageWithParts_Parts_Item) FromMilestonePart(v MilestonePart) error {
-	v.Type = "milestone"
+// FromFeaturePart overwrites any union data inside the MessageWithParts_Parts_Item as the provided FeaturePart
+func (t *MessageWithParts_Parts_Item) FromFeaturePart(v FeaturePart) error {
+	v.Type = "feature"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMilestonePart performs a merge with any union data inside the MessageWithParts_Parts_Item, using the provided MilestonePart
-func (t *MessageWithParts_Parts_Item) MergeMilestonePart(v MilestonePart) error {
-	v.Type = "milestone"
+// MergeFeaturePart performs a merge with any union data inside the MessageWithParts_Parts_Item, using the provided FeaturePart
+func (t *MessageWithParts_Parts_Item) MergeFeaturePart(v FeaturePart) error {
+	v.Type = "feature"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1480,8 +1478,8 @@ func (t MessageWithParts_Parts_Item) ValueByDiscriminator() (interface{}, error)
 	switch discriminator {
 	case "artifact":
 		return t.AsArtifactPart()
-	case "milestone":
-		return t.AsMilestonePart()
+	case "feature":
+		return t.AsFeaturePart()
 	case "reasoning":
 		return t.AsReasoningPart()
 	case "text":
@@ -1917,24 +1915,24 @@ func (t *PartProps_Part) MergeToolPart(v ToolPart) error {
 	return err
 }
 
-// AsMilestonePart returns the union data inside the PartProps_Part as a MilestonePart
-func (t PartProps_Part) AsMilestonePart() (MilestonePart, error) {
-	var body MilestonePart
+// AsFeaturePart returns the union data inside the PartProps_Part as a FeaturePart
+func (t PartProps_Part) AsFeaturePart() (FeaturePart, error) {
+	var body FeaturePart
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMilestonePart overwrites any union data inside the PartProps_Part as the provided MilestonePart
-func (t *PartProps_Part) FromMilestonePart(v MilestonePart) error {
-	v.Type = "milestone"
+// FromFeaturePart overwrites any union data inside the PartProps_Part as the provided FeaturePart
+func (t *PartProps_Part) FromFeaturePart(v FeaturePart) error {
+	v.Type = "feature"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMilestonePart performs a merge with any union data inside the PartProps_Part, using the provided MilestonePart
-func (t *PartProps_Part) MergeMilestonePart(v MilestonePart) error {
-	v.Type = "milestone"
+// MergeFeaturePart performs a merge with any union data inside the PartProps_Part, using the provided FeaturePart
+func (t *PartProps_Part) MergeFeaturePart(v FeaturePart) error {
+	v.Type = "feature"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1989,8 +1987,8 @@ func (t PartProps_Part) ValueByDiscriminator() (interface{}, error) {
 	switch discriminator {
 	case "artifact":
 		return t.AsArtifactPart()
-	case "milestone":
-		return t.AsMilestonePart()
+	case "feature":
+		return t.AsFeaturePart()
 	case "reasoning":
 		return t.AsReasoningPart()
 	case "text":

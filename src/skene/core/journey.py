@@ -3,9 +3,9 @@
 ``analyse-journey`` is a *canned prompt* to a fresh ``skene`` session
 (opencode's "command" concept): the main agent decides which subagents to
 spawn through the ``task`` tool (child sessions, see
-:mod:`skene.core.tasks`), then calls the deterministic
-``finalize_journey`` tool — merge, classify, assemble, serialize — which
-reads the candidate milestones back from the child sessions' parts.
+:mod:`skene.core.tasks`), then calls the ``synthesize_journey`` tool —
+merge the feature map, synthesize milestones, assemble, serialize —
+which reads the emitted features back from the child sessions' parts.
 
 The phase-2 deterministic-pipeline wrapper this replaces was retired
 after the parity check against ``tests/fixtures/parity`` passed. The
@@ -28,12 +28,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from skene.analyzers.journey.assemble import assemble_journey
-from skene.analyzers.journey.classify import classify_all
-from skene.analyzers.journey.merge import merge_candidates_llm
+from skene.analyzers.journey.feature_map import write_features
+from skene.analyzers.journey.merge import merge_features_llm
 from skene.analyzers.journey.models import Journey
 from skene.analyzers.journey.serialize import write as write_journey
 from skene.analyzers.journey.specialize import specialize_stages
 from skene.analyzers.journey.stages import STAGES
+from skene.analyzers.journey.synthesize import synthesize_milestones_llm
 from skene.analyzers.schema_parsers.models import SchemaIndex
 from skene.core.agents import AgentDef, AgentRegistry
 from skene.core.permissions import PermissionService
@@ -48,9 +49,9 @@ from skene.output_paths import DEFAULT_OUTPUT_DIR_NAME
 from skene.schema import (
     ArtifactPart,
     AssistantMessage,
-    CandidateMilestone,
+    Feature,
+    FeaturePart,
     JourneyAnalyseRequest,
-    MilestonePart,
     Session,
     TextPart,
     UserMessage,
@@ -87,7 +88,7 @@ class JourneyRunContext:
 
     ``llm`` and ``message_id`` are filled in when the run starts (the
     tools close over the context, so they read both lazily); ``journey``
-    is set by a successful ``finalize_journey`` call.
+    is set by a successful ``synthesize_journey`` call.
     """
 
     def __init__(
@@ -213,12 +214,12 @@ def _default_config(directory: str) -> JourneyRunConfig:
     )
 
 
-def canned_prompt(config: JourneyRunConfig) -> str:
-    """The analyse-journey command as a prompt to the main agent.
+def _sources_display(config: JourneyRunConfig) -> str:
+    """Human-readable list of the run's evidence sources.
 
-    Also persisted verbatim as the session's user message, so the trace
-    shows exactly what the agent was asked. Credentials never appear —
-    the db url is described, not quoted.
+    Shared by the canned prompt and the synthesis step (which uses it to
+    judge journey coverage). Credentials never appear — the db url is
+    described, not quoted.
     """
     if config.schema_dir is not None:
         schema_display = str(config.schema_dir)
@@ -226,80 +227,112 @@ def canned_prompt(config: JourneyRunConfig) -> str:
         schema_display = f"live database ({redact_db_url(config.db_url)})"
     else:
         schema_display = "(none)"
+    return f"- Code repository: {config.repo_root or '(none)'}\n- Database schema: {schema_display}"
+
+
+def canned_prompt(config: JourneyRunConfig) -> str:
+    """The analyse-journey command as a prompt to the main agent.
+
+    Also persisted verbatim as the session's user message, so the trace
+    shows exactly what the agent was asked.
+    """
     return (
         f"Analyse the user journey of {config.product_name}.\n\n"
         f"Evidence sources available:\n"
-        f"- Code repository: {config.repo_root or '(none)'}\n"
-        f"- Database schema: {schema_display}\n\n"
+        f"{_sources_display(config)}\n\n"
         f"Output artifact: {config.output}\n\n"
         "Spawn the matching subagents with the task tool (all in one turn "
-        "so they run in parallel), then call finalize_journey, then reply "
-        "with a short summary."
+        "so they run in parallel), then call synthesize_journey, then "
+        "reply with a short summary."
     )
 
 
 # ---------------------------------------------------------------------------
-# The finalize_journey tool
+# The synthesize_journey tool
 # ---------------------------------------------------------------------------
 
 
 def build_main_tools(ctx: JourneyRunContext) -> list[Tool]:
-    return [build_task_tool(ctx), _build_finalize_tool(ctx)]
+    return [build_task_tool(ctx), _build_synthesize_tool(ctx)]
 
 
-def _build_finalize_tool(ctx: JourneyRunContext) -> Tool:
+def _build_synthesize_tool(ctx: JourneyRunContext) -> Tool:
     return Tool(
-        name="finalize_journey",
+        name="synthesize_journey",
         description=(
-            "Merge every candidate milestone emitted by this session's "
-            "subagents, classify them into journey stages, assemble the "
+            "Merge every feature emitted by this session's subagents into "
+            "the deduplicated feature map (written as features.yaml), "
+            "synthesize user-journey milestones from it, assemble the "
             "validated journey, and write the journey.yaml artifact. "
             "Returns a summary. Call after your task subagents finish."
         ),
         parameters={"type": "object", "properties": {}},
-        handler=lambda args: _finalize_journey(ctx),
+        handler=lambda args: _synthesize_journey(ctx),
     )
 
 
-async def _collect_candidates(ctx: JourneyRunContext) -> tuple[list[CandidateMilestone], list[CandidateMilestone]]:
-    """Candidate milestones from the child sessions' parts, split schema/code."""
-    schema_candidates: list[CandidateMilestone] = []
-    code_candidates: list[CandidateMilestone] = []
+async def _collect_features(ctx: JourneyRunContext) -> tuple[list[Feature], list[Feature]]:
+    """Features from the child sessions' parts, split schema/code."""
+    schema_features: list[Feature] = []
+    code_features: list[Feature] = []
     for child in await ctx.sessions.store.list_children(ctx.session.id):
-        bucket = schema_candidates if child.agent == "schema" else code_candidates
+        bucket = schema_features if child.agent == "schema" else code_features
         for _message, parts in await ctx.sessions.store.list_messages(child.id):
-            bucket.extend(part.milestone for part in parts if isinstance(part, MilestonePart))
-    return schema_candidates, code_candidates
+            bucket.extend(part.feature for part in parts if isinstance(part, FeaturePart))
+    return schema_features, code_features
 
 
-async def _finalize_journey(ctx: JourneyRunContext) -> str:
-    """The tail of the old pipeline — merge, classify, assemble — as one tool."""
-    schema_candidates, code_candidates = await _collect_candidates(ctx)
-    if not schema_candidates and not code_candidates:
-        raise ValueError("no candidate milestones found — run task subagents first")
+async def _synthesize_journey(ctx: JourneyRunContext) -> str:
+    """The pipeline tail — merge the feature map, synthesize, assemble — as one tool."""
+    schema_features, code_features = await _collect_features(ctx)
+    if not schema_features and not code_features:
+        raise ValueError("no features found — run task subagents first")
 
     stages = STAGES
     if ctx.config.specialize and ctx.config.repo_root is not None:
         stages = await specialize_stages(ctx.config.repo_root, ctx.config.product_name, llm=ctx.llm)
 
-    status("finalize: merging candidates (LLM grouping)")
-    merged = await merge_candidates_llm(schema_candidates, code_candidates, llm=ctx.llm)
+    status("synthesize: merging features (LLM grouping)")
+    feature_map = await merge_features_llm(schema_features, code_features, llm=ctx.llm)
     status(
-        f"finalize: merged {len(schema_candidates)} schema + {len(code_candidates)} "
-        f"code → {len(merged)} unique candidates"
+        f"synthesize: merged {len(schema_features)} schema + {len(code_features)} "
+        f"code → {len(feature_map)} unique features"
     )
-    status(f"finalize: classifying {len(merged)} candidates (concurrency={ctx.config.classify_concurrency})")
-    classified = await classify_all(merged, llm=ctx.llm, concurrency=ctx.config.classify_concurrency, stages=stages)
-    journey = assemble_journey(classified, product_name=ctx.config.product_name, stages=stages)
 
     output = ctx.config.output
     output.parent.mkdir(parents=True, exist_ok=True)
+    features_output = output.parent / "features.yaml"
+    write_features(feature_map, features_output, product_name=ctx.config.product_name)
+    await ctx.sessions.emit_part(
+        ArtifactPart(
+            id=new_id("prt"),
+            session_id=ctx.session.id,
+            message_id=ctx.message_id or "",
+            path=str(features_output),
+            title="features.yaml",
+            summary=f"Feature map: {len(feature_map)} features → {features_output}",
+        )
+    )
+
+    status(f"synthesize: composing milestones from {len(feature_map)} features")
+    candidates = await synthesize_milestones_llm(
+        feature_map,
+        llm=ctx.llm,
+        stages=stages,
+        classify_concurrency=ctx.config.classify_concurrency,
+        sources=_sources_display(ctx.config),
+    )
+    journey = assemble_journey(candidates, product_name=ctx.config.product_name, stages=stages)
+
     write_journey(journey, output)
     ctx.journey = journey
 
     milestone_count = sum(len(stage.milestones) for stage in journey.stages)
-    summary = f"Journey assembled: {len(journey.stages)} stages, {milestone_count} milestones → {output}"
-    status(f"finalize: {summary}")
+    summary = (
+        f"Journey assembled: {len(journey.stages)} stages, {milestone_count} milestones "
+        f"from {len(feature_map)} features → {output}"
+    )
+    status(f"synthesize: {summary}")
     await ctx.sessions.emit_part(
         ArtifactPart(
             id=new_id("prt"),
@@ -388,7 +421,7 @@ async def _agent_run(ctx: JourneyRunContext, agent: AgentDef, initial_input: str
         await sessions.set_status(ctx.session, "idle")
         return
     if ctx.journey is None:
-        error = "main agent finished without calling finalize_journey — no journey.yaml produced"
+        error = "main agent finished without calling synthesize_journey — no journey.yaml produced"
         await sessions.set_status(ctx.session, "error", error=error)
         ctx.result.set_exception(JourneyRunError(error))
         ctx.result.exception()

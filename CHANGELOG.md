@@ -58,6 +58,10 @@ in the TUI and its installer.
 
 ### [Unreleased]
 
+#### Changed
+- **Stages are no longer force-filled.** The synthesis step is told which evidence sources were analysed and instructed to populate a stage only when the evidence genuinely shows that lifecycle step — an app-only analysis now leaves e.g. discovery empty instead of promoting the in-app signup flow into it. Accordingly, the canonical stage definitions moved signup/account-creation from discovery (now acquisition surfaces only: landing/pricing pages, campaign attribution) into onboarding (now "begins with account creation"). The per-feature classify fallback carries the same coverage rule.
+- **`analyse-journey` restructured around a feature map.** The code/schema subagents now emit product *features* (capabilities with evidence) instead of candidate milestones — same shape, honest name — and the merged, deduplicated feature map is written as a `features.yaml` artifact next to `journey.yaml`. A new synthesis step (one LLM call over the whole feature map) composes actual user-journey milestones from groups of related features, named from the user's perspective and stage-assigned with global context; milestone evidence is the union of its features' evidence. The per-feature classifier remains as the fallback when synthesis fails (every feature becomes its own milestone — the old behavior). Wire/API renames: part type `milestone` → `feature` (`MilestonePart`/`CandidateMilestone` → `FeaturePart`/`Feature` in the OpenAPI schema), subagent tool `emit_milestone` → `emit_feature`, task summaries report `featuresEmitted`, and the main agent's finalize tool is now `synthesize_journey`. The `journey.yaml` schema itself is unchanged. Old dev session DBs with `milestone` parts will 500 on read (pre-1.0 posture); delete the DB file if it bites.
+
 #### Removed
 - **Legacy pipeline commands removed: `analyze`, `plan`, `build`, `validate`.** The journey flow (`analyse-journey`) is now the sole analysis entry point. Removed alongside them:
   - The legacy analyzers (`TechStackAnalyzer`, `GrowthFeaturesAnalyzer`, `ManifestAnalyzer`, `DocsAnalyzer`), the strategy framework (`skene.strategies`), the planner (`skene.planner`), docs generation (`skene.docs`), templates (`skene.templates`), objectives (`skene.objectives`), and the manifest schemas (`skene.manifest`).
@@ -74,6 +78,11 @@ Maintenance release — version bump only.
 - Companion release: TUI `tui-v0.4.1` (anonymous telemetry, installer hardening, config-reload fix).
 
 ## skene TUI
+
+### [Unreleased]
+
+#### Changed
+- **Journey analysis streams `feature` parts.** Regenerated the API client for the CLI's feature-map restructure (`MilestonePart` → `FeaturePart`); the run log now shows `✦ feature: <name>` lines and a features-collected count. Requires a CLI with the matching wire shape.
 
 ### [tui-0.4.1] - 2026-05-20
 

@@ -21,7 +21,7 @@ When invoked with no arguments, `skene` prints help and exits.
 
 Generate a `journey.yaml` describing the user lifecycle of a product.
 
-A main "skene" agent orchestrates two parallel subagents — one analyzing the codebase filesystem, one analyzing the database schema — to discover user-facing milestones; a deterministic finalize step merges and classifies them into a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
+A main "skene" agent orchestrates two parallel subagents — one analyzing the codebase filesystem, one analyzing the database schema — to discover product features; a synthesis step merges them into a feature map (`features.yaml`) and composes user-journey milestones from it, producing a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
 
 By default the command runs an embedded (in-process) server; after [`skene attach`](#attach) (or with `--server`) it drives a remote [`skene serve`](#serve) instance instead. Every run — local or remote — persists a session trace in the [skene database](#serve), which is the debug trail for a run.
 

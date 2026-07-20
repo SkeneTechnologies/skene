@@ -79,7 +79,7 @@ def turn(text: str | None = None, tool_calls: list | None = None, usage: dict[st
     return AssistantTurn(text=text, tool_calls=tool_calls or [], usage=usage)
 
 
-# Stage assignments the fake classifier hands out, keyed by milestone name.
+# Stage assignments the fake synthesis/classifier hands out, keyed by name.
 PARITY_STAGE_MAP: dict[str, str] = {
     "Account Created": "onboarding",
     "Invite Sent": "virality",
@@ -94,9 +94,10 @@ class JourneyFakeLLM(LLMClient):
     ("parsed database schema"), the code subagent ("explore a codebase"),
     and everything else is treated as the main skene agent. Plain
     ``generate_content`` calls are answered as the merge agent (every
-    candidate its own group, matching the rule-based merge on the parity
-    fixture, which has no duplicates) or as the classifier, using
-    ``stage_map`` (milestone name → stage id).
+    feature its own group, matching the rule-based merge on the parity
+    fixture, which has no duplicates), as the synthesis agent (every
+    feature its own milestone, stage from ``stage_map``), or as the
+    fallback classifier, using ``stage_map`` (name → stage id).
 
     The same instance drove the retired deterministic pipeline when the
     parity golden file was generated (see ``tests/fixtures/parity``), so
@@ -109,10 +110,25 @@ class JourneyFakeLLM(LLMClient):
         self._steps: dict[str, int] = {"main": 0, "schema": 0, "code": 0}
 
     async def generate_content_with_usage(self, prompt: str) -> tuple[str, dict[str, int] | None]:
-        if "You deduplicate candidate user-journey milestones" in prompt:
+        if "You deduplicate candidate product features" in prompt:
             indices = re.findall(r"^(\d+)\. id=", prompt, flags=re.MULTILINE)
             return json.dumps({"groups": [[int(i)] for i in indices]}), None
-        match = re.search(r"^Milestone: (.+)$", prompt, flags=re.MULTILINE)
+        if "You synthesize product milestones" in prompt:
+            milestones = []
+            for m in re.finditer(r"^(\d+)\. id=(\S+) name='(.*?)' — (.*)$", prompt, flags=re.MULTILINE):
+                name = m.group(3)
+                milestones.append(
+                    {
+                        "proposed_id": m.group(2),
+                        "name": name,
+                        "description": m.group(4),
+                        "stage_id": self._stage_map.get(name, "engagement"),
+                        "features": [int(m.group(1))],
+                        "confidence": 0.85,
+                    }
+                )
+            return json.dumps({"milestones": milestones}), None
+        match = re.search(r"^Feature: (.+)$", prompt, flags=re.MULTILINE)
         name = match.group(1).strip() if match else ""
         stage = self._stage_map.get(name, "engagement")
         return json.dumps({"stage_id": stage, "confidence": 0.85, "reason": "fake classifier"}), None
@@ -145,7 +161,7 @@ class JourneyFakeLLM(LLMClient):
                 tool_calls=[
                     ToolCall(
                         id="s2",
-                        name="emit_milestone",
+                        name="emit_feature",
                         arguments={
                             "proposed_id": "account_created",
                             "name": "Account Created",
@@ -157,7 +173,7 @@ class JourneyFakeLLM(LLMClient):
                     ),
                     ToolCall(
                         id="s3",
-                        name="emit_milestone",
+                        name="emit_feature",
                         arguments={
                             "proposed_id": "invite_sent",
                             "name": "Invite Sent",
@@ -180,7 +196,7 @@ class JourneyFakeLLM(LLMClient):
                 tool_calls=[
                     ToolCall(
                         id="c2",
-                        name="emit_milestone",
+                        name="emit_feature",
                         arguments={
                             "proposed_id": "landing_page",
                             "name": "Landing Page",
@@ -204,5 +220,5 @@ class JourneyFakeLLM(LLMClient):
                 ]
             )
         if self._steps["main"] == 2:
-            return AssistantTurn(tool_calls=[ToolCall(id="m3", name="finalize_journey", arguments={})])
+            return AssistantTurn(tool_calls=[ToolCall(id="m3", name="synthesize_journey", arguments={})])
         return AssistantTurn(text="Journey analysis complete.")

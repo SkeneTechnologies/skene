@@ -1,4 +1,4 @@
-"""Tests for the Step 4 classifier."""
+"""Tests for the per-feature classifier (the synthesis fallback)."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from typing import AsyncGenerator
 
 import pytest
 
-from skene.analyzers.journey.candidate import CandidateMilestone
 from skene.analyzers.journey.classify import (
     ClassificationResult,
     classify_all,
-    classify_milestone,
+    classify_feature,
 )
+from skene.analyzers.journey.feature import Feature
 from skene.analyzers.journey.models import Evidence
 from skene.llm.base import LLMClient
 
@@ -45,8 +45,8 @@ class _FakeLLM(LLMClient):
         return "fake"
 
 
-def _candidate(pid: str, name: str = "x") -> CandidateMilestone:
-    return CandidateMilestone(
+def _feature(pid: str, name: str = "x") -> Feature:
+    return Feature(
         proposed_id=pid,
         name=name,
         description=name,
@@ -56,38 +56,38 @@ def _candidate(pid: str, name: str = "x") -> CandidateMilestone:
 
 
 @pytest.mark.asyncio
-async def test_classify_milestone_parses_valid_json():
+async def test_classify_feature_parses_valid_json():
     llm = _FakeLLM([json.dumps({"stage_id": "activation", "confidence": 0.9, "reason": "ok"})])
-    cm = _candidate("first_estimate", "First Estimate")
-    result = await classify_milestone(cm, llm)
+    f = _feature("first_estimate", "First Estimate")
+    result = await classify_feature(f, llm)
     assert isinstance(result, ClassificationResult)
     assert result.stage_id == "activation"
     assert result.confidence == 0.9
 
 
 @pytest.mark.asyncio
-async def test_classify_milestone_handles_fenced_json():
+async def test_classify_feature_handles_fenced_json():
     fenced = "```json\n" + json.dumps({"stage_id": "discovery", "confidence": 0.5, "reason": "?"}) + "\n```"
     llm = _FakeLLM([fenced])
-    cm = _candidate("landing")
-    result = await classify_milestone(cm, llm)
+    f = _feature("landing")
+    result = await classify_feature(f, llm)
     assert result.stage_id == "discovery"
 
 
 @pytest.mark.asyncio
-async def test_classify_milestone_raises_on_non_json():
+async def test_classify_feature_raises_on_non_json():
     llm = _FakeLLM(["I think this is discovery."])
-    cm = _candidate("x")
+    f = _feature("x")
     with pytest.raises(ValueError, match="non-JSON"):
-        await classify_milestone(cm, llm)
+        await classify_feature(f, llm)
 
 
 @pytest.mark.asyncio
-async def test_classify_milestone_raises_on_bad_shape():
+async def test_classify_feature_raises_on_bad_shape():
     llm = _FakeLLM([json.dumps({"stage_id": "discovery"})])  # missing fields
-    cm = _candidate("x")
+    f = _feature("x")
     with pytest.raises(ValueError, match="invalid result"):
-        await classify_milestone(cm, llm)
+        await classify_feature(f, llm)
 
 
 @pytest.mark.asyncio
@@ -97,25 +97,25 @@ async def test_classify_all_assigns_stage_ids():
         json.dumps({"stage_id": "activation", "confidence": 0.85, "reason": "first value"}),
     ]
     llm = _FakeLLM(responses)
-    cms = [_candidate("a"), _candidate("b")]
-    out = await classify_all(cms, llm, concurrency=2)
+    features = [_feature("a"), _feature("b")]
+    out = await classify_all(features, llm, concurrency=2)
     stage_ids = {cm.proposed_id: cm.stage_id for cm in out}
     assert stage_ids == {"a": "discovery", "b": "activation"}
 
 
 @pytest.mark.asyncio
 async def test_classify_all_confidence_is_min_of_inputs():
-    # Candidate confidence is 0.8; classifier confidence is 0.95 → result 0.8
+    # Feature confidence is 0.8; classifier confidence is 0.95 → result 0.8
     llm = _FakeLLM([json.dumps({"stage_id": "discovery", "confidence": 0.95, "reason": "x"})])
-    cm = _candidate("x")
-    [out] = await classify_all([cm], llm)
+    f = _feature("x")
+    [out] = await classify_all([f], llm)
     assert out.confidence == 0.8
 
 
 @pytest.mark.asyncio
 async def test_classify_all_falls_back_to_engagement_on_unknown_stage():
     llm = _FakeLLM([json.dumps({"stage_id": "moon_phase", "confidence": 0.9, "reason": "?"})])
-    [out] = await classify_all([_candidate("x")], llm)
+    [out] = await classify_all([_feature("x")], llm)
     assert out.stage_id == "engagement"
     assert out.confidence <= 0.3
 
@@ -123,6 +123,6 @@ async def test_classify_all_falls_back_to_engagement_on_unknown_stage():
 @pytest.mark.asyncio
 async def test_classify_all_falls_back_on_llm_error():
     llm = _FakeLLM([RuntimeError("network down")])
-    [out] = await classify_all([_candidate("x")], llm)
+    [out] = await classify_all([_feature("x")], llm)
     assert out.stage_id == "engagement"
     assert out.confidence <= 0.3

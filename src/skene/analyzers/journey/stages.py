@@ -26,21 +26,24 @@ STAGES: tuple[StageDef, ...] = (
         1,
         "Discovery",
         "The Hook",
-        "The user first encounters the product and decides to sign up. "
-        "Public marketing routes, landing pages, and the signup flow itself "
-        "belong here. Ends when an account exists.",
-        ["Landing Page View", "Sign-Up Intent Triggered", "Account Created"],
+        "The user first encounters the product and decides to try it. "
+        "Acquisition surfaces only: public marketing routes, landing pages, "
+        "pricing pages, campaign attribution. An in-app signup or login flow "
+        "is NOT discovery — that is where onboarding begins. Ends when the "
+        "user decides to sign up.",
+        ["Landing Page View", "Pricing Page View", "Sign-Up Intent Triggered"],
     ),
     StageDef(
         "onboarding",
         2,
         "Onboarding",
         "The Setup",
-        "The user configures the product so it can do useful work. API keys, "
+        "Begins with account creation. The user signs up and configures the "
+        "product so it can do useful work: the signup/login flow, API keys, "
         "integrations, initial settings, and required setup steps. Does not "
         "yet involve real user-facing output.",
         [
-            "Admin Dashboard First Visit",
+            "Account Created",
             "API Key Configured",
             "Onboarding Checklist Completed",
         ],

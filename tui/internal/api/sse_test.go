@@ -111,12 +111,12 @@ func TestDecodePermissionAsked(t *testing.T) {
 	}
 }
 
-func TestDecodePartCreatedMilestone(t *testing.T) {
+func TestDecodePartCreatedFeature(t *testing.T) {
 	envelope := EventEnvelope{
 		Type: "part.created",
 		Raw: []byte(`{"id":"evt_9","type":"part.created","properties":{"part":{` +
-			`"id":"prt_1","sessionId":"ses_2","messageId":"msg_1","type":"milestone",` +
-			`"milestone":{"proposedId":"signup","name":"User signs up","description":"d",` +
+			`"id":"prt_1","sessionId":"ses_2","messageId":"msg_1","type":"feature",` +
+			`"feature":{"proposedId":"signup","name":"User signs up","description":"d",` +
 			`"evidence":[],"trackedEvent":null,"stageId":null}},"delta":null}}`),
 	}
 	decoded, err := envelope.Decode()
@@ -125,14 +125,14 @@ func TestDecodePartCreatedMilestone(t *testing.T) {
 	}
 	event := decoded.(*PartCreated)
 	kind, err := event.Properties.Part.Discriminator()
-	if err != nil || kind != "milestone" {
-		t.Fatalf("expected milestone part, got %q (%v)", kind, err)
+	if err != nil || kind != "feature" {
+		t.Fatalf("expected feature part, got %q (%v)", kind, err)
 	}
-	milestone, err := event.Properties.Part.AsMilestonePart()
+	feature, err := event.Properties.Part.AsFeaturePart()
 	if err != nil {
-		t.Fatalf("AsMilestonePart: %v", err)
+		t.Fatalf("AsFeaturePart: %v", err)
 	}
-	if milestone.Milestone.Name != "User signs up" || milestone.SessionId != "ses_2" {
-		t.Fatalf("unexpected milestone: %+v", milestone)
+	if feature.Feature.Name != "User signs up" || feature.SessionId != "ses_2" {
+		t.Fatalf("unexpected feature: %+v", feature)
 	}
 }

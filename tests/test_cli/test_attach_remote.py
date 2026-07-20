@@ -60,13 +60,13 @@ class TestRunTracker:
         tracker = self._tracker()
         assert tracker.handle(_session_event("session.idle", "ses_root")) is True
 
-    def test_child_lifecycle_and_milestones(self):
+    def test_child_lifecycle_and_features(self):
         tracker = self._tracker()
         assert tracker.handle(_session_event("session.created", "ses_child", parent="ses_root", agent="code")) is False
         assert tracker.handle(_session_event("session.idle", "ses_child")) is False
-        part = {"type": "milestone", "sessionId": "ses_child", "milestone": {"proposedId": "user_signs_up"}}
+        part = {"type": "feature", "sessionId": "ses_child", "feature": {"proposedId": "user_signs_up"}}
         assert tracker.handle({"type": "part.created", "properties": {"part": part}}) is False
-        assert tracker._milestones == 1
+        assert tracker._features == 1
 
     def test_foreign_sessions_are_ignored(self):
         tracker = self._tracker()

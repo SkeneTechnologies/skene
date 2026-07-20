@@ -1,4 +1,4 @@
-"""Tests for the canned journey run (main agent + task tool + finalize)."""
+"""Tests for the canned journey run (main agent + task tool + synthesize)."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from skene.core.embedded import run_journey_embedded
 from skene.core.journey import JourneyRequestError, JourneyRunError, start_journey_run
 from skene.schema import (
     ArtifactPart,
+    FeaturePart,
     JourneyAnalyseRequest,
-    MilestonePart,
     ToolPart,
 )
 from tests.fakes import JourneyFakeLLM, ScriptedClient, turn
@@ -47,32 +47,34 @@ async def test_journey_run_spawns_subagents_and_emits_artifact(services, workspa
     assert session.status == "idle"
     assert session.agent == "skene"
 
-    # Parent trace: canned prompt, then task × 2 + finalize + artifact.
+    # Parent trace: canned prompt, then task × 2 + synthesize + artifacts.
     messages = await services.store.list_messages(session.id)
     assert [type(m).__name__ for m, _ in messages] == ["UserMessage", "AssistantMessage"]
     assistant, parts = messages[1]
     assert assistant.finish == "no_tool_calls"
     tool_parts = [p for p in parts if isinstance(p, ToolPart)]
-    assert sorted(p.tool for p in tool_parts) == ["finalize_journey", "task", "task"]
+    assert sorted(p.tool for p in tool_parts) == ["synthesize_journey", "task", "task"]
     assert all(p.state.status == "completed" for p in tool_parts)
     artifacts = [p for p in parts if isinstance(p, ArtifactPart)]
-    assert len(artifacts) == 1
-    assert artifacts[0].path == str(output)
+    assert [a.title for a in artifacts] == ["features.yaml", "journey.yaml"]
+    assert artifacts[0].path == str(output.parent / "features.yaml")
+    assert (output.parent / "features.yaml").is_file()
+    assert artifacts[1].path == str(output)
 
-    # Child sessions: one per subagent, idle, holding the milestone parts.
+    # Child sessions: one per subagent, idle, holding the feature parts.
     children = await services.store.list_children(session.id)
     assert sorted(c.agent for c in children) == ["code", "schema"]
     assert all(c.status == "idle" for c in children)
-    milestones_by_agent = {}
+    features_by_agent = {}
     for child in children:
         child_parts = [p for _, ps in await services.store.list_messages(child.id) for p in ps]
-        milestones_by_agent[child.agent] = [p.milestone for p in child_parts if isinstance(p, MilestonePart)]
-    assert [m.proposed_id for m in milestones_by_agent["code"]] == ["landing_page"]
-    assert [m.proposed_id for m in milestones_by_agent["schema"]] == ["account_created", "invite_sent"]
-    # Live parts carry the *candidate* shape: no stage yet, camelCase wire form.
-    candidate = milestones_by_agent["schema"][0]
-    assert candidate.stage_id is None
-    assert '"proposedId"' in candidate.model_dump_json()
+        features_by_agent[child.agent] = [p.feature for p in child_parts if isinstance(p, FeaturePart)]
+    assert [f.proposed_id for f in features_by_agent["code"]] == ["landing_page"]
+    assert [f.proposed_id for f in features_by_agent["schema"]] == ["account_created", "invite_sent"]
+    # Live parts carry the *feature* shape: no stage, camelCase wire form.
+    feature = features_by_agent["schema"][0]
+    assert not hasattr(feature, "stage_id")
+    assert '"proposedId"' in feature.model_dump_json()
 
 
 async def test_journey_output_matches_pipeline_golden(services, workspace, tmp_path):
@@ -95,12 +97,37 @@ async def test_journey_output_matches_pipeline_golden(services, workspace, tmp_p
     assert produced == golden
 
 
-async def test_journey_run_errors_when_agent_never_finalizes(services, workspace):
+async def test_synthesis_prompt_receives_evidence_sources(services, workspace, tmp_path):
+    """The synthesize step is told what was analysed, so it can judge coverage."""
+
+    class RecordingLLM(JourneyFakeLLM):
+        def __init__(self) -> None:
+            super().__init__()
+            self.prompts: list[str] = []
+
+        async def generate_content_with_usage(self, prompt):
+            self.prompts.append(prompt)
+            return await super().generate_content_with_usage(prompt)
+
+    llm = RecordingLLM()
+    handle = await start_journey_run(
+        services.sessions, services.registry, str(workspace), _parity_request(tmp_path / "journey.yaml"), llm=llm
+    )
+    await asyncio.wait_for(handle.result, timeout=5)
+    await services.sessions.wait(handle.session.id)
+
+    synthesis = next(p for p in llm.prompts if "You synthesize product milestones" in p)
+    assert "Evidence sources analysed" in synthesis
+    assert str(PARITY / "repo") in synthesis
+    assert str(PARITY / "schemas") in synthesis
+
+
+async def test_journey_run_errors_when_agent_never_synthesizes(services, workspace):
     llm = ScriptedClient([turn(text="I have nothing to do.")])
     handle = await start_journey_run(
         services.sessions, services.registry, str(workspace), JourneyAnalyseRequest(path=str(workspace)), llm=llm
     )
-    with pytest.raises(JourneyRunError, match="without calling finalize_journey"):
+    with pytest.raises(JourneyRunError, match="without calling synthesize_journey"):
         await asyncio.wait_for(handle.result, timeout=5)
     await services.sessions.wait(handle.session.id)
     assert (await services.store.get_session(handle.session.id)).status == "error"

@@ -180,8 +180,9 @@ For each of the seven stages return:
 - subtitle: a 2-5 word evocative tagline (e.g. "From signup to first AI
   output").
 - description: 1-2 sentences anchored in this product's domain. Stage
-  semantics must stay identical — discovery is still "first contact +
-  signup", activation is still "first real value", etc.
+  semantics must stay identical — discovery is still "acquisition
+  surfaces, up to the decision to sign up", onboarding still "account
+  creation + setup", activation still "first real value", etc.
 - examples: 3-5 product-specific milestone names that would belong in
   this stage. Use the actual nouns/verbs from this product (e.g. for an
   AI-estimate product: "First Estimate Generated", not "First Value

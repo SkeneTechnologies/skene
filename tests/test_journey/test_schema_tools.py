@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from skene.analyzers.journey.candidate import CandidateMilestone
+from skene.analyzers.journey.feature import Feature
 from skene.analyzers.journey.tools.schema_tools import SchemaToolset
 from skene.analyzers.schema_parsers.models import (
     ColumnInfo,
@@ -102,10 +102,10 @@ def test_search_tables_substring_case_insensitive_across_files():
     assert files == {"public.sql", "auth.sql"}
 
 
-def test_emit_milestone_appends_to_collector():
-    collector: list[CandidateMilestone] = []
+def test_emit_feature_appends_to_collector():
+    collector: list[Feature] = []
     toolset = SchemaToolset(_build_index(), collector)
-    ack = toolset._emit_milestone(
+    ack = toolset._emit_feature(
         proposed_id="account_created",
         name="Account Created",
         description="New row in users table",
@@ -131,11 +131,11 @@ async def test_as_tools_returns_callable_handlers():
 
 
 @pytest.mark.asyncio
-async def test_emit_milestone_handler_records_into_collector():
-    collector: list[CandidateMilestone] = []
+async def test_emit_feature_handler_records_into_collector():
+    collector: list[Feature] = []
     toolset = SchemaToolset(_build_index(), collector)
     by_name = {t.name: t for t in toolset.as_tools()}
-    ack = await by_name["emit_milestone"].handler(
+    ack = await by_name["emit_feature"].handler(
         {
             "proposed_id": "estimate_created",
             "name": "Estimate Created",
@@ -191,7 +191,7 @@ async def test_schema_agent_loop_against_fixture():
                     tool_calls=[
                         ToolCall(
                             id="c2",
-                            name="emit_milestone",
+                            name="emit_feature",
                             arguments={
                                 "proposed_id": "account_created",
                                 "name": "Account Created",
@@ -210,7 +210,7 @@ async def test_schema_agent_loop_against_fixture():
     await client.run_agent(
         instructions=SCHEMA_AGENT_INSTRUCTIONS,
         tools=SchemaToolset(parse_schema_dir(fixture), candidates).as_tools(),
-        initial_input="Begin exploring the schema. Emit one milestone per user action.",
+        initial_input="Begin exploring the schema. Emit one feature per user-facing capability.",
         max_turns=10,
     )
     assert len(candidates) == 1

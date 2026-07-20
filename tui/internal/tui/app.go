@@ -1633,12 +1633,12 @@ func (a *App) startSimpleAnalysisCmd(p *tea.Program) tea.Cmd {
 		result := server.RunJourney(ctx, projectDir, func(update backend.Update) {
 			send(update.Phase, update.Message)
 		})
-		if result.Milestones > 0 {
-			send("", fmt.Sprintf("%d candidate milestones collected", result.Milestones))
+		if result.Features > 0 {
+			send("", fmt.Sprintf("%d features collected", result.Features))
 		}
 		if result.Err != nil && result.ArtifactPath != "" && ctx.Err() == nil {
 			// The deliverable exists — e.g. the agent's closing turn hit a
-			// provider error after finalize_journey had already written the
+			// provider error after synthesize_journey had already written the
 			// artifact. Surface the error but finish as a success so the
 			// results flow (visualizer auto-open) still happens.
 			send("", "⚠ run ended with an error after journey.yaml was written: "+result.Err.Error())

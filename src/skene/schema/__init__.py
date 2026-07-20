@@ -26,12 +26,18 @@ from skene.schema.event import (
     SessionIdle,
     SessionUpdated,
 )
+from skene.schema.feature import (
+    ID_PATTERN,
+    Evidence,
+    EvidenceSource,
+    Feature,
+)
 from skene.schema.ids import new_id
 from skene.schema.message import (
     ArtifactPart,
     AssistantMessage,
+    FeaturePart,
     Message,
-    MilestonePart,
     Part,
     ReasoningPart,
     SyntheticMessage,
@@ -44,12 +50,6 @@ from skene.schema.message import (
     ToolStatePending,
     ToolStateRunning,
     UserMessage,
-)
-from skene.schema.milestone import (
-    ID_PATTERN,
-    CandidateMilestone,
-    Evidence,
-    EvidenceSource,
 )
 from skene.schema.permission import (
     PermissionAnswer,
@@ -71,10 +71,11 @@ __all__ = [
     "AgentMode",
     "ArtifactPart",
     "AssistantMessage",
-    "CandidateMilestone",
     "Event",
     "Evidence",
     "EvidenceSource",
+    "Feature",
+    "FeaturePart",
     "ID_PATTERN",
     "JourneyAnalyseAccepted",
     "JourneyAnalyseRequest",
@@ -82,7 +83,6 @@ __all__ = [
     "MessageCreated",
     "MessageUpdated",
     "MessageWithParts",
-    "MilestonePart",
     "Part",
     "PartCreated",
     "PartUpdated",

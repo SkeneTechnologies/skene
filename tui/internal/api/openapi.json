@@ -1049,7 +1049,48 @@
         ],
         "title": "AssistantMessage"
       },
-      "CandidateMilestone": {
+      "Evidence": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/EvidenceSource"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "path": {
+            "title": "Path",
+            "description": "Required when source == 'code'. File path inside the repo.",
+            "type": "string",
+            "nullable": true
+          },
+          "table": {
+            "title": "Table",
+            "description": "Required when source == 'db'. Table or collection name.",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "source"
+        ],
+        "title": "Evidence",
+        "description": "A pointer back to the code path or DB table that justifies a feature."
+      },
+      "EvidenceSource": {
+        "type": "string",
+        "enum": [
+          "code",
+          "db",
+          "config"
+        ],
+        "title": "EvidenceSource"
+      },
+      "Feature": {
         "properties": {
           "proposedId": {
             "type": "string",
@@ -1085,11 +1126,6 @@
             "minimum": 0.0,
             "title": "Confidence",
             "default": 1.0
-          },
-          "stageId": {
-            "title": "Stageid",
-            "type": "string",
-            "nullable": true
           }
         },
         "additionalProperties": false,
@@ -1100,49 +1136,46 @@
           "name",
           "proposedId"
         ],
-        "title": "CandidateMilestone",
-        "description": "A milestone candidate emitted by a subagent, before classification."
+        "title": "Feature",
+        "description": "A product feature emitted by a subagent \u2014 one feature-map entry."
       },
-      "Evidence": {
+      "FeaturePart": {
         "properties": {
-          "source": {
-            "$ref": "#/components/schemas/EvidenceSource"
-          },
-          "reason": {
+          "id": {
             "type": "string",
-            "minLength": 1,
-            "title": "Reason"
+            "title": "Id"
           },
-          "path": {
-            "title": "Path",
-            "description": "Required when source == 'code'. File path inside the repo.",
+          "sessionId": {
             "type": "string",
-            "nullable": true
+            "title": "Sessionid"
           },
-          "table": {
-            "title": "Table",
-            "description": "Required when source == 'db'. Table or collection name.",
+          "messageId": {
             "type": "string",
-            "nullable": true
+            "title": "Messageid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "feature",
+            "enum": [
+              "feature"
+            ]
+          },
+          "feature": {
+            "$ref": "#/components/schemas/Feature"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "reason",
-          "source"
+          "feature",
+          "id",
+          "messageId",
+          "sessionId",
+          "type"
         ],
-        "title": "Evidence",
-        "description": "A pointer back to the code path or DB table that justifies a milestone."
-      },
-      "EvidenceSource": {
-        "type": "string",
-        "enum": [
-          "code",
-          "db",
-          "config"
-        ],
-        "title": "EvidenceSource"
+        "title": "FeaturePart",
+        "description": "A feature emitted by an analysis agent's ``emit_feature``.\n\nStreams live from subagent runs \u2014 features carry no stage or\nmilestone assignment; milestone synthesis happens later in\n``synthesize_journey`` and is only visible in the ``journey.yaml``\nartifact, not retroactively on these parts."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1268,7 +1301,7 @@
                   "$ref": "#/components/schemas/ToolPart"
                 },
                 {
-                  "$ref": "#/components/schemas/MilestonePart"
+                  "$ref": "#/components/schemas/FeaturePart"
                 },
                 {
                   "$ref": "#/components/schemas/ArtifactPart"
@@ -1278,7 +1311,7 @@
                 "propertyName": "type",
                 "mapping": {
                   "artifact": "#/components/schemas/ArtifactPart",
-                  "milestone": "#/components/schemas/MilestonePart",
+                  "feature": "#/components/schemas/FeaturePart",
                   "reasoning": "#/components/schemas/ReasoningPart",
                   "text": "#/components/schemas/TextPart",
                   "tool": "#/components/schemas/ToolPart"
@@ -1296,44 +1329,6 @@
         ],
         "title": "MessageWithParts",
         "description": "One message plus its parts, as returned by ``GET /session/{id}/message``."
-      },
-      "MilestonePart": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "sessionId": {
-            "type": "string",
-            "title": "Sessionid"
-          },
-          "messageId": {
-            "type": "string",
-            "title": "Messageid"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": "milestone",
-            "enum": [
-              "milestone"
-            ]
-          },
-          "milestone": {
-            "$ref": "#/components/schemas/CandidateMilestone"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "messageId",
-          "milestone",
-          "sessionId",
-          "type"
-        ],
-        "title": "MilestonePart",
-        "description": "A candidate milestone emitted by an analysis agent's ``emit_milestone``.\n\nStreams live from subagent runs \u2014 ``milestone.stage_id`` is still\n``None`` at this point; classification happens later in\n``finalize_journey`` and is only visible in the ``journey.yaml``\nartifact, not retroactively on these parts."
       },
       "PermissionAnswer": {
         "properties": {
@@ -2326,7 +2321,7 @@
             "discriminator": {
               "mapping": {
                 "artifact": "#/components/schemas/ArtifactPart",
-                "milestone": "#/components/schemas/MilestonePart",
+                "feature": "#/components/schemas/FeaturePart",
                 "reasoning": "#/components/schemas/ReasoningPart",
                 "text": "#/components/schemas/TextPart",
                 "tool": "#/components/schemas/ToolPart"
@@ -2344,7 +2339,7 @@
                 "$ref": "#/components/schemas/ToolPart"
               },
               {
-                "$ref": "#/components/schemas/MilestonePart"
+                "$ref": "#/components/schemas/FeaturePart"
               },
               {
                 "$ref": "#/components/schemas/ArtifactPart"

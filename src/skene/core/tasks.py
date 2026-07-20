@@ -8,9 +8,9 @@ the parent when the child finishes. Because the loop dispatches one
 turn's tool calls concurrently, several ``task`` calls in a single turn
 run their subagents in parallel — one child session each.
 
-Milestones stream live: after every successful ``emit_milestone`` call
-the freshly collected :class:`CandidateMilestone` objects are persisted
-as ``MilestonePart`` rows in the *child* session (``finalize_journey``
+Features stream live: after every successful ``emit_feature`` call the
+freshly collected :class:`Feature` objects are persisted as
+``FeaturePart`` rows in the *child* session (``synthesize_journey``
 reads them back from there).
 
 Abort fan-out: a child run is an independent asyncio task, so when the
@@ -38,8 +38,8 @@ from skene.llm.agent_loop import AgentStreamEvent, Tool, ToolCallFinished
 from skene.output import status
 from skene.schema import (
     AssistantMessage,
-    CandidateMilestone,
-    MilestonePart,
+    Feature,
+    FeaturePart,
     Session,
     TextPart,
     UserMessage,
@@ -55,7 +55,7 @@ class SubagentOutcome:
     """What a finished subagent run reports back to the task tool."""
 
     session_id: str
-    milestones: int
+    features: int
     turns: int
     stopped_reason: str
     summary: str | None
@@ -68,8 +68,8 @@ def build_task_tool(ctx: "JourneyRunContext") -> Tool:
         name="task",
         description=(
             "Spawn a subagent in a child session and wait for it to finish. "
-            "Returns a JSON summary including how many candidate milestones "
-            "it emitted. Make multiple task calls in ONE turn to run "
+            "Returns a JSON summary including how many features it "
+            "emitted. Make multiple task calls in ONE turn to run "
             "subagents in parallel.\nAvailable agents:\n" + catalog
         ),
         parameters={
@@ -101,10 +101,10 @@ async def _run_task(ctx: "JourneyRunContext", args: dict) -> str:
     if agent is None or agent.mode != "subagent":
         available = sorted(a.name for a in ctx.registry.subagents())
         raise ValueError(f"unknown subagent {name!r}; available: {available}")
-    prompt = str(args.get("prompt") or "Begin exploring. Emit one milestone per user action.")
+    prompt = str(args.get("prompt") or "Begin exploring. Emit one feature per user-facing capability.")
     title = str(args.get("title") or f"task: {name}")
 
-    collector: list[CandidateMilestone] = []
+    collector: list[Feature] = []
     # Raises ValueError when the run has no matching evidence source; the
     # loop feeds that back to the model, which adapts (design: reacting to
     # a missing schema is the agentic part).
@@ -138,12 +138,12 @@ async def _run_task(ctx: "JourneyRunContext", args: dict) -> str:
         # the child mid-cleanup.
         await asyncio.shield(sessions.abort(child.id))
         raise
-    status(f"task: {name} subagent finished — {result.milestones} milestone(s), turns={result.turns}")
+    status(f"task: {name} subagent finished — {result.features} feature(s), turns={result.turns}")
     return json.dumps(
         {
             "sessionId": result.session_id,
             "agent": name,
-            "milestonesEmitted": result.milestones,
+            "featuresEmitted": result.features,
             "turns": result.turns,
             "stoppedReason": result.stopped_reason,
             "summary": result.summary,
@@ -151,7 +151,7 @@ async def _run_task(ctx: "JourneyRunContext", args: dict) -> str:
     )
 
 
-async def _build_subagent_tools(ctx: "JourneyRunContext", name: str, collector: list[CandidateMilestone]) -> list[Tool]:
+async def _build_subagent_tools(ctx: "JourneyRunContext", name: str, collector: list[Feature]) -> list[Tool]:
     """Bind a subagent to its toolset using the run's evidence sources."""
     if name == "code":
         if ctx.config.repo_root is None:
@@ -176,7 +176,7 @@ async def _subagent_run(
     agent: AgentDef,
     llm,
     tools: list[Tool],
-    collector: list[CandidateMilestone],
+    collector: list[Feature],
     prompt: str,
     ctx: "JourneyRunContext",
     outcome: "asyncio.Future[SubagentOutcome]",
@@ -184,7 +184,7 @@ async def _subagent_run(
     """The child session's background run; resolves ``outcome`` for the task tool."""
 
     def wrap(session: Session, message: AssistantMessage, stream: AsyncGenerator[AgentStreamEvent, None]):
-        return _stream_milestones(sessions, session, message, stream, collector)
+        return _stream_features(sessions, session, message, stream, collector)
 
     try:
         result = await sessions.execute_run(
@@ -201,7 +201,7 @@ async def _subagent_run(
         outcome.set_result(
             SubagentOutcome(
                 session_id=child.id,
-                milestones=len(collector),
+                features=len(collector),
                 turns=result.turns,
                 stopped_reason=result.stopped_reason,
                 summary=result.final_text,
@@ -217,26 +217,26 @@ async def _subagent_run(
             outcome.exception()  # pre-retrieve: the awaiter may already be gone
 
 
-async def _stream_milestones(
+async def _stream_features(
     sessions: SessionService,
     session: Session,
     message: AssistantMessage,
     stream: AsyncGenerator[AgentStreamEvent, None],
-    collector: list[CandidateMilestone],
+    collector: list[Feature],
 ) -> AsyncGenerator[AgentStreamEvent, None]:
-    """Pass-through that persists newly collected milestones as parts."""
+    """Pass-through that persists newly collected features as parts."""
     flushed = 0
     async for event in stream:
-        if isinstance(event, ToolCallFinished) and event.call.name == "emit_milestone" and not event.error:
+        if isinstance(event, ToolCallFinished) and event.call.name == "emit_feature" and not event.error:
             while flushed < len(collector):
-                milestone = collector[flushed]
+                feature = collector[flushed]
                 flushed += 1
                 await sessions.emit_part(
-                    MilestonePart(
+                    FeaturePart(
                         id=new_id("prt"),
                         session_id=session.id,
                         message_id=message.id,
-                        milestone=milestone,
+                        feature=feature,
                     )
                 )
         yield event

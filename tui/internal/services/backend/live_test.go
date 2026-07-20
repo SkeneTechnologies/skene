@@ -136,7 +136,7 @@ def start_subscription(user, plan):
 	if err != nil || journey == nil {
 		t.Fatalf("GET /journey after run: %v (nil=%v)", err, journey == nil)
 	}
-	t.Logf("journey keys: %v; milestones streamed: %d", mapKeys(journey), result.Milestones)
+	t.Logf("journey keys: %v; features streamed: %d", mapKeys(journey), result.Features)
 }
 
 func mapKeys(m map[string]interface{}) []string {

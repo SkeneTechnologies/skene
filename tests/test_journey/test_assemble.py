@@ -51,23 +51,6 @@ def test_groups_by_stage_and_assigns_sequential_order():
     assert [m.id for m in discovery.milestones] == ["landing", "signup"]
 
 
-def test_unclassified_candidates_are_dropped():
-    candidates = [
-        _candidate("landing", "Landing", "discovery"),
-        CandidateMilestone(
-            proposed_id="orphan",
-            name="Orphan",
-            description="Orphan",
-            evidence=[Evidence(source="code", path="src/orphan.ts", reason="?")],
-            stage_id=None,
-        ),
-    ]
-    journey = assemble_journey(candidates, product_name="Test")
-    all_ids = {m.id for s in journey.stages for m in s.milestones}
-    assert "orphan" not in all_ids
-    assert "landing" in all_ids
-
-
 def test_id_collision_within_stage_gets_suffixed():
     candidates = [
         _candidate("signup", "Signup A", "discovery"),
@@ -78,8 +61,8 @@ def test_id_collision_within_stage_gets_suffixed():
     assert ids == ["signup", "signup_2"]
 
 
-def test_empty_classified_list_raises():
-    with pytest.raises(ValueError, match="no classified milestones"):
+def test_empty_candidate_list_raises():
+    with pytest.raises(ValueError, match="no synthesized milestones"):
         assemble_journey([], product_name="Test")
 
 

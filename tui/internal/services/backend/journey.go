@@ -25,7 +25,7 @@ type Update struct {
 type JourneyResult struct {
 	SessionID    string
 	ArtifactPath string // absolute path of the produced journey.yaml
-	Milestones   int
+	Features     int
 	Err          error
 }
 
@@ -234,15 +234,21 @@ func (t *runTracker) handlePart(part api.PartProps_Part, result *JourneyResult) 
 		if tool, err := part.AsToolPart(); err == nil && t.tracks(tool.SessionId) {
 			t.handleToolPart(tool)
 		}
-	case "milestone":
-		if milestone, err := part.AsMilestonePart(); err == nil && t.tracks(milestone.SessionId) {
-			result.Milestones++
-			t.update("", fmt.Sprintf("%s ✦ milestone: %s", t.tag(milestone.SessionId), milestone.Milestone.Name))
+	case "feature":
+		if feature, err := part.AsFeaturePart(); err == nil && t.tracks(feature.SessionId) {
+			result.Features++
+			t.update("", fmt.Sprintf("%s ✦ feature: %s", t.tag(feature.SessionId), feature.Feature.Name))
 		}
 	case "artifact":
 		if artifact, err := part.AsArtifactPart(); err == nil && artifact.SessionId == t.rootID {
-			result.ArtifactPath = artifact.Path
-			t.update(phaseFinalizing, "journey.yaml written to "+artifact.Path)
+			// The feature map lands first; only the journey artifact is
+			// the run's deliverable.
+			if artifact.Title != nil && *artifact.Title == "features.yaml" {
+				t.update(phaseFinalizing, "feature map written to "+artifact.Path)
+			} else {
+				result.ArtifactPath = artifact.Path
+				t.update(phaseFinalizing, "journey.yaml written to "+artifact.Path)
+			}
 		}
 	case "text":
 		if text, err := part.AsTextPart(); err == nil && text.SessionId == t.rootID {
@@ -265,7 +271,7 @@ func (t *runTracker) handleToolPart(tool api.ToolPart) {
 		if st.Title != nil && *st.Title != "" {
 			title = *st.Title
 		}
-		if tool.Tool == "finalize_journey" {
+		if tool.Tool == "synthesize_journey" {
 			t.update(phaseFinalizing, fmt.Sprintf("%s ⚙ %s", tag, title))
 		} else {
 			t.update("", fmt.Sprintf("%s ⚙ %s", tag, title))

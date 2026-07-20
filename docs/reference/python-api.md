@@ -118,8 +118,8 @@ from skene.analyzers.journey.models import (
     KpiDerivation,  # How a KPI is derived from tables/events
     Layer,          # A named layer spanning multiple stages
     Connector,      # A cross-stage link between milestones
-    Evidence,       # Re-exported from skene.schema.milestone
-    EvidenceSource, # Re-exported from skene.schema.milestone
+    Evidence,       # Re-exported from skene.schema.feature
+    EvidenceSource, # Re-exported from skene.schema.feature
     TriggerType,    # Enum: email, scheduled, webhook, event_bus, unknown
     ConnectorStyle, # Enum: solid, dashed, dotted
     KpiUnit,        # Enum: percentage, count, duration_days, duration_hours, ratio, currency
@@ -187,8 +187,9 @@ serialize.write(journey, path)           # Write journey.yaml to disk
 
 The rest of the journey machinery lives alongside the models and is orchestrated by `skene.core.journey`:
 
-- `skene.analyzers.journey.merge` — `merge_candidates` deduplicates milestone candidates from the code and schema agents
-- `skene.analyzers.journey.classify` — `classify_milestone` / `classify_all` assign candidates to lifecycle stages
+- `skene.analyzers.journey.merge` — `merge_features` deduplicates features from the code and schema agents into the feature map
+- `skene.analyzers.journey.synthesize` — `synthesize_milestones_llm` composes user-journey milestones from the feature map
+- `skene.analyzers.journey.classify` — `classify_feature` / `classify_all` per-feature stage assignment (the synthesis fallback)
 - `skene.analyzers.journey.assemble` — `assemble_journey` builds the final validated `Journey`
 - `skene.analyzers.schema_parsers` — `parse_schema_dir` (SQL files) and `introspect_db` (live PostgreSQL) produce the schema input
 

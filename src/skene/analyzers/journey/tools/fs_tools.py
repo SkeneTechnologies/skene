@@ -19,7 +19,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from skene.analyzers.journey.candidate import CandidateMilestone
+from skene.analyzers.journey.feature import Feature
 from skene.analyzers.journey.models import Evidence
 from skene.llm.agent_loop import Tool
 from skene.output import debug
@@ -86,7 +86,7 @@ class FsToolset:
     def __init__(
         self,
         repo_root: Path,
-        collector: list[CandidateMilestone],
+        collector: list[Feature],
         max_search_hits: int = 50,
     ) -> None:
         self._root = repo_root.resolve()
@@ -193,7 +193,7 @@ class FsToolset:
             elif child.is_file() and child.suffix in _TEXT_SUFFIXES:
                 yield child
 
-    def _emit_milestone(
+    def _emit_feature(
         self,
         proposed_id: str,
         name: str,
@@ -209,7 +209,7 @@ class FsToolset:
             return {"error": str(e)}
         if not target.exists() or not target.is_file():
             return {"error": (f"path {path!r} must be a real file you have read; use search_files / read_file first")}
-        cm = CandidateMilestone(
+        feature = Feature(
             proposed_id=proposed_id,
             name=name,
             description=description,
@@ -217,8 +217,8 @@ class FsToolset:
             tracked_event=tracked_event,
             confidence=confidence,
         )
-        self._collector.append(cm)
-        debug(f"fs tool: emit_milestone id={proposed_id} name={name!r} path={path} conf={confidence:.2f}")
+        self._collector.append(feature)
+        debug(f"fs tool: emit_feature id={proposed_id} name={name!r} path={path} conf={confidence:.2f}")
         return f"recorded {proposed_id}"
 
     # --- Tool bindings ---
@@ -250,9 +250,9 @@ class FsToolset:
             debug(f"fs tool: search_files({pattern!r}, path={path!r})")
             return _dump_model(toolset._search_files(pattern, path))
 
-        async def emit_milestone(args: dict[str, Any]) -> Any:
+        async def emit_feature(args: dict[str, Any]) -> Any:
             return _dump_model(
-                toolset._emit_milestone(
+                toolset._emit_feature(
                     proposed_id=args["proposed_id"],
                     name=args["name"],
                     description=args["description"],
@@ -310,9 +310,9 @@ class FsToolset:
                 handler=search_files,
             ),
             Tool(
-                name="emit_milestone",
+                name="emit_feature",
                 description=(
-                    "Record a candidate milestone. path must point to a "
+                    "Record a product feature. path must point to a "
                     "real file inside the repo. The only way to produce output."
                 ),
                 parameters={
@@ -341,6 +341,6 @@ class FsToolset:
                         "reason",
                     ],
                 },
-                handler=emit_milestone,
+                handler=emit_feature,
             ),
         ]

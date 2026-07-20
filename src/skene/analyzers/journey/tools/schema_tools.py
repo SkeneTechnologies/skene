@@ -6,7 +6,7 @@ Design points:
   look lifecycle-relevant.
 - ``search_tables`` lets the agent locate concepts like "subscription" or
   "referral" without iterating every file.
-- ``emit_milestone`` is the only output path. There is no final JSON blob —
+- ``emit_feature`` is the only output path. There is no final JSON blob —
   the agent stops emitting and the collector list holds the result.
 """
 
@@ -16,7 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from skene.analyzers.journey.candidate import CandidateMilestone
+from skene.analyzers.journey.feature import Feature
 from skene.analyzers.journey.models import Evidence
 from skene.analyzers.schema_parsers.models import SchemaFileInfo, SchemaIndex, TableInfo
 from skene.llm.agent_loop import Tool
@@ -67,9 +67,9 @@ def _summarize_table(t: TableInfo) -> TableSummary:
 
 
 class SchemaToolset:
-    """Holds the parsed index + a collector list for emitted milestones."""
+    """Holds the parsed index + a collector list for emitted features."""
 
-    def __init__(self, index: SchemaIndex, collector: list[CandidateMilestone]) -> None:
+    def __init__(self, index: SchemaIndex, collector: list[Feature]) -> None:
         self._index = index
         self._collector = collector
 
@@ -104,7 +104,7 @@ class SchemaToolset:
                     out.append(TableRef(schema_file=fname, table=t.name))
         return out
 
-    def _emit_milestone(
+    def _emit_feature(
         self,
         proposed_id: str,
         name: str,
@@ -114,7 +114,7 @@ class SchemaToolset:
         tracked_event: str | None = None,
         confidence: float = 0.8,
     ) -> str:
-        cm = CandidateMilestone(
+        feature = Feature(
             proposed_id=proposed_id,
             name=name,
             description=description,
@@ -122,8 +122,8 @@ class SchemaToolset:
             tracked_event=tracked_event,
             confidence=confidence,
         )
-        self._collector.append(cm)
-        debug(f"schema tool: emit_milestone id={proposed_id} name={name!r} table={table} conf={confidence:.2f}")
+        self._collector.append(feature)
+        debug(f"schema tool: emit_feature id={proposed_id} name={name!r} table={table} conf={confidence:.2f}")
         return f"recorded {proposed_id}"
 
     # --- Tool bindings ---
@@ -158,8 +158,8 @@ class SchemaToolset:
             debug(f"schema tool: search_tables({query!r})")
             return _dump_model(toolset._search_tables(query))
 
-        async def emit_milestone(args: dict[str, Any]) -> str:
-            return toolset._emit_milestone(
+        async def emit_feature(args: dict[str, Any]) -> str:
+            return toolset._emit_feature(
                 proposed_id=args["proposed_id"],
                 name=args["name"],
                 description=args["description"],
@@ -221,10 +221,10 @@ class SchemaToolset:
                 handler=search_tables,
             ),
             Tool(
-                name="emit_milestone",
+                name="emit_feature",
                 description=(
-                    "Record a candidate milestone. `table` is the DB "
-                    "evidence — the table that proves the milestone "
+                    "Record a product feature. `table` is the DB "
+                    "evidence — the table that proves the feature "
                     "exists. The only way to produce output."
                 ),
                 parameters={
@@ -253,6 +253,6 @@ class SchemaToolset:
                         "reason",
                     ],
                 },
-                handler=emit_milestone,
+                handler=emit_feature,
             ),
         ]

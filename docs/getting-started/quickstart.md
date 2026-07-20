@@ -32,7 +32,7 @@ The interactive setup walks you through provider, model, and API key selection.
 uvx skene analyse-journey .
 ```
 
-A main "skene" agent orchestrates two parallel subagents -- one analyzing your codebase, one analyzing your database schema -- to discover user-facing milestones. A deterministic finalize step merges and classifies them into a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
+A main "skene" agent orchestrates two parallel subagents -- one analyzing your codebase, one analyzing your database schema -- to discover product features. A synthesis step merges them into a feature map (`features.yaml`) and composes user-journey milestones from it, producing a validated Customer Journey map across seven lifecycle stages: discovery, onboarding, activation, engagement, retention, expansion, and virality.
 
 The result is written to `./skene-context/journey.yaml`.
 

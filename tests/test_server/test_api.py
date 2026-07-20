@@ -31,9 +31,9 @@ async def test_doc_includes_sse_event_schemas(client):
         assert model in schemas, model
     stream = spec["paths"]["/event"]["get"]["responses"]["200"]["content"]["text/event-stream"]
     assert stream["schema"] == {"$ref": "#/components/schemas/Event"}
-    # Parts (incl. the typed milestone payload) are reachable from the spec.
-    assert "MilestonePart" in schemas
-    assert "CandidateMilestone" in schemas
+    # Parts (incl. the typed feature payload) are reachable from the spec.
+    assert "FeaturePart" in schemas
+    assert "Feature" in schemas
 
 
 async def test_session_crud_and_wire_shape(client):
@@ -130,7 +130,7 @@ async def test_journey_analyse_starts_session(client, services, workspace):
     from tests.fakes import JourneyFakeLLM
 
     services.sessions.llm_factory = lambda: JourneyFakeLLM()
-    # The fake code subagent emits a milestone whose evidence path must exist.
+    # The fake code subagent emits a feature whose evidence path must exist.
     (workspace / "index.tsx").write_text("export default () => null;\n")
 
     accepted = await client.post("/journey/analyse", json={"path": str(workspace), "specialize": False})

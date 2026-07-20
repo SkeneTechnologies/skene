@@ -15,7 +15,7 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import Field
 
 from skene.schema.base import WireModel
-from skene.schema.milestone import CandidateMilestone
+from skene.schema.feature import Feature
 
 # ---------------------------------------------------------------------------
 # Tool state
@@ -84,17 +84,17 @@ class ToolPart(_BasePart):
     state: ToolState
 
 
-class MilestonePart(_BasePart):
-    """A candidate milestone emitted by an analysis agent's ``emit_milestone``.
+class FeaturePart(_BasePart):
+    """A feature emitted by an analysis agent's ``emit_feature``.
 
-    Streams live from subagent runs — ``milestone.stage_id`` is still
-    ``None`` at this point; classification happens later in
-    ``finalize_journey`` and is only visible in the ``journey.yaml``
+    Streams live from subagent runs — features carry no stage or
+    milestone assignment; milestone synthesis happens later in
+    ``synthesize_journey`` and is only visible in the ``journey.yaml``
     artifact, not retroactively on these parts.
     """
 
-    type: Literal["milestone"] = "milestone"
-    milestone: CandidateMilestone
+    type: Literal["feature"] = "feature"
+    feature: Feature
 
 
 class ArtifactPart(_BasePart):
@@ -107,7 +107,7 @@ class ArtifactPart(_BasePart):
 
 
 Part = Annotated[
-    Union[TextPart, ReasoningPart, ToolPart, MilestonePart, ArtifactPart],
+    Union[TextPart, ReasoningPart, ToolPart, FeaturePart, ArtifactPart],
     Field(discriminator="type"),
 ]
 

@@ -23,7 +23,7 @@ from skene.schema import AgentInfo, AgentMode
 
 MAIN_AGENT_INSTRUCTIONS = """\
 You are skene's main analysis agent. You orchestrate specialist subagents
-to map a product's user journey, then produce the final journey.yaml
+to build the product's feature map, then produce the final journey.yaml
 artifact.
 
 How to work:
@@ -31,18 +31,19 @@ How to work:
    repository, a database schema, or both).
 2. Use the `task` tool to spawn one subagent per available source. Make
    ALL independent task calls in a single turn — they run in parallel.
-3. Each task result reports how many candidate milestones the subagent
-   emitted. For a real product, fewer than ~10 milestones in total
-   usually means the evidence was under-explored: re-run that subagent
-   once with a sharper focus prompt before moving on.
-4. When evidence gathering is done, call `finalize_journey`. It merges
-   and classifies every emitted milestone, assembles the journey, and
-   writes journey.yaml.
+3. Each task result reports how many features the subagent emitted. For
+   a real product, fewer than ~10 features in total usually means the
+   evidence was under-explored: re-run that subagent once with a sharper
+   focus prompt before moving on.
+4. When evidence gathering is done, call `synthesize_journey`. It merges
+   the emitted features into the feature map (features.yaml),
+   synthesizes user-journey milestones from it, assembles the journey,
+   and writes journey.yaml.
 5. Reply with a short summary of the journey and stop.
 
 Rules:
-- Never invent milestones yourself — only subagents gather evidence.
-- Do not call finalize_journey before at least one task has completed
+- Never invent features yourself — only subagents gather evidence.
+- Do not call synthesize_journey before at least one task has completed
   successfully.
 - If a subagent fails or an evidence source is unavailable, continue
   with the sources you do have.
@@ -68,21 +69,21 @@ DEFAULT_AGENTS: tuple[AgentDef, ...] = (
     AgentDef(
         name="skene",
         mode="primary",
-        description="Main analysis agent: orchestrates subagents and assembles journey.yaml.",
+        description="Main analysis agent: orchestrates subagents, builds the feature map, and assembles journey.yaml.",
         instructions=MAIN_AGENT_INSTRUCTIONS,
         max_turns=30,
     ),
     AgentDef(
         name="code",
         mode="subagent",
-        description=("Explores the product's code repository and emits candidate user-journey milestones."),
+        description=("Explores the product's code repository and emits product features."),
         instructions=CODE_AGENT_INSTRUCTIONS,
         max_turns=200,
     ),
     AgentDef(
         name="schema",
         mode="subagent",
-        description=("Explores the product's database schema and emits candidate user-journey milestones."),
+        description=("Explores the product's database schema and emits product features."),
         instructions=SCHEMA_AGENT_INSTRUCTIONS,
         max_turns=150,
     ),

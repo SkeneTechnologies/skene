@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from skene.analyzers.journey.candidate import CandidateMilestone
+from skene.analyzers.journey.feature import Feature
 from skene.analyzers.journey.tools.fs_tools import FsToolset
 
 
@@ -87,11 +87,11 @@ def test_search_files_invalid_regex(tmp_path: Path):
     assert "invalid regex" in out["error"]
 
 
-def test_emit_milestone_requires_real_file(tmp_path: Path):
+def test_emit_feature_requires_real_file(tmp_path: Path):
     repo = _build_repo(tmp_path)
-    collector: list[CandidateMilestone] = []
+    collector: list[Feature] = []
     toolset = FsToolset(repo, collector)
-    out = toolset._emit_milestone(
+    out = toolset._emit_feature(
         proposed_id="ghost",
         name="Ghost",
         description="X",
@@ -103,11 +103,11 @@ def test_emit_milestone_requires_real_file(tmp_path: Path):
     assert collector == []
 
 
-def test_emit_milestone_records_into_collector(tmp_path: Path):
+def test_emit_feature_records_into_collector(tmp_path: Path):
     repo = _build_repo(tmp_path)
-    collector: list[CandidateMilestone] = []
+    collector: list[Feature] = []
     toolset = FsToolset(repo, collector)
-    ack = toolset._emit_milestone(
+    ack = toolset._emit_feature(
         proposed_id="account_created",
         name="Account Created",
         description="Signup endpoint",
@@ -179,7 +179,7 @@ async def test_code_agent_loop_with_scripted_llm(tmp_path: Path):
                     tool_calls=[
                         ToolCall(
                             id="c2",
-                            name="emit_milestone",
+                            name="emit_feature",
                             arguments={
                                 "proposed_id": "signup",
                                 "name": "Signup",
@@ -199,7 +199,7 @@ async def test_code_agent_loop_with_scripted_llm(tmp_path: Path):
     await client.run_agent(
         instructions=CODE_AGENT_INSTRUCTIONS,
         tools=FsToolset(repo, candidates).as_tools(),
-        initial_input="Begin exploring the repo. Emit one milestone per user action.",
+        initial_input="Begin exploring the repo. Emit one feature per user-facing capability.",
         max_turns=10,
     )
     assert len(candidates) == 1

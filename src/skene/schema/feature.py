@@ -1,15 +1,16 @@
-"""Candidate-milestone wire models.
+"""Feature wire models.
 
 These used to live in ``skene.analyzers.journey`` (phase-1 loose end);
-they moved here in phase 3 because candidate milestones now cross the
-wire as ``MilestonePart`` payloads. The analyzer modules re-export them,
-so engine code keeps importing from its usual homes.
+they moved here in phase 3 because features now cross the wire as
+``FeaturePart`` payloads. The analyzer modules re-export them, so engine
+code keeps importing from its usual homes.
 
-``CandidateMilestone`` is the *pre-classification* shape emitted live by
-the code/schema subagents' ``emit_milestone`` tool — ``stage_id`` is
-``None`` until ``finalize_journey`` classifies it. The final, classified
-``Milestone`` only exists inside ``journey.yaml`` and stays in
-:mod:`skene.analyzers.journey.models`.
+``Feature`` is one entry of the *feature map*: a user-facing capability
+with evidence, emitted live by the code/schema subagents' ``emit_feature``
+tool. Journey milestones do not exist at this level — the synthesis step
+inside ``synthesize_journey`` composes them from groups of features, and
+the final ``Milestone`` only exists inside ``journey.yaml``
+(:mod:`skene.analyzers.journey.models`).
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ class EvidenceSource(str, Enum):
 
 
 class Evidence(WireModel):
-    """A pointer back to the code path or DB table that justifies a milestone."""
+    """A pointer back to the code path or DB table that justifies a feature."""
 
     source: EvidenceSource
     reason: str = Field(min_length=1)
@@ -54,8 +55,8 @@ class Evidence(WireModel):
         return self
 
 
-class CandidateMilestone(WireModel):
-    """A milestone candidate emitted by a subagent, before classification."""
+class Feature(WireModel):
+    """A product feature emitted by a subagent — one feature-map entry."""
 
     proposed_id: str = Field(pattern=ID_PATTERN)
     name: str = Field(min_length=1)
@@ -63,6 +64,3 @@ class CandidateMilestone(WireModel):
     evidence: list[Evidence] = Field(min_length=1)
     tracked_event: str | None = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
-
-    # Filled in by classification inside finalize_journey.
-    stage_id: str | None = None

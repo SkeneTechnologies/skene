@@ -14,10 +14,10 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # Evidence moved to the wire-model package in phase 3 (it rides on
-# MilestonePart); re-exported here so journey.yaml code keeps its imports.
-from skene.schema.milestone import ID_PATTERN as ID_PATTERN
-from skene.schema.milestone import Evidence as Evidence
-from skene.schema.milestone import EvidenceSource as EvidenceSource
+# FeaturePart); re-exported here so journey.yaml code keeps its imports.
+from skene.schema.feature import ID_PATTERN as ID_PATTERN
+from skene.schema.feature import Evidence as Evidence
+from skene.schema.feature import EvidenceSource as EvidenceSource
 
 
 class TriggerType(str, Enum):

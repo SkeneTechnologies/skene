@@ -748,3 +748,30 @@ on:
   the canned analyse prompt; no free-form chat with the skene agent. The API
   (`POST /session/{id}/message`) already supports arbitrary follow-up messages, so
   enabling chat later is TUI/CLI scope, not a server change.
+
+## 10. Feature-map restructure (2026-07-08)
+
+The subagent output was renamed to what it actually is. Code/DB analysis
+finds *features* (capabilities with evidence), not journey milestones —
+the old flow promoted each candidate 1:1 into journey.yaml, so the
+"journey" read as a stage-bucketed feature inventory. Phase-3 names in
+the sections above reflect the pre-restructure wire shape; current state:
+
+- **Wire**: `MilestonePart`/`CandidateMilestone` → `FeaturePart`/`Feature`
+  (`skene/schema/feature.py`, part type `"feature"`, no stage field).
+  Subagents emit via `emit_feature`; the task tool reports
+  `featuresEmitted`. Same pre-1.0 old-DB caveat as the phase-3 rename.
+- **`finalize_journey` → `synthesize_journey`** (`core/journey.py`):
+  merge (dedup, unchanged) now yields the *feature map*, written as a
+  `features.yaml` artifact next to journey.yaml (its `ArtifactPart` is
+  emitted first; the journey artifact stays the run's final part).
+- **New synthesis step** (`analyzers/journey/synthesize.py`): one LLM
+  call over the whole feature map + stage defs composes candidate
+  milestones — many features per milestone, user-perspective naming,
+  stage assigned with global context, evidence unioned from members.
+  `CandidateMilestone` (now `Feature` + required `stage_id`, engine-only
+  in `analyzers/journey/candidate.py`) is the synthesis→assemble
+  handoff. The per-feature classifier survives as the fallback: on LLM
+  failure/invalid grouping, every feature becomes its own milestone —
+  exactly the old behavior, which is also what keeps the parity golden
+  meaningful.

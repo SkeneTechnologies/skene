@@ -3,9 +3,10 @@
 Replaces the legacy schema/growth/plan pipeline. The main skene agent
 spawns two subagents in parallel — one over a directory of pre-exported
 SQL files (or a live database), one over the repo filesystem — which emit
-candidate milestones; its ``finalize_journey`` tool merges them,
-classifies each into one of seven canonical lifecycle stages, and
-assembles a validated Journey written to ``journey.yaml``.
+product features; its ``synthesize_journey`` tool merges them into the
+feature map (``features.yaml``), synthesizes milestones assigned to the
+seven canonical lifecycle stages, and assembles a validated Journey
+written to ``journey.yaml``.
 
 See :mod:`skene.core.journey` for the flow.
 """
@@ -169,14 +170,15 @@ def analyse_journey_cmd(
     main agent runs two subagents in parallel:
 
     \b
-      - Schema agent: walks the parsed SQL schema and emits a milestone for
+      - Schema agent: walks the parsed SQL schema and emits a feature for
         every user-facing table.
-      - Code agent: walks the repo and emits a milestone for every
+      - Code agent: walks the repo and emits a feature for every
         user-facing route, handler, analytics call, or job.
 
-    The candidates are merged, classified into discovery / onboarding /
-    activation / engagement / retention / expansion / virality, and
-    assembled into a single validated Journey document.
+    The features are merged into a deduplicated feature map, synthesized
+    into milestones across discovery / onboarding / activation /
+    engagement / retention / expansion / virality, and assembled into a
+    single validated Journey document.
 
     Examples:
 

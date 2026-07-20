@@ -32,7 +32,7 @@ uvx skene push
 
 ## Key concepts
 
-**Journey** (`journey.yaml`) — The primary output of the `analyse-journey` command. A validated YAML map of your product's user lifecycle: milestones discovered by parallel code and schema agents, merged and classified into seven canonical lifecycle stages.
+**Journey** (`journey.yaml`) — The primary output of the `analyse-journey` command. A validated YAML map of your product's user lifecycle: parallel code and schema agents discover product features (written alongside as `features.yaml`), and a synthesis step composes them into milestones across seven canonical lifecycle stages.
 
 **Engine model** (`skene-context/engine.yaml`) — A YAML model that captures subjects and features, including optional action definitions for trigger/runtime behavior.
 

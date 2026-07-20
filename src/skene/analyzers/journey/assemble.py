@@ -1,10 +1,9 @@
-"""Step 5 — group classified candidates by stage and build a validated Journey.
+"""Step 5 — group synthesized candidates by stage and build a validated Journey.
 
-Pure function (no LLM). Drops any candidate that came out of the classifier
-unassigned, sorts each stage bucket alphabetically by ``proposed_id`` for
-deterministic order, resolves ID collisions within a stage by appending
-``_2``, ``_3``, ..., and assembles layers using the standard 4-layer
-swim-lane model.
+Pure function (no LLM). Sorts each stage bucket alphabetically by
+``proposed_id`` for deterministic order, resolves ID collisions within a
+stage by appending ``_2``, ``_3``, ..., and assembles layers using the
+standard 4-layer swim-lane model.
 
 If the resulting Journey fails Pydantic validation, this raises — we do
 not patch around malformed output. The caller surfaces the error so the
@@ -25,7 +24,6 @@ from skene.analyzers.journey.models import (
     Stage,
 )
 from skene.analyzers.journey.stages import STAGES, StageDef
-from skene.output import warning
 
 # Standard 4-layer model: a coarse grouping of the seven stages used for
 # the "swimlane" view in the rendered journey map.
@@ -49,11 +47,7 @@ def assemble_journey(
 
     by_stage: dict[str, list[CandidateMilestone]] = {}
     for cm in candidates:
-        sid = cm.stage_id
-        if sid is None:
-            warning(f"dropping unclassified candidate {cm.proposed_id}")
-            continue
-        by_stage.setdefault(sid, []).append(cm)
+        by_stage.setdefault(cm.stage_id, []).append(cm)
 
     out_stages: list[Stage] = []
     for stage_def in stages:
@@ -79,7 +73,7 @@ def assemble_journey(
         )
 
     if not out_stages:
-        raise ValueError("no classified milestones — refusing to emit an empty journey")
+        raise ValueError("no synthesized milestones — refusing to emit an empty journey")
 
     present_stage_ids = {s.id for s in out_stages}
     layers: list[Layer] = []

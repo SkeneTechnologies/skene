@@ -40,7 +40,7 @@ func TestRunTrackerFollowsRunToIdle(t *testing.T) {
 	frames := []string{
 		fmt.Sprintf(`{"id":"e1","type":"session.created","properties":{"session":%s}}`, sessionJSON("ses_root", "skene", "")),
 		fmt.Sprintf(`{"id":"e2","type":"session.created","properties":{"session":%s}}`, sessionJSON("ses_code", "code", "ses_root")),
-		`{"id":"e3","type":"part.created","properties":{"part":{"id":"p1","sessionId":"ses_code","messageId":"m1","type":"milestone","milestone":{"proposedId":"signup","name":"User signs up","description":"d","evidence":[]}},"delta":null}}`,
+		`{"id":"e3","type":"part.created","properties":{"part":{"id":"p1","sessionId":"ses_code","messageId":"m1","type":"feature","feature":{"proposedId":"signup","name":"User signs up","description":"d","evidence":[]}},"delta":null}}`,
 		`{"id":"e4","type":"part.created","properties":{"part":{"id":"p2","sessionId":"ses_root","messageId":"m2","type":"artifact","path":"/repo/skene/journey.yaml","title":"journey.yaml","summary":null},"delta":null}}`,
 	}
 	for _, frame := range frames {
@@ -56,8 +56,8 @@ func TestRunTrackerFollowsRunToIdle(t *testing.T) {
 		t.Fatalf("expected clean finish, got done=%v err=%v", done, err)
 	}
 
-	if result.Milestones != 1 {
-		t.Fatalf("expected 1 milestone, got %d", result.Milestones)
+	if result.Features != 1 {
+		t.Fatalf("expected 1 feature, got %d", result.Features)
 	}
 	if result.ArtifactPath != "/repo/skene/journey.yaml" {
 		t.Fatalf("artifact path not captured: %q", result.ArtifactPath)
@@ -66,8 +66,8 @@ func TestRunTrackerFollowsRunToIdle(t *testing.T) {
 	if !strings.Contains(joined, "▶ code agent started") {
 		t.Fatalf("missing subagent start line in:\n%s", joined)
 	}
-	if !strings.Contains(joined, "[code] ✦ milestone: User signs up") {
-		t.Fatalf("missing milestone line in:\n%s", joined)
+	if !strings.Contains(joined, "[code] ✦ feature: User signs up") {
+		t.Fatalf("missing feature line in:\n%s", joined)
 	}
 }
 
@@ -94,7 +94,7 @@ func TestRunTrackerIgnoresOtherWorkspaceSessions(t *testing.T) {
 	frames := []string{
 		fmt.Sprintf(`{"id":"e1","type":"session.created","properties":{"session":%s}}`, sessionJSON("ses_other", "skene", "")),
 		fmt.Sprintf(`{"id":"e2","type":"session.idle","properties":{"session":%s}}`, sessionJSON("ses_other", "skene", "")),
-		`{"id":"e3","type":"part.created","properties":{"part":{"id":"p1","sessionId":"ses_other","messageId":"m1","type":"milestone","milestone":{"proposedId":"x","name":"X","description":"d","evidence":[]}},"delta":null}}`,
+		`{"id":"e3","type":"part.created","properties":{"part":{"id":"p1","sessionId":"ses_other","messageId":"m1","type":"feature","feature":{"proposedId":"x","name":"X","description":"d","evidence":[]}},"delta":null}}`,
 	}
 	for _, frame := range frames {
 		done, err := tracker.handle(envelope(t, frame), &result)
@@ -102,7 +102,7 @@ func TestRunTrackerIgnoresOtherWorkspaceSessions(t *testing.T) {
 			t.Fatalf("foreign session ended the run: done=%v err=%v", done, err)
 		}
 	}
-	if result.Milestones != 0 {
-		t.Fatalf("foreign milestone counted: %d", result.Milestones)
+	if result.Features != 0 {
+		t.Fatalf("foreign feature counted: %d", result.Features)
 	}
 }

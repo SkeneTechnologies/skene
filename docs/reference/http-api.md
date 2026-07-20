@@ -34,7 +34,7 @@ The skene backend server (started with [`skene serve`](cli.md#serve)) exposes a 
 
 **Message** — belongs to a session; role is `user`, `assistant`, or `synthetic`.
 
-**Part** — a piece of message content. Types: `text`, `reasoning`, `tool`, `milestone`, `artifact`. Tool parts carry streaming state (`running` → `completed` | `error`). During journey analysis, candidate milestones stream as `milestone` parts in the child sessions, and the finished run puts an `artifact` part (the written `journey.yaml`) in the parent session.
+**Part** — a piece of message content. Types: `text`, `reasoning`, `tool`, `feature`, `artifact`. Tool parts carry streaming state (`running` → `completed` | `error`). During journey analysis, features stream as `feature` parts in the child sessions, and the finished run puts `artifact` parts (the written `features.yaml` and `journey.yaml`) in the parent session.
 
 Messages and parts are **upserts keyed by id** — on a `*.updated` event, clients just overwrite their copy.
 
@@ -54,7 +54,7 @@ Messages and parts are **upserts keyed by id** — on a `*.updated` event, clien
 | `session.idle` | Run finished |
 | `session.error` | Run failed |
 | `message.created` / `message.updated` | Message upserts |
-| `part.created` / `part.updated` | Part upserts (tool state, streaming text deltas, milestones, artifacts) |
+| `part.created` / `part.updated` | Part upserts (tool state, streaming text deltas, features, artifacts) |
 | `permission.asked` / `permission.answered` | Permission flow (see below) |
 
 ## Permissions
@@ -85,4 +85,4 @@ curl -H "x-skene-directory: /path/to/project" http://127.0.0.1:4906/journey
 
 Every session is persisted in a global SQLite database (WAL mode) at `~/.local/share/skene/skene.db`, overridable with `SKENE_DB_PATH` or `skene serve --db-path`. It holds sessions for every workspace; retention is keep-everything (no GC command yet).
 
-> **Pre-1.0 caveat:** the milestone wire shape changed during development — very old dev databases can return `500` on read. Deleting the DB file fixes it.
+> **Pre-1.0 caveat:** the feature/milestone wire shape changed during development — old dev databases can return `500` on read. Deleting the DB file fixes it.

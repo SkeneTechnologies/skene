@@ -138,7 +138,7 @@ class _RunTracker:
     def __init__(self) -> None:
         self.session_id: str | None = None
         self._children: dict[str, str] = {}  # child session id -> agent name
-        self._milestones = 0
+        self._features = 0
 
     def _mine(self, sid: str | None) -> bool:
         return sid is not None and (sid == self.session_id or sid in self._children)
@@ -157,7 +157,7 @@ class _RunTracker:
             if agent is not None:
                 status(f"subagent finished: {agent}")
             elif session.get("id") == self.session_id:
-                status(f"run finished — {self._milestones} milestone(s) emitted")
+                status(f"run finished — {self._features} feature(s) emitted")
                 return True
         elif kind == "session.error":
             session = properties.get("session") or {}
@@ -167,10 +167,10 @@ class _RunTracker:
             part = properties.get("part") or {}
             if not self._mine(part.get("sessionId")):
                 return False
-            if part.get("type") == "milestone":
-                self._milestones += 1
-                proposed = (part.get("milestone") or {}).get("proposedId", "?")
-                status(f"milestone: {proposed}")
+            if part.get("type") == "feature":
+                self._features += 1
+                proposed = (part.get("feature") or {}).get("proposedId", "?")
+                status(f"feature: {proposed}")
             elif part.get("type") == "tool" and part.get("sessionId") == self.session_id:
                 status(f"tool started: {part.get('tool', '?')}")
         elif kind == "part.updated":
@@ -208,13 +208,18 @@ async def _sse_events(stream: httpx.Response):
 
 
 async def _fetch_artifact(client: httpx.AsyncClient, token: str | None, session_id: str) -> dict[str, Any]:
+    """The run's final artifact part — intermediate artifacts (the
+    features.yaml feature map) precede the journey.yaml deliverable."""
     response = await client.get(f"/session/{session_id}/message", headers=_headers(token))
     response.raise_for_status()
+    artifact: dict[str, Any] | None = None
     for message in response.json():
         for part in message.get("parts", []):
             if part.get("type") == "artifact":
-                return part
-    raise RemoteServerError("run finished but produced no artifact part")
+                artifact = part
+    if artifact is None:
+        raise RemoteServerError("run finished but produced no artifact part")
+    return artifact
 
 
 async def _abort(base_url: str, token: str | None, session_id: str) -> None:
