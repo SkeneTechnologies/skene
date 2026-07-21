@@ -59,6 +59,7 @@ in the TUI and its installer.
 ### [Unreleased]
 
 #### Changed
+- **Tool parts carry a human title.** The server now fills the tool-state `title` field from the call's most descriptive argument (`read_file app/page.tsx`, `search_files stripe|webhook`, `describe_table users`, `task code`), so clients can show *what* a tool is inspecting instead of the bare tool name. Built from redacted inputs; the TUI activity ticker uses it for running and completed lines.
 - **Stages are no longer force-filled.** The synthesis step is told which evidence sources were analysed and instructed to populate a stage only when the evidence genuinely shows that lifecycle step — an app-only analysis now leaves e.g. discovery empty instead of promoting the in-app signup flow into it. Accordingly, the canonical stage definitions moved signup/account-creation from discovery (now acquisition surfaces only: landing/pricing pages, campaign attribution) into onboarding (now "begins with account creation"). The per-feature classify fallback carries the same coverage rule.
 - **`analyse-journey` restructured around a feature map.** The code/schema subagents now emit product *features* (capabilities with evidence) instead of candidate milestones — same shape, honest name — and the merged, deduplicated feature map is written as a `features.yaml` artifact next to `journey.yaml`. A new synthesis step (one LLM call over the whole feature map) composes actual user-journey milestones from groups of related features, named from the user's perspective and stage-assigned with global context; milestone evidence is the union of its features' evidence. The per-feature classifier remains as the fallback when synthesis fails (every feature becomes its own milestone — the old behavior). Wire/API renames: part type `milestone` → `feature` (`MilestonePart`/`CandidateMilestone` → `FeaturePart`/`Feature` in the OpenAPI schema), subagent tool `emit_milestone` → `emit_feature`, task summaries report `featuresEmitted`, and the main agent's finalize tool is now `synthesize_journey`. The `journey.yaml` schema itself is unchanged. Old dev session DBs with `milestone` parts will 500 on read (pre-1.0 posture); delete the DB file if it bites.
 
@@ -82,6 +83,7 @@ Maintenance release — version bump only.
 ### [Unreleased]
 
 #### Changed
+- **Analysis progress split into steps + activity ticker.** The progress box no longer accumulates every `list_directory`/`read_file` call. It now shows only step-level progress (agents started/finished with feature counts, feature map written, journey written, failures), while per-tool calls and individual feature emissions scroll through a dimmed 3-line ticker underneath — so the important steps stay readable and there's still visible motion while agents work.
 - **Journey analysis streams `feature` parts.** Regenerated the API client for the CLI's feature-map restructure (`MilestonePart` → `FeaturePart`); the run log now shows `✦ feature: <name>` lines and a features-collected count. Requires a CLI with the matching wire shape.
 
 ### [tui-0.4.1] - 2026-05-20

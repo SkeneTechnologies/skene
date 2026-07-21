@@ -28,6 +28,12 @@ func (s *Spinner) Render() string {
 	return styles.Spinner.Render(s.frames[s.index])
 }
 
+// Frame returns the current frame unstyled, for callers that apply their
+// own styling (e.g. the muted activity ticker).
+func (s *Spinner) Frame() string {
+	return s.frames[s.index]
+}
+
 // SpinnerWithText renders spinner with text
 func (s *Spinner) SpinnerWithText(text string) string {
 	return s.Render() + " " + styles.Body.Render(text)

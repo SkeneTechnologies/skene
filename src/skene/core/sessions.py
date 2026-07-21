@@ -279,7 +279,7 @@ class SessionService:
                     message_id=message.id,
                     tool=event.call.name,
                     call_id=event.call.id,
-                    state=ToolStateRunning(input=_redact_inputs(event.call.arguments), started=now_ms()),
+                    state=_running_state(event.call.name, event.call.arguments),
                 )
                 tool_parts[event.call.id] = part
                 await self.emit_part(part)
@@ -295,7 +295,13 @@ class SessionService:
                         input=inputs, error=event.result, started=started, ended=now_ms()
                     )
                 else:
-                    state = ToolStateCompleted(input=inputs, output=event.result, started=started, ended=now_ms())
+                    state = ToolStateCompleted(
+                        input=inputs,
+                        output=event.result,
+                        title=_tool_title(event.call.name, inputs),
+                        started=started,
+                        ended=now_ms(),
+                    )
                 part = part.model_copy(update={"state": state})
                 tool_parts[event.call.id] = part
                 await self.emit_part(part, update=True)
@@ -392,6 +398,37 @@ class SessionService:
 def _redact_inputs(arguments: dict) -> dict:
     """Redact DSN credentials in string values before tool inputs hit disk/wire."""
     return {k: redact_dsn_in_text(v) if isinstance(v, str) else v for k, v in arguments.items()}
+
+
+def _running_state(tool_name: str, arguments: dict) -> ToolStateRunning:
+    inputs = _redact_inputs(arguments)
+    return ToolStateRunning(input=inputs, title=_tool_title(tool_name, inputs), started=now_ms())
+
+
+# Argument keys worth surfacing in a tool title, most descriptive first:
+# the feature being emitted, the search pattern/query, the table or file
+# being inspected, the schema file, the subagent being spawned. `pattern`
+# outranks `path` because search_files sends both (path is usually ".").
+_TITLE_KEYS = ("name", "pattern", "query", "table", "path", "schema_file", "agent")
+
+_TITLE_VALUE_MAX = 60
+
+
+def _tool_title(tool_name: str, inputs: dict) -> str | None:
+    """Short human title for a tool call, e.g. ``read_file app/page.tsx``.
+
+    Clients render it in place of the bare tool name so progress lines say
+    *what* is being inspected. Built from the already-redacted inputs;
+    None (no recognizable argument) keeps the bare tool name.
+    """
+    for key in _TITLE_KEYS:
+        value = inputs.get(key)
+        if isinstance(value, str) and value.strip():
+            value = " ".join(value.split())
+            if len(value) > _TITLE_VALUE_MAX:
+                value = value[:_TITLE_VALUE_MAX] + "…"
+            return f"{tool_name} {value}"
+    return None
 
 
 __all__ = ["SessionBusyError", "SessionService", "UnknownSessionError"]

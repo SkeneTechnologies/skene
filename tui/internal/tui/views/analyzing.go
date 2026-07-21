@@ -29,7 +29,17 @@ type AnalyzingView struct {
 	done        bool
 	failMessage string
 	currentIdx  int
+
+	// showActivity enables the transient activity ticker: the terminal box
+	// keeps only step-level progress, while high-frequency detail lines
+	// scroll through the last few ticker slots at the bottom of the box.
+	showActivity bool
+	activity     []string
 }
+
+// activityLines is how many detail lines the ticker retains — older
+// activity scrolls away automatically.
+const activityLines = 3
 
 // NewCommandView creates a view for running a generic command with terminal output
 func NewCommandView(title string) *AnalyzingView {
@@ -38,6 +48,28 @@ func NewCommandView(title string) *AnalyzingView {
 		header:   components.NewTitleHeader(title),
 		spinner:  components.NewSpinner(),
 		terminal: components.NewTerminalOutput(14, 300),
+	}
+}
+
+// NewAnalysisView creates the journey-analysis view: the terminal box shows
+// only the important steps (persistent), and per-tool activity scrolls
+// through a small ticker underneath so users still see work happening.
+func NewAnalysisView(title string) *AnalyzingView {
+	v := NewCommandView(title)
+	v.showActivity = true
+	return v
+}
+
+// AddActivity pushes a detail line onto the transient ticker. On views
+// without a ticker it falls back to the terminal log.
+func (v *AnalyzingView) AddActivity(line string) {
+	if !v.showActivity {
+		v.terminal.AddLine(line)
+		return
+	}
+	v.activity = append(v.activity, line)
+	if len(v.activity) > activityLines {
+		v.activity = v.activity[len(v.activity)-activityLines:]
 	}
 }
 
@@ -241,8 +273,22 @@ func (v *AnalyzingView) Render() string {
 		}
 	}
 
-	// Terminal output
-	termOutput := v.terminal.Render(sectionWidth)
+	// Terminal output, with the transient activity ticker pinned to the
+	// bottom of the box (journey analysis only). The newest line carries
+	// the spinner frame so the ticker visibly moves even while a single
+	// long-running tool call is in flight.
+	var ticker []string
+	if v.showActivity && !v.done && !v.failed && len(v.activity) > 0 {
+		for i, line := range v.activity {
+			if i == len(v.activity)-1 {
+				line = v.spinner.Frame() + " " + line
+			} else {
+				line = "  " + line
+			}
+			ticker = append(ticker, line)
+		}
+	}
+	termOutput := v.terminal.RenderWithTicker(sectionWidth, ticker)
 
 	// Footer
 	var footerContent string
