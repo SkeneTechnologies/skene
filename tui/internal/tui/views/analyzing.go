@@ -1,9 +1,6 @@
 package views
 
 import (
-	"fmt"
-	"strings"
-
 	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -37,17 +34,7 @@ type AnalyzingView struct {
 	// keeps only step-level progress, while high-frequency detail lines
 	// scroll through the last few ticker slots at the bottom of the box.
 	showActivity bool
-	activity     []activityEntry
-}
-
-// activityEntry is one ticker slot. Consecutive lines for the same tool
-// (its ⚙ running / ✓ completed alternation) collapse into a single entry
-// whose count keeps climbing — the moving number is what shows progress
-// during long same-tool stretches.
-type activityEntry struct {
-	key   string // line with the state glyph removed, for collapsing
-	text  string // latest form of the line
-	count int
+	activity     []string
 }
 
 // activityLines is how many detail lines the ticker retains — older
@@ -80,25 +67,10 @@ func (v *AnalyzingView) AddActivity(line string) {
 		v.terminal.AddLine(line)
 		return
 	}
-	key := activityKey(line)
-	if n := len(v.activity); n > 0 && v.activity[n-1].key == key {
-		v.activity[n-1].text = line
-		v.activity[n-1].count++
-		return
-	}
-	v.activity = append(v.activity, activityEntry{key: key, text: line, count: 1})
+	v.activity = append(v.activity, line)
 	if len(v.activity) > activityLines {
 		v.activity = v.activity[len(v.activity)-activityLines:]
 	}
-}
-
-// activityKey strips the state glyph so "⚙ search_files" and
-// "✓ search_files" collapse into the same ticker slot.
-func activityKey(line string) string {
-	for _, glyph := range []string{"⚙ ", "✓ ", "✗ "} {
-		line = strings.Replace(line, glyph, "", 1)
-	}
-	return line
 }
 
 // SetSize updates dimensions
@@ -307,11 +279,7 @@ func (v *AnalyzingView) Render() string {
 	// long-running tool call is in flight.
 	var ticker []string
 	if v.showActivity && !v.done && !v.failed && len(v.activity) > 0 {
-		for i, e := range v.activity {
-			line := e.text
-			if e.count > 1 {
-				line += fmt.Sprintf("  ×%d", e.count)
-			}
+		for i, line := range v.activity {
 			if i == len(v.activity)-1 {
 				line = v.spinner.Frame() + " " + line
 			} else {
