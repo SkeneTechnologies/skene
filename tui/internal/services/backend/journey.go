@@ -313,10 +313,14 @@ func (t *runTracker) handleToolPart(tool api.ToolPart) {
 			t.detail(fmt.Sprintf("%s ⚙ %s", tag, title))
 		}
 	case api.ToolStateCompleted:
+		title := tool.Tool
+		if st.Title != nil && *st.Title != "" {
+			title = *st.Title
+		}
 		if important {
 			t.step("", fmt.Sprintf("%s ✓ %s", tag, tool.Tool))
 		} else {
-			t.detail(fmt.Sprintf("%s ✓ %s", tag, tool.Tool))
+			t.detail(fmt.Sprintf("%s ✓ %s", tag, title))
 		}
 	case api.ToolStateError:
 		message := ""

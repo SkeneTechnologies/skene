@@ -158,7 +158,7 @@ def _event_names(events: list) -> list[str]:
 
 async def test_part_created_and_updated_shapes(services, workspace):
     services.sessions.llm_factory = lambda: ScriptedClient(
-        [turn(tool_calls=[ToolCall(id="c1", name="ghost", arguments={})]), turn(text="done")]
+        [turn(tool_calls=[ToolCall(id="c1", name="ghost", arguments={"path": "app/page.tsx"})]), turn(text="done")]
     )
     session = await services.sessions.create_session(str(workspace))
     sub = services.bus.subscribe(workspace)
@@ -178,4 +178,25 @@ async def test_part_created_and_updated_shapes(services, workspace):
     assert len(tool_created) == 1 and len(tool_updated) == 1
     assert tool_created[0].id == tool_updated[0].id
     assert tool_created[0].state.status == "running"
+    # The running state carries a human title built from the arguments.
+    assert tool_created[0].state.title == "ghost app/page.tsx"
     assert tool_updated[0].state.status == "error"
+
+
+def test_tool_title_from_arguments():
+    from skene.core.sessions import _tool_title
+
+    assert _tool_title("read_file", {"path": "app/page.tsx"}) == "read_file app/page.tsx"
+    assert _tool_title("list_directory", {"path": "src/api"}) == "list_directory src/api"
+    # search_files sends pattern + path (usually ".") — pattern wins.
+    assert _tool_title("search_files", {"pattern": "stripe|webhook", "path": "."}) == "search_files stripe|webhook"
+    assert _tool_title("describe_table", {"schema_file": "public.sql", "table": "users"}) == "describe_table users"
+    assert _tool_title("task", {"agent": "code", "prompt": "Explore the repo."}) == "task code"
+    assert _tool_title("emit_feature", {"name": "Signup flow", "path": "auth.ts", "proposed_id": "x"}) == (
+        "emit_feature Signup flow"
+    )
+    # No recognizable argument -> no title, clients keep the bare tool name.
+    assert _tool_title("synthesize_journey", {}) is None
+    # Long values are collapsed and truncated.
+    title = _tool_title("read_file", {"path": "a/" * 60})
+    assert title is not None and len(title) <= len("read_file ") + 61
