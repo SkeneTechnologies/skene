@@ -218,6 +218,13 @@ func (t *TerminalOutput) wrapAllLines(contentWidth int) []string {
 
 // Render the terminal output box
 func (t *TerminalOutput) Render(width int) string {
+	return t.RenderWithTicker(width, nil)
+}
+
+// RenderWithTicker renders the box with transient ticker lines pinned to
+// its bottom edge, below the persistent log. Ticker lines are dimmed, are
+// not part of the scrollback, and are truncated (never wrapped).
+func (t *TerminalOutput) RenderWithTicker(width int, ticker []string) string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -231,6 +238,13 @@ func (t *TerminalOutput) Render(width int) string {
 	}
 
 	visibleCount := t.visibleCount()
+	// Reserve the bottom of the box for the ticker (plus a blank spacer).
+	if len(ticker) > 0 {
+		visibleCount -= len(ticker) + 1
+		if visibleCount < 3 {
+			visibleCount = 3
+		}
+	}
 	wrapped := t.wrapAllLines(contentWidth)
 
 	totalWrapped := len(wrapped)
@@ -279,6 +293,16 @@ func (t *TerminalOutput) Render(width int) string {
 
 	for len(displayLines) < visibleCount {
 		displayLines = append(displayLines, "")
+	}
+
+	if len(ticker) > 0 {
+		mutedStyle := lipgloss.NewStyle().
+			Foreground(styles.MutedColor).
+			Width(contentWidth)
+		displayLines = append(displayLines, "")
+		for _, line := range ticker {
+			displayLines = append(displayLines, mutedStyle.Render(runewidth.Truncate(line, contentWidth, "…")))
+		}
 	}
 
 	content := strings.Join(displayLines, "\n")
