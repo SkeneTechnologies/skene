@@ -1,6 +1,8 @@
 package views
 
 import (
+	"strings"
+
 	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -29,7 +31,17 @@ type AnalyzingView struct {
 	done        bool
 	failMessage string
 	currentIdx  int
+
+	// showActivity enables the transient activity ticker: the terminal box
+	// keeps only step-level progress, while high-frequency detail lines
+	// scroll through the last few ticker slots below it.
+	showActivity bool
+	activity     []string
 }
+
+// activityLines is how many detail lines the ticker retains — older
+// activity scrolls away automatically.
+const activityLines = 3
 
 // NewCommandView creates a view for running a generic command with terminal output
 func NewCommandView(title string) *AnalyzingView {
@@ -41,12 +53,37 @@ func NewCommandView(title string) *AnalyzingView {
 	}
 }
 
+// NewAnalysisView creates the journey-analysis view: the terminal box shows
+// only the important steps (persistent), and per-tool activity scrolls
+// through a small ticker underneath so users still see work happening.
+func NewAnalysisView(title string) *AnalyzingView {
+	v := NewCommandView(title)
+	v.showActivity = true
+	return v
+}
+
+// AddActivity pushes a detail line onto the transient ticker. On views
+// without a ticker it falls back to the terminal log.
+func (v *AnalyzingView) AddActivity(line string) {
+	if !v.showActivity {
+		v.terminal.AddLine(line)
+		return
+	}
+	v.activity = append(v.activity, line)
+	if len(v.activity) > activityLines {
+		v.activity = v.activity[len(v.activity)-activityLines:]
+	}
+}
+
 // SetSize updates dimensions
 func (v *AnalyzingView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
 	v.header.SetWidth(width)
 	termHeight := height - 16
+	if v.showActivity {
+		termHeight -= activityLines + 1
+	}
 	if termHeight < 6 {
 		termHeight = 6
 	}
@@ -244,6 +281,18 @@ func (v *AnalyzingView) Render() string {
 	// Terminal output
 	termOutput := v.terminal.Render(sectionWidth)
 
+	// Transient activity ticker (journey analysis only): the latest few
+	// detail lines, dimmed, replaced as new activity arrives.
+	var activityBlock string
+	if v.showActivity && !v.done && !v.failed && len(v.activity) > 0 {
+		muted := lipgloss.NewStyle().Foreground(styles.MutedColor).Width(sectionWidth)
+		lines := make([]string, 0, len(v.activity))
+		for _, l := range v.activity {
+			lines = append(lines, muted.Render("  "+l))
+		}
+		activityBlock = strings.Join(lines, "\n")
+	}
+
 	// Footer
 	var footerContent string
 	if v.failed {
@@ -275,14 +324,11 @@ func (v *AnalyzingView) Render() string {
 		Render(footerContent)
 
 	// Combine
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		wizHeader,
-		"",
-		statusLine,
-		"",
-		termOutput,
-	)
+	parts := []string{wizHeader, "", statusLine, "", termOutput}
+	if activityBlock != "" {
+		parts = append(parts, activityBlock)
+	}
+	content := lipgloss.JoinVertical(lipgloss.Left, parts...)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
 

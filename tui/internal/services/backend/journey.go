@@ -16,9 +16,14 @@ import (
 // Update is one structured progress notification from a journey run.
 type Update struct {
 	// Phase, when non-empty, names the coarse step the run is in (rendered
-	// as the active phase). Message is a per-agent/per-tool log line.
+	// as the active phase). Message is a progress line.
 	Phase   string
 	Message string
+	// Detail marks high-frequency activity (individual tool calls, single
+	// feature emissions) meant for a transient ticker. Step-level lines —
+	// agents starting/finishing, artifacts written, errors — keep it false
+	// and should stay visible for the whole run.
+	Detail bool
 }
 
 // JourneyResult is the outcome of a journey analysis run.
@@ -39,7 +44,7 @@ const (
 // the event stream until the run finishes. Cancelling ctx aborts the run
 // server-side (the abort fans out to the whole child-session tree).
 func (s *Server) RunJourney(ctx context.Context, directory string, onUpdate func(Update)) JourneyResult {
-	update := func(phase, message string) {
+	step := func(phase, message string) {
 		if onUpdate != nil {
 			onUpdate(Update{Phase: phase, Message: message})
 		}
@@ -52,15 +57,15 @@ func (s *Server) RunJourney(ctx context.Context, directory string, onUpdate func
 	}
 	defer closeEvents()
 
-	update(phaseStarting, "Requesting journey analysis...")
+	step(phaseStarting, "Requesting journey analysis...")
 	sessionID, err := s.startAnalysis(ctx, directory)
 	if err != nil {
 		return JourneyResult{Err: err}
 	}
-	update(phaseStarting, "Session "+sessionID)
+	step(phaseStarting, "Session "+sessionID)
 
 	result := JourneyResult{SessionID: sessionID}
-	run := newRunTracker(sessionID, update)
+	run := newRunTracker(sessionID, onUpdate)
 
 	for {
 		select {
@@ -169,20 +174,37 @@ func (s *Server) abort(sessionID string) {
 }
 
 // runTracker folds the event stream into progress updates for one root
-// session and its subagent children.
+// session and its subagent children. Step-level updates (agents starting/
+// finishing, artifacts, errors) persist in the progress log; per-tool and
+// per-feature activity is flagged Detail for the transient ticker.
 type runTracker struct {
 	rootID string
 	// agents maps session id -> agent name, seeded with the root and grown
 	// from session.created events for its children.
 	agents map[string]string
-	update func(phase, message string)
+	// features counts emitted features per session, for the finish line.
+	features map[string]int
+	notify   func(Update)
 }
 
-func newRunTracker(rootID string, update func(phase, message string)) *runTracker {
+func newRunTracker(rootID string, notify func(Update)) *runTracker {
 	return &runTracker{
-		rootID: rootID,
-		agents: map[string]string{},
-		update: update,
+		rootID:   rootID,
+		agents:   map[string]string{},
+		features: map[string]int{},
+		notify:   notify,
+	}
+}
+
+func (t *runTracker) step(phase, message string) {
+	if t.notify != nil {
+		t.notify(Update{Phase: phase, Message: message})
+	}
+}
+
+func (t *runTracker) detail(message string) {
+	if t.notify != nil {
+		t.notify(Update{Message: message, Detail: true})
 	}
 }
 
@@ -200,16 +222,26 @@ func (t *runTracker) handle(envelope api.EventEnvelope, result *JourneyResult) (
 			t.agents[session.Id] = session.Agent
 		} else if session.ParentId != nil && t.tracks(*session.ParentId) {
 			t.agents[session.Id] = session.Agent
-			t.update(phaseAnalyzing, fmt.Sprintf("▶ %s agent started", session.Agent))
+			t.step(phaseAnalyzing, fmt.Sprintf("▶ %s agent started", session.Agent))
 		}
 	case *api.SessionIdle:
-		if event.Properties.Session.Id == t.rootID {
-			t.update(phaseFinalizing, "Analysis complete")
+		session := event.Properties.Session
+		if session.Id == t.rootID {
+			t.step(phaseFinalizing, "Analysis complete")
 			return true, nil
 		}
+		if t.tracks(session.Id) && session.Id != t.rootID {
+			t.step("", fmt.Sprintf("✓ %s agent finished — %d feature(s)", session.Agent, t.features[session.Id]))
+		}
 	case *api.SessionError:
-		if event.Properties.Session.Id == t.rootID {
+		session := event.Properties.Session
+		if session.Id == t.rootID {
 			return true, errors.New(event.Properties.Error)
+		}
+		if t.tracks(session.Id) {
+			// A failed subagent doesn't end the run — the main agent
+			// decides how to continue with the sources it has.
+			t.step("", fmt.Sprintf("✗ %s agent failed: %s", session.Agent, firstLine(event.Properties.Error)))
 		}
 	case *api.PartCreated:
 		t.handlePart(event.Properties.Part, result)
@@ -237,23 +269,24 @@ func (t *runTracker) handlePart(part api.PartProps_Part, result *JourneyResult) 
 	case "feature":
 		if feature, err := part.AsFeaturePart(); err == nil && t.tracks(feature.SessionId) {
 			result.Features++
-			t.update("", fmt.Sprintf("%s ✦ feature: %s", t.tag(feature.SessionId), feature.Feature.Name))
+			t.features[feature.SessionId]++
+			t.detail(fmt.Sprintf("%s ✦ feature: %s", t.tag(feature.SessionId), feature.Feature.Name))
 		}
 	case "artifact":
 		if artifact, err := part.AsArtifactPart(); err == nil && artifact.SessionId == t.rootID {
 			// The feature map lands first; only the journey artifact is
 			// the run's deliverable.
 			if artifact.Title != nil && *artifact.Title == "features.yaml" {
-				t.update(phaseFinalizing, "feature map written to "+artifact.Path)
+				t.step(phaseFinalizing, "feature map written to "+artifact.Path)
 			} else {
 				result.ArtifactPath = artifact.Path
-				t.update(phaseFinalizing, "journey.yaml written to "+artifact.Path)
+				t.step(phaseFinalizing, "journey.yaml written to "+artifact.Path)
 			}
 		}
 	case "text":
 		if text, err := part.AsTextPart(); err == nil && text.SessionId == t.rootID {
 			if line := firstLine(text.Text); line != "" {
-				t.update("", t.tag(text.SessionId)+" "+line)
+				t.step("", t.tag(text.SessionId)+" "+line)
 			}
 		}
 	}
@@ -265,25 +298,39 @@ func (t *runTracker) handleToolPart(tool api.ToolPart) {
 	if err != nil {
 		return
 	}
+	// The pipeline tool is a step of the run itself; everything else
+	// (list_directory, read_file, ...) is per-call activity for the ticker.
+	important := tool.Tool == "synthesize_journey"
 	switch st := state.(type) {
 	case api.ToolStateRunning:
 		title := tool.Tool
 		if st.Title != nil && *st.Title != "" {
 			title = *st.Title
 		}
-		if tool.Tool == "synthesize_journey" {
-			t.update(phaseFinalizing, fmt.Sprintf("%s ⚙ %s", tag, title))
+		if important {
+			t.step(phaseFinalizing, fmt.Sprintf("%s ⚙ %s", tag, title))
 		} else {
-			t.update("", fmt.Sprintf("%s ⚙ %s", tag, title))
+			t.detail(fmt.Sprintf("%s ⚙ %s", tag, title))
 		}
 	case api.ToolStateCompleted:
-		t.update("", fmt.Sprintf("%s ✓ %s", tag, tool.Tool))
+		if important {
+			t.step("", fmt.Sprintf("%s ✓ %s", tag, tool.Tool))
+		} else {
+			t.detail(fmt.Sprintf("%s ✓ %s", tag, tool.Tool))
+		}
 	case api.ToolStateError:
 		message := ""
 		if st.Error != nil {
 			message = *st.Error
 		}
-		t.update("", fmt.Sprintf("%s ✗ %s: %s", tag, tool.Tool, firstLine(message)))
+		line := fmt.Sprintf("%s ✗ %s: %s", tag, tool.Tool, firstLine(message))
+		// Root-session tool failures (a task that died, synthesis errors)
+		// are step-level; a failed read inside a subagent is ticker noise.
+		if important || tool.SessionId == t.rootID {
+			t.step("", line)
+		} else {
+			t.detail(line)
+		}
 	}
 }
 

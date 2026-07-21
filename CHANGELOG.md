@@ -82,6 +82,7 @@ Maintenance release — version bump only.
 ### [Unreleased]
 
 #### Changed
+- **Analysis progress split into steps + activity ticker.** The progress box no longer accumulates every `list_directory`/`read_file` call. It now shows only step-level progress (agents started/finished with feature counts, feature map written, journey written, failures), while per-tool calls and individual feature emissions scroll through a dimmed 3-line ticker underneath — so the important steps stay readable and there's still visible motion while agents work.
 - **Journey analysis streams `feature` parts.** Regenerated the API client for the CLI's feature-map restructure (`MilestonePart` → `FeaturePart`); the run log now shows `✦ feature: <name>` lines and a features-collected count. Requires a CLI with the matching wire shape.
 
 ### [tui-0.4.1] - 2026-05-20

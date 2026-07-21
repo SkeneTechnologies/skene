@@ -77,6 +77,9 @@ type AnalysisDoneMsg struct {
 type JourneyProgressMsg struct {
 	Phase   string
 	Message string
+	// Detail marks a high-frequency activity line for the transient
+	// ticker instead of the persistent step log.
+	Detail bool
 }
 
 // NextStepOutputMsg is sent when a next-step command produces output
@@ -414,7 +417,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case JourneyProgressMsg:
 		if a.analyzingView != nil {
-			if msg.Phase != "" {
+			if msg.Detail {
+				a.analyzingView.AddActivity(msg.Message)
+			} else if msg.Phase != "" {
 				a.analyzingView.UpdatePhaseByName(msg.Phase, 0.5, msg.Message)
 			} else {
 				a.analyzingView.UpdatePhase(-1, 0, msg.Message)
@@ -1582,7 +1587,7 @@ func (a *App) startJourneyAnalysis() tea.Cmd {
 	a.telemetry.Track(constants.EventAnalysisStarted, map[string]string{
 		"type": "journey",
 	})
-	a.analyzingView = views.NewCommandView(constants.StepNameJourneyAnalysis)
+	a.analyzingView = views.NewAnalysisView(constants.StepNameJourneyAnalysis)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.analyzingOrigin = StateProjectDir
@@ -1592,7 +1597,7 @@ func (a *App) startJourneyAnalysis() tea.Cmd {
 
 func (a *App) startSimpleAnalysis() tea.Cmd {
 	a.journeyAnalysis = true
-	a.analyzingView = views.NewCommandView(constants.StepNameJourneyAnalysis)
+	a.analyzingView = views.NewAnalysisView(constants.StepNameJourneyAnalysis)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.analyzingOrigin = StateNextSteps
@@ -1631,7 +1636,9 @@ func (a *App) startSimpleAnalysisCmd(p *tea.Program) tea.Cmd {
 		}
 
 		result := server.RunJourney(ctx, projectDir, func(update backend.Update) {
-			send(update.Phase, update.Message)
+			if p != nil {
+				p.Send(JourneyProgressMsg{Phase: update.Phase, Message: update.Message, Detail: update.Detail})
+			}
 		})
 		if result.Features > 0 {
 			send("", fmt.Sprintf("%d features collected", result.Features))
