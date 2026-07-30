@@ -29,6 +29,7 @@ from pathlib import Path
 
 from skene.analyzers.journey.assemble import assemble_journey
 from skene.analyzers.journey.feature_map import write_features
+from skene.analyzers.journey.ground import ground_candidates
 from skene.analyzers.journey.merge import merge_features_llm
 from skene.analyzers.journey.models import Journey
 from skene.analyzers.journey.serialize import write as write_journey
@@ -322,6 +323,17 @@ async def _synthesize_journey(ctx: JourneyRunContext) -> str:
         classify_concurrency=ctx.config.classify_concurrency,
         sources=_sources_display(ctx.config),
     )
+    known_tables: set[str] | None = None
+    if ctx.config.schema_dir is not None or ctx.config.db_url is not None:
+        index = await ctx.schema_index()
+        known_tables = {t.name for tables in index.files.values() for t in tables}
+    candidates, grounding = ground_candidates(candidates, repo_root=ctx.config.repo_root, known_tables=known_tables)
+    if grounding.evidence_count or grounding.milestone_count:
+        status(
+            f"synthesize: grounding dropped {grounding.evidence_count} unverifiable "
+            f"evidence chip(s) and {grounding.milestone_count} milestone(s) left without proof"
+        )
+
     journey = assemble_journey(candidates, product_name=ctx.config.product_name, stages=stages)
 
     write_journey(journey, output)
