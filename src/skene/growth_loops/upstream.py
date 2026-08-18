@@ -63,11 +63,7 @@ def _sha256_checksum(content: str) -> str:
 def _auth_headers(token: str) -> dict[str, str]:
     """Headers for upstream API auth."""
     t = (token or "").strip()
-    return {
-        "Authorization": f"Bearer {t}",
-        "X-Skene-Token": t,
-        "X-API-Key": t,
-    }
+    return {"Authorization": f"Bearer {t}"}
 
 
 def validate_token(api_base: str, token: str) -> bool:
