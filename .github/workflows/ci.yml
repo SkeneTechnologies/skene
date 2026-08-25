@@ -5,12 +5,10 @@ on:
     branches: [ main ]
     paths-ignore:
       - 'tui/**'
-      - 'skills/**'
   pull_request:
     branches: [ main ]
     paths-ignore:
       - 'tui/**'
-      - 'skills/**'
 
 permissions:
   contents: read

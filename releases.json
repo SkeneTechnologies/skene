@@ -1,7 +1,7 @@
 {
   "latest_version": "0.3.1",
   "notification": {
-    "message": "Skene Skills: 19 composable Supabase schemas for business apps",
+    "message": "Skene 0.3.1 is available",
     "url": "https://github.com/SkeneTechnologies/skene",
     "expires": "2026-06-01"
   },

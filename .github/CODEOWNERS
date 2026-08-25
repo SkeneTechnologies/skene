@@ -3,6 +3,3 @@
 
 # TUI folder — overrides the default above
 /tui/  @eretjohannes
-
-# Skills (Supabase schemas)
-/skills/  @teekoo5

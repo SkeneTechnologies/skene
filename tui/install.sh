@@ -84,7 +84,7 @@ detect_platform() {
 # Resolve TUI release tag
 # ---------------------------------------------------------------------------
 #
-# This repo publishes three tag families (v*, tui-v*, skills-v*). We only
+# This repo publishes two tag families (v*, tui-v*). We only
 # care about tui-v*. Selection order:
 #   1. SKENE_VERSION env (full tag, e.g. tui-v0.4.0 — "tui-v" prefix is added
 #      if a bare version like "0.4.0" or "v0.4.0" is given)

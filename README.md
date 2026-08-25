@@ -92,7 +92,6 @@ Both the Python CLI and the TUI write artifacts to a single bundle directory in 
 | `src/skene/` | CLI + analysis engine | Python | [PyPI](https://pypi.org/project/skene/) |
 | `tui/` | Interactive terminal UI wizard | Go | [GitHub Releases](https://github.com/SkeneTechnologies/skene/releases) |
 | `cursor-plugin/` | Cursor IDE plugin | — | — |
-| `skills/` | Skene Skills — composable backend schemas for Supabase | SQL | [npm](https://www.npmjs.com/package/@skene/database-skills) |
 
 The TUI (`tui/`) is a Bubble Tea app that provides an interactive wizard experience and orchestrates the Python CLI via `uvx`. Each package has independent CI/CD pipelines.
 
