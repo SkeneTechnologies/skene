@@ -11,6 +11,7 @@ from pydantic import SecretStr
 from skene import CodebaseExplorer, ManifestAnalyzer
 from skene.llm import create_llm_client
 
+
 async def main():
     codebase = CodebaseExplorer(Path("/path/to/repo"))
     llm = create_llm_client(
@@ -30,6 +31,7 @@ async def main():
     print(manifest["tech_stack"])
     print(manifest["current_growth_features"])
 
+
 asyncio.run(main())
 ```
 
@@ -45,10 +47,7 @@ from skene import CodebaseExplorer, DEFAULT_EXCLUDE_FOLDERS
 explorer = CodebaseExplorer(Path("/path/to/repo"))
 
 # Create with custom exclusions (merged with defaults)
-explorer = CodebaseExplorer(
-    Path("/path/to/repo"),
-    exclude_folders=["tests", "vendor", "migrations"]
-)
+explorer = CodebaseExplorer(Path("/path/to/repo"), exclude_folders=["tests", "vendor", "migrations"])
 ```
 
 ### Methods
@@ -118,14 +117,14 @@ from skene import Config, load_config
 config = load_config()
 
 # Access properties
-config.api_key       # str | None
-config.provider      # str (default: "openai")
-config.model         # str (auto-determined if not set)
-config.output_dir    # str (default: "./skene-context"; legacy "./skene" auto-detected)
-config.debug         # bool (default: False)
+config.api_key  # str | None
+config.provider  # str (default: "openai")
+config.model  # str (auto-determined if not set)
+config.output_dir  # str (default: "./skene-context"; legacy "./skene" auto-detected)
+config.debug  # bool (default: False)
 config.exclude_folders  # list[str] (default: [])
-config.base_url      # str | None
-config.upstream      # str | None (upstream workspace URL)
+config.base_url  # str | None
+config.upstream  # str | None (upstream workspace URL)
 
 # Get/set arbitrary keys
 config.get("api_key", default=None)
@@ -136,9 +135,9 @@ config.set("provider", "gemini")
 
 ```python
 from skene.config import (
-    save_upstream_to_config,    # Save upstream URL, workspace, API key to .skene.config
-    remove_upstream_from_config,# Remove upstream credentials from .skene.config
-    resolve_upstream_token,     # Resolve token from env/config
+    save_upstream_to_config,  # Save upstream URL, workspace, API key to .skene.config
+    remove_upstream_from_config,  # Remove upstream credentials from .skene.config
+    resolve_upstream_token,  # Resolve token from env/config
 )
 ```
 
@@ -149,11 +148,11 @@ from pydantic import SecretStr
 from skene.llm import create_llm_client, LLMClient
 
 client: LLMClient = create_llm_client(
-    provider="openai",          # openai, gemini, anthropic, ollama, lmstudio, generic
+    provider="openai",  # openai, gemini, anthropic, ollama, lmstudio, generic
     api_key=SecretStr("key"),
     model="gpt-4o",
-    base_url=None,              # Required for generic provider
-    debug=False,                # Log LLM I/O to ~/.local/state/skene/debug/
+    base_url=None,  # Required for generic provider
+    debug=False,  # Log LLM I/O to ~/.local/state/skene/debug/
 )
 ```
 
@@ -163,14 +162,14 @@ All schemas are Pydantic v2 models. See [Manifest schema reference](manifest-sch
 
 ```python
 from skene import (
-    GrowthManifest,     # v1.0 manifest
-    DocsManifest,       # v2.0 manifest (extends GrowthManifest)
+    GrowthManifest,  # v1.0 manifest
+    DocsManifest,  # v2.0 manifest (extends GrowthManifest)
     TechStack,
     GrowthFeature,
     GrowthOpportunity,
     IndustryInfo,
-    ProductOverview,    # v2.0 only
-    Feature,            # v2.0 only
+    ProductOverview,  # v2.0 only
+    Feature,  # v2.0 only
 )
 ```
 
@@ -200,14 +199,14 @@ from skene import (
 
 ```python
 from skene.feature_registry import (
-    load_feature_registry,              # Load registry from disk
-    write_feature_registry,             # Write registry to disk
-    merge_features_into_registry,       # Merge new features with existing registry
-    merge_registry_and_enrich_manifest, # Full registry + manifest enrichment pipeline
-    load_features_for_build,            # Load active features for build command
-    export_registry_to_format,          # Export to json, csv, or markdown
-    derive_feature_id,                  # Convert feature name to snake_case ID
-    compute_loop_ids_by_feature,        # Map feature_id -> list of loop_ids
+    load_feature_registry,  # Load registry from disk
+    write_feature_registry,  # Write registry to disk
+    merge_features_into_registry,  # Merge new features with existing registry
+    merge_registry_and_enrich_manifest,  # Full registry + manifest enrichment pipeline
+    load_features_for_build,  # Load active features for build command
+    export_registry_to_format,  # Export to json, csv, or markdown
+    derive_feature_id,  # Convert feature name to snake_case ID
+    compute_loop_ids_by_feature,  # Map feature_id -> list of loop_ids
 )
 ```
 
@@ -225,27 +224,27 @@ from skene.feature_registry import (
 
 ```python
 from skene.engine import (
-    load_engine_document,               # Load engine.yaml from the bundle dir
-    write_engine_document,              # Write engine.yaml to the bundle dir
-    merge_engine_documents,             # Merge delta by key
-    parse_source_to_db_event,           # Parse schema.table.operation source
-    engine_features_to_loop_definitions # Adapter for migration builder
+    load_engine_document,  # Load engine.yaml from the bundle dir
+    write_engine_document,  # Write engine.yaml to the bundle dir
+    merge_engine_documents,  # Merge delta by key
+    parse_source_to_db_event,  # Parse schema.table.operation source
+    engine_features_to_loop_definitions,  # Adapter for migration builder
 )
 
 from skene.growth_loops.push import (
-    ensure_base_schema_migration,       # Check, build, update base schema (creates or overwrites)
-    build_loops_to_supabase,            # Build Supabase migrations from trigger definitions
-    build_migration_sql,                # Generate migration SQL
-    find_trigger_migration,             # Latest telemetry migration path (*_skene_triggers.sql + legacy names)
-    write_migration,                    # Write timestamped *_skene_triggers.sql (default migration_name)
-    push_to_upstream,                   # Push to upstream API
+    ensure_base_schema_migration,  # Check, build, update base schema (creates or overwrites)
+    build_loops_to_supabase,  # Build Supabase migrations from trigger definitions
+    build_migration_sql,  # Generate migration SQL
+    find_trigger_migration,  # Latest telemetry migration path (*_skene_triggers.sql + legacy names)
+    write_migration,  # Write timestamped *_skene_triggers.sql (default migration_name)
+    push_to_upstream,  # Push to upstream API
 )
 
 from skene.growth_loops.upstream import (
-    validate_token,                     # Validate token via upstream API
-    collect_push_files,                 # [{path, content}] — full bundle under output_dir + trigger SQL
-    build_push_manifest,                # Create push manifest with checksum over files
-    push_to_upstream,                   # POST {manifest, files} to /api/v1/push
+    validate_token,  # Validate token via upstream API
+    collect_push_files,  # [{path, content}] — full bundle under output_dir + trigger SQL
+    build_push_manifest,  # Create push manifest with checksum over files
+    push_to_upstream,  # POST {manifest, files} to /api/v1/push
 )
 ```
 
@@ -253,8 +252,8 @@ from skene.growth_loops.upstream import (
 
 ```python
 from skene.planner.decline import (
-    decline_plan,           # Archive a declined plan with executive summary only
-    load_declined_plans,    # Load recent declined plans for reference
+    decline_plan,  # Archive a declined plan with executive summary only
+    load_declined_plans,  # Load recent declined plans for reference
 )
 ```
 
@@ -278,19 +277,19 @@ The analysis pipeline is built on a composable strategy framework:
 
 ```python
 from skene.strategies import (
-    AnalysisStrategy,    # Base strategy class
-    AnalysisResult,      # Result container with data + metadata
-    AnalysisMetadata,    # Timing, token usage, step info
-    AnalysisContext,     # Shared context between steps
-    MultiStepStrategy,   # Chains multiple steps together
+    AnalysisStrategy,  # Base strategy class
+    AnalysisResult,  # Result container with data + metadata
+    AnalysisMetadata,  # Timing, token usage, step info
+    AnalysisContext,  # Shared context between steps
+    MultiStepStrategy,  # Chains multiple steps together
 )
 
 from skene.strategies.steps import (
-    AnalysisStep,        # Base step class
-    SelectFilesStep,     # Select relevant files for analysis
-    ReadFilesStep,       # Read file contents
-    AnalyzeStep,         # Send to LLM for analysis
-    GenerateStep,        # Generate structured output
+    AnalysisStep,  # Base step class
+    SelectFilesStep,  # Select relevant files for analysis
+    ReadFilesStep,  # Read file contents
+    AnalyzeStep,  # Send to LLM for analysis
+    GenerateStep,  # Generate structured output
 )
 ```
 
