@@ -550,8 +550,8 @@ async def run_generate_plan(
                     extract_next_action,
                 )
 
-                executive_summary = extract_executive_summary(memo_content)
-                todo_summary = extract_next_action(memo_content)
+                executive_summary = extract_executive_summary(output_path)
+                todo_summary = extract_next_action(output_path)
 
             # Print summary (dynamic sections + Technical Execution; exec summary disabled)
             middle_count = len(growth_plan.sections) if growth_plan else 0

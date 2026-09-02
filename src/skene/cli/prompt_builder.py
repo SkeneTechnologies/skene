@@ -12,25 +12,32 @@ from skene.output import status, warning
 from skene.progress import run_with_progress
 
 
-def _load_growth_plan_json(plan_path: Path) -> dict | None:
+def _load_growth_plan_json(plan_path: Path | str) -> dict | None:
     """Load growth-plan.json from the same directory as the plan markdown file.
 
     Args:
-        plan_path: Path to the growth-plan.md file
+        plan_path: Path to the growth-plan.md file (or path string)
 
     Returns:
         Parsed JSON dict or None if not found
     """
-    json_path = plan_path.with_suffix(".json")
-    if not json_path.exists():
+    if isinstance(plan_path, str):
+        if "\n" in plan_path or plan_path.startswith("#"):
+            return None
+        plan_path = Path(plan_path)
+    elif not isinstance(plan_path, Path):
         return None
+
     try:
-        return json.loads(json_path.read_text())
-    except (json.JSONDecodeError, OSError):
+        json_path = plan_path.with_suffix(".json")
+        if not json_path.exists():
+            return None
+        return json.loads(json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, ValueError, TypeError):
         return None
 
 
-def extract_executive_summary(plan_path: Path) -> str | None:
+def extract_executive_summary(plan_path: Path | str) -> str | None:
     """Extract the Executive Summary from the growth plan JSON.
 
     Args:
@@ -45,7 +52,7 @@ def extract_executive_summary(plan_path: Path) -> str | None:
     return data.get("executive_summary") or None
 
 
-def extract_next_action(plan_path: Path) -> str | None:
+def extract_next_action(plan_path: Path | str) -> str | None:
     """Extract 'The Next Action' section from the growth plan JSON.
 
     Args:
@@ -63,7 +70,7 @@ def extract_next_action(plan_path: Path) -> str | None:
     return None
 
 
-def extract_technical_execution(plan_path: Path) -> dict[str, str] | None:
+def extract_technical_execution(plan_path: Path | str) -> dict[str, str] | None:
     """Extract the Technical Execution section from the growth plan JSON.
 
     Args:
