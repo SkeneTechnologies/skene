@@ -222,6 +222,85 @@ class TestIntrospectDb:
                 assert fk.references_table == "users"
                 assert fk.references_columns == ["id"]
 
+    def test_multiple_foreign_keys_to_same_referenced_table(self):
+        """Separate foreign keys to the same table are not incorrectly grouped into a single composite FK."""
+        mock_conn = _build_mock_conn(
+            schemas=["public"],
+            tables=[("public", "orders"), ("public", "users")],
+            pk_rows=[
+                {"schema_name": "public", "table_name": "orders", "pk_columns": ["id"]},
+                {"schema_name": "public", "table_name": "users", "pk_columns": ["id"]},
+            ],
+            col_rows=[
+                {
+                    "schema_name": "public",
+                    "table_name": "orders",
+                    "column_name": "id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+                {
+                    "schema_name": "public",
+                    "table_name": "orders",
+                    "column_name": "buyer_id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+                {
+                    "schema_name": "public",
+                    "table_name": "orders",
+                    "column_name": "seller_id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+                {
+                    "schema_name": "public",
+                    "table_name": "users",
+                    "column_name": "id",
+                    "data_type": "uuid",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                },
+            ],
+            fk_rows=[
+                {
+                    "schema_name": "public",
+                    "table_name": "orders",
+                    "constraint_name": "orders_buyer_id_fkey",
+                    "columns": ["buyer_id"],
+                    "references_schema": "public",
+                    "references_table": "users",
+                    "references_columns": ["id"],
+                },
+                {
+                    "schema_name": "public",
+                    "table_name": "orders",
+                    "constraint_name": "orders_seller_id_fkey",
+                    "columns": ["seller_id"],
+                    "references_schema": "public",
+                    "references_table": "users",
+                    "references_columns": ["id"],
+                },
+            ],
+            idx_rows=[],
+        )
+        with patch("psycopg.connect", return_value=mock_conn):
+            index = introspect_db("postgresql://user:pass@localhost/db")
+
+        orders_tables = index.files["public.orders.sql"]
+        orders_t = next(t for t in orders_tables if t.name == "orders")
+        assert len(orders_t.foreign_keys) == 2
+        fks_by_col = {tuple(fk.columns): fk for fk in orders_t.foreign_keys}
+        assert ("buyer_id",) in fks_by_col
+        assert ("seller_id",) in fks_by_col
+        assert fks_by_col[("buyer_id",)].references_table == "users"
+        assert fks_by_col[("buyer_id",)].references_columns == ["id"]
+        assert fks_by_col[("seller_id",)].references_table == "users"
+        assert fks_by_col[("seller_id",)].references_columns == ["id"]
+
     def test_views_included(self):
         """Views are included in the schema index."""
         mock_conn = _build_mock_conn(

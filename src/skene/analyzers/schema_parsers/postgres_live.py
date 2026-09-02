@@ -154,6 +154,7 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
         fk_query = """\
             SELECT nsp.nspname AS schema_name,
                    cl.relname AS table_name,
+                   fk.conname AS constraint_name,
                    array_agg(att.attname ORDER BY sub) AS columns,
                    ref_nsp.nspname AS references_schema,
                    ref_cl.relname AS references_table,
@@ -171,7 +172,7 @@ def introspect_db(db_url: str, *, connect_timeout: int = 10) -> SchemaIndex:
             WHERE fk.contype = 'f'
               AND cl.relname = ANY(%s)
               AND nsp.nspname = ANY(%s)
-            GROUP BY nsp.nspname, cl.relname, ref_nsp.nspname, ref_cl.relname
+            GROUP BY nsp.nspname, cl.relname, fk.conname, ref_nsp.nspname, ref_cl.relname
         """
         with conn.cursor() as cur:
             cur.execute(fk_query, (table_names, user_schemas))
